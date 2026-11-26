@@ -237,4 +237,16 @@ describe('ResetWorkspace — quantity-only bookings', () => {
       ],
     })
   })
+
+  it('counts units, not queue rows, on every count (sweep-A-floor-3)', async () => {
+    await mount()
+
+    // One queue row for a qty-3 line is three units on the floor.
+    expect(container.textContent).toContain('0 / 3 Ready')
+    expect(container.textContent).toContain('3 units still in the queue')
+    expect(container.textContent).toContain('0 of 3 units restocked and ready for dispatch')
+    expect(container.textContent).toContain('0/3')
+    expect(container.textContent).toContain('Ready + Remaining + Exceptions = 3 of 3 units.')
+    expect(container.textContent).not.toContain('of 1 units')
+  })
 })

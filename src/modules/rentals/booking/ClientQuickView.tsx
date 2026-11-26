@@ -199,7 +199,7 @@ export function ClientQuickView({
               ? RESTRICTED
               : client.creditLimitPaisa > 0
                 ? formatMoney(client.creditLimitPaisa)
-                : 'Not configured'
+                : 'Not set'
           }
           figure={showMoney && client.creditLimitPaisa > 0}
         />

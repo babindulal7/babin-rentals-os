@@ -46,6 +46,7 @@ import {
 } from '../../lib/queries/internalNotes'
 import EntityIdSelectorModal from './EntityIdSelectorModal'
 import ShiftBriefModal from './ShiftBriefModal'
+import { noteInCategory } from './noteCategoryFilter'
 import { getRecentEntitiesFromNotes, type EntityLookupItem } from '../../lib/queries/entityLookup'
 import './notes.css'
 
@@ -460,7 +461,7 @@ function NotesWorkspace({
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { All: notes.length }
     for (const cat of CATEGORIES) {
-      counts[cat] = notes.filter(n => n.category === cat).length
+      counts[cat] = notes.filter(n => noteInCategory(n, cat)).length
     }
     return counts
   }, [notes])
@@ -634,7 +635,7 @@ function NotesWorkspace({
 
     // Category filter
     if (filterCategory !== 'All') {
-      result = result.filter(n => n.category.toLowerCase() === filterCategory.toLowerCase())
+      result = result.filter(n => noteInCategory(n, filterCategory))
     }
 
     // Status filter

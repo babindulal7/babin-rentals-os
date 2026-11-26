@@ -299,6 +299,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
         <RecordActions
           busy={formBusy}
           dirty={dirty || !recordId}
+          statusText={dirty ? undefined : 'No unsaved changes'}
           label={recordId ? 'Save changes' : `Create ${kind}`}
           onSave={() => void save()}
           onCancel={cancel}

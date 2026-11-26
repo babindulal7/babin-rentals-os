@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
+import { kathmanduCivil } from '../bs'
 import { completeReportRead, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 /**
@@ -138,8 +139,10 @@ export async function getClientReportsSummary(
     if (amt <= 0) continue
     receivables += amt
     outstandingByClient.set(o.client_id, (outstandingByClient.get(o.client_id) ?? 0) + amt)
-    const due = Date.parse(o.due_date ?? '')
-    const days = Number.isNaN(due) ? 0 : Math.floor((now.getTime() - due) / DAY)
+    // Whole Kathmandu civil days, as `daysPastDue` counts them. A due date parses to 00:00 UTC, which is
+    // 05:45 in Kathmandu, so flooring wall-clock milliseconds read one day short until that hour.
+    const due = Date.parse(`${(o.due_date ?? '').slice(0, 10)}T00:00:00Z`)
+    const days = Number.isNaN(due) ? 0 : Math.round((kathmanduCivil(now) - due) / DAY)
     const bucket = buckets.find((b) => days >= b.min && days <= b.max)
     if (bucket) {
       bucket.amount += amt

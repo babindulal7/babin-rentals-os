@@ -207,6 +207,12 @@ describe('fetchDailyClosing — the standing position', () => {
     expect(out.dayBoundaryNote).toMatch(/operational day/i)
     expect(out.dayBoundaryNote).toMatch(/calendar day/i)
   })
+
+  it('states the 06:00 default in plain words, with no internal decision code', async () => {
+    const out = await fetchDailyClosing(DAY)
+    expect(out.dayBoundaryNote).toContain('starts at 06:00 Nepal time by default')
+    expect(out.dayBoundaryNote).not.toMatch(/\bD4\b/)
+  })
 })
 
 describe('varianceLine', () => {

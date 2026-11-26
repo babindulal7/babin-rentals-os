@@ -210,7 +210,7 @@ export function OnlineBookingAwayControl() {
               }}
             />
             <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
-              Displayed on public catalogue, items, and checkout drawer while away (B6).
+              Displayed on public catalogue, items, and checkout drawer while away.
             </span>
           </div>
 
@@ -256,7 +256,7 @@ export function OnlineBookingAwayControl() {
             </div>
           ) : (
             <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-              Only Owner, Admin, and Manager can configure online booking availability (B6).
+              Only Owner, Admin, and Manager can configure online booking availability.
             </p>
           )}
         </form>

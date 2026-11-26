@@ -137,7 +137,7 @@ describe('ScannerFab — Item Card Triggering (T2-14, W91)', () => {
     expect(dialog).not.toBeNull()
     expect(document.body.textContent).toContain('Sony FX3')
     expect(document.body.textContent).toContain('Kathmandu Cine Arts')
-    expect(document.body.textContent).toContain('Who Has It Now (W91)')
+    expect(document.body.textContent).toContain('Who Has It Now')
   })
 
   it('opens item card sheet via global keyboard wedge outside floor workspaces', async () => {

@@ -153,9 +153,10 @@ describe('Numbering — the Next Number column is previewNextNumber()', () => {
     expect(text).not.toContain('Run AI Analysis')
   })
 
-  it('states that only next_document_number() mints — the preview is read-only', async () => {
+  it('states that only the database mints a number — the preview is read-only', async () => {
     await mount()
-    expect(container.textContent).toContain('only next_document_number() mints')
+    expect(container.textContent).toContain('only the database mints a number')
+    expect(container.textContent).not.toContain('next_document_number')
   })
 
   it('phone renders one card per sequence with the next number under the fields', async () => {

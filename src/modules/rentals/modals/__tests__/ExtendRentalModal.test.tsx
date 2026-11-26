@@ -323,7 +323,7 @@ describe('ExtendRentalModal (T3-17)', () => {
 
     await flush(6)
 
-    expect(container.textContent).toContain('Manager Decision on Clash (B41):')
+    expect(container.textContent).toContain('Manager Decision on Clash:')
     expect(container.textContent).toContain('a) Extend, and move next booking to similar unit')
     expect(container.textContent).toContain('b) Extend, and mark next booking At risk')
     expect(container.textContent).toContain('c) Refuse extension')

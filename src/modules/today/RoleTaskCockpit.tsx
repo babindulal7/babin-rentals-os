@@ -372,7 +372,7 @@ export function RoleTaskCockpit() {
               count={metrics.warehouse.returnCount}
               subtitle={
                 metrics.warehouse.earlyMorningReturnCount > 0
-                  ? `${metrics.warehouse.earlyMorningReturnCount} returns due before 06:00 NPT (W31)`
+                  ? `${metrics.warehouse.earlyMorningReturnCount} returns due before 06:00 NPT`
                   : 'Scheduled returns for intake & check'
               }
               actionLabel="Intake Return"
@@ -403,7 +403,7 @@ export function RoleTaskCockpit() {
               Booking Desk &amp; Coordination
             </h2>
             <span style={{ fontSize: 'var(--t-meta, 12px)', color: 'var(--muted)' }}>
-              1h online response promise (W66)
+              1h online response promise
             </span>
           </div>
 
@@ -421,7 +421,7 @@ export function RoleTaskCockpit() {
               actionLabel="Review Requests"
               actionPath="/rentals"
               icon="external_link"
-              badge={metrics.coordinator.onlineRequestsCount > 0 ? 'Urgent W66' : undefined}
+              badge={metrics.coordinator.onlineRequestsCount > 0 ? 'Urgent' : undefined}
               badgeTone="warning"
             />
             {/* RULING 2026-11-05: Law 15/17 — "customer" never appears in UI copy; "client" instead. See RULINGS-2026-11-05.md */}
@@ -526,7 +526,7 @@ export function RoleTaskCockpit() {
               Operations &amp; Approvals Control
             </h2>
             <span style={{ fontSize: 'var(--t-meta, 12px)', color: 'var(--muted)' }}>
-              Approver when Babin is away (W57)
+              Approver when Babin is away
             </span>
           </div>
 
@@ -540,7 +540,7 @@ export function RoleTaskCockpit() {
             <TaskCard
               title="Approvals Inbox"
               count={metrics.manager.approvalsWaitingCount}
-              subtitle="Damage charges, fee waivers & overrides waiting (T5-10)"
+              subtitle="Damage charges, fee waivers & overrides waiting"
               actionLabel="Open Approvals"
               actionPath="/approvals"
               icon="checklist"
@@ -598,7 +598,7 @@ export function RoleTaskCockpit() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <h2 style={{ fontSize: 'var(--t-h2, 18px)', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
-              Executive Cockpit (W79)
+              Executive Cockpit
             </h2>
             <span style={{ fontSize: 'var(--t-meta, 12px)', color: 'var(--muted)' }}>
               Owner overview · 1-tap navigation

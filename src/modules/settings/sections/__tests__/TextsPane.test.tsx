@@ -105,6 +105,7 @@ describe('TextsPane (T5-13, B20, O-11, Law 7)', () => {
 
     expect(container?.textContent).toContain('Access Restricted')
     expect(container?.textContent).toContain('restricted to Owner and Admin')
+    expect(container?.textContent).toContain('Admin. Your role')
     expect(container?.textContent).not.toContain('Email Subject Line')
   })
 

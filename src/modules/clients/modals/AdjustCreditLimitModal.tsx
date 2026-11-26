@@ -3,6 +3,7 @@ import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Page'
 import { Unavailable } from '../../../components/ui/Unavailable'
 import { rupees, formatMoney } from '../../../lib/money'
+import { creditLimitLabel } from '../clientDisplay'
 import type { Paisa } from '../../../lib/money'
 import type { ClientRecord } from '../../../lib/queries/clients'
 
@@ -84,7 +85,7 @@ export function AdjustCreditLimitModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>Current Credit Limit</span>
             <span style={{ fontSize: 'var(--t-h3)', fontWeight: 700, color: 'var(--text)' }}>
-              {formatMoney(client.creditLimitPaisa)}
+              {creditLimitLabel(client.creditLimitPaisa)}
             </span>
           </div>
 

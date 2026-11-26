@@ -1361,7 +1361,7 @@ function lineNetTotal(input: {
       value: null,
       refusal:
         'This Service line does not say whether it is charged flat or per day, so no amount can be shown for it. ' +
-        'Every Service line must carry a basis (booking_lines_service_needs_basis); reopen the line and set it.',
+        'Every Service line must carry a basis; reopen the line and set it.',
     }
   }
 
@@ -1590,8 +1590,8 @@ function markOrphanedBundleChildren(lines: readonly CanonicalBookingLine[]): {
     orphanedChildIds.push(line.id)
     const sentence =
       'This line belongs to a bundle whose parent line is not among this booking’s live lines, so the ' +
-      'bundle’s rate is not in any total. It prices at Rs 0 by constraint ' +
-      '(booking_lines_bundle_child_is_free, 0002:172) while the line carrying the money is gone, so a ' +
+      'bundle’s rate is not in any total. It prices at Rs 0 by a database rule ' +
+      'while the line carrying the money is gone, so a ' +
       'subtotal computed with it would be short by the whole bundle and would look correct. Restore ' +
       'the bundle line, or remove this line with it.'
     return {
@@ -1619,9 +1619,9 @@ function markOrphanedBundleChildren(lines: readonly CanonicalBookingLine[]): {
           ? null
           : `${count} line${count === 1 ? '' : 's'} on this booking belong${count === 1 ? 's' : ''} to a ` +
             'bundle whose parent line is not live, so no total can be shown. A bundle child prices at ' +
-            'Rs 0 by constraint and the bundle line carries the rate, so losing the parent removes the ' +
-            'whole bundle’s money from the subtotal without removing anything from the screen. Nothing ' +
-            'cascades voided_at from a bundle parent to its children (verified across 0001-0055), so ' +
+            'Rs 0 by a database rule and the bundle line carries the rate, so losing the parent removes the ' +
+            'whole bundle’s money from the subtotal without removing anything from the screen. Removing a bundle ' +
+            'parent does not also remove its children, so ' +
             'this is reachable from one Remove action and is a data defect, not a booking worth less.',
     },
   }
@@ -1862,8 +1862,8 @@ function checkDiscounts(rows: readonly CanonicalBookingDiscount[]): CanonicalDis
       violation: 'Not a number',
       message:
         `This booking's discount cannot be read as a percentage (${count}, totalling ` +
-        `${describe(sumPercent as unknown)}), so no total can be shown. booking_discounts.percent is ` +
-        'numeric(5,2) NOT NULL, so this is a data or query defect rather than a discount of 0%.',
+        `${describe(sumPercent as unknown)}), so no total can be shown. A discount percent must always be ` +
+        'a number, so this is a data or query defect rather than a discount of 0%.',
     }
   }
 
@@ -1873,7 +1873,7 @@ function checkDiscounts(rows: readonly CanonicalBookingDiscount[]): CanonicalDis
       violation: 'Negative',
       message:
         `This booking's discount reads ${sumPercent}% across ${count}, which is negative. ` +
-        'booking_discounts_hard_cap (0002:593) forbids a percent below 0, so no total is shown ' +
+        'A discount below 0% is not allowed, so no total is shown ' +
         'until the rows are corrected — a negative discount would ADD to the Rental Total.',
     }
   }
@@ -1884,8 +1884,7 @@ function checkDiscounts(rows: readonly CanonicalBookingDiscount[]): CanonicalDis
       violation: 'Over cap',
       message:
         `This booking's ${count} total a ${sumPercent}% discount, above the ${DISCOUNT_CAP}% cap. ` +
-        `The cap applies per row and to the stacked total (booking_discounts_hard_cap, 0002:593, and ` +
-        'trg_booking_discounts_stacking, 0044:271), so rows in this state should not exist and no ' +
+        'The cap applies per row and to the stacked total, so rows in this state should not exist and no ' +
         `total is shown from them. The ${sumPercent}% above is what is stored, not a corrected ` +
         `figure — it is deliberately not clamped to ${DISCOUNT_CAP}%, because that would report a ` +
         'discount matching neither the rows nor the rules.',
@@ -2353,7 +2352,7 @@ function rejectAmount(label: string, value: Paisa | null, guidance: string): str
   if (!Number.isInteger(value)) {
     return (
       `${label} is ${value} paisa, which is not a whole paisa, so a total cannot be shown. ` +
-      'Amounts are integer paisa (money.ts §2.3) so that every displayed total reconciles exactly; ' +
+      'Amounts are whole paisa, so that every displayed total reconciles exactly; ' +
       'a fraction here would put a later total out by a paisa with no visible cause.'
     )
   }
@@ -2512,8 +2511,8 @@ export function priceCanonicalBooking(
     'booking discount',
     discountPercent,
     DISCOUNT_CAP,
-    `The cap is ${DISCOUNT_CAP}% per row and ${DISCOUNT_CAP}% summed across stacked rows ` +
-      '(booking_discounts_hard_cap, 0002:593). No total is shown from a discount the rules say ' +
+    `The cap is ${DISCOUNT_CAP}% per row and ${DISCOUNT_CAP}% summed across stacked rows. ` +
+      'No total is shown from a discount the rules say ' +
       'cannot exist, and it is not clamped to fit.',
   )
   if (badDiscount) return { ok: false, reason: badDiscount }
@@ -2528,18 +2527,18 @@ export function priceCanonicalBooking(
     rejectAmount(
       'Crew charges',
       supplied.crew,
-      'Supply the sum of booking_crew_lines_v for this booking, or Rs 0 if it has no crew.',
+      'Supply the total crew charges for this booking, or Rs 0 if it has no crew.',
     ) ??
     rejectAmount(
       'Transport charges',
       supplied.transport,
-      'Supply the sum of booking_transport for this booking, or Rs 0 — §2.1 charges Rs 0 on client pickup.',
+      'Supply the total transport charges for this booking, or Rs 0. Client pickup is charged Rs 0.',
     ) ??
     rejectAmount(
       'Payments received',
       supplied.payments,
       'Supply the sum of this booking’s payments, or Rs 0 if none has been received. Reading payments ' +
-        'needs a Finance or Admin account (0011:61), which is narrower than money visibility, so a ' +
+        'needs a Finance or Admin account, which is narrower than money visibility, so a ' +
         'Coordinator can get zero rows from a booking that has been paid.',
     )
   if (badSupplied) return { ok: false, reason: badSupplied }

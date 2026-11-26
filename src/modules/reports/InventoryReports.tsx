@@ -122,7 +122,7 @@ export default function InventoryReports() {
             <ReportChartCard
               title="Units by Status"
               basis="Live physical unit lifecycle status counts"
-              source="Inventory · product_units_v"
+              source="Inventory · Units"
               description="Current inventory distribution across physical asset states."
             >
               {/* Status proportion bar */}

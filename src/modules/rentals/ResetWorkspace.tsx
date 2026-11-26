@@ -629,21 +629,29 @@ export default function ResetWorkspace({
   )
   const remainingCount = counts.Waiting + counts.Cleaning + counts.QC
 
-  const filterCounts = useMemo<Record<(typeof RESET_FILTERS)[number], number>>(
-    () => ({
-      'Needs action': remainingCount,
-      All: rows.length,
-      Waiting: counts.Waiting,
-      Cleaning: counts.Cleaning,
-      QC: counts.QC,
-      Ready: counts.Ready,
-      Exceptions: exceptionRows.length,
-    }),
-    [rows.length, counts.Waiting, counts.Cleaning, counts.QC, counts.Ready, remainingCount, exceptionRows.length],
-  )
-
+  /* Units, not rows, for every count on this screen: a quantity row (qty 3) is one
+     queue row but three units on the floor (sweep-A-floor-3). */
+  const unitCounts: Record<QueueState, number> = { Waiting: 0, Cleaning: 0, QC: 0, Ready: 0 }
+  activeRows.forEach((r) => {
+    unitCounts[recOf(r.key).queueState] += r.qty
+  })
   const totalUnits = rows.reduce((n, r) => n + r.qty, 0)
   const readyUnits = readyRows.reduce((n, r) => n + r.qty, 0)
+  const remainingUnits = unitCounts.Waiting + unitCounts.Cleaning + unitCounts.QC
+  const exceptionUnits = exceptionRows.reduce((n, r) => n + r.qty, 0)
+
+  const filterCounts = useMemo<Record<(typeof RESET_FILTERS)[number], number>>(
+    () => ({
+      'Needs action': remainingUnits,
+      All: totalUnits,
+      Waiting: unitCounts.Waiting,
+      Cleaning: unitCounts.Cleaning,
+      QC: unitCounts.QC,
+      Ready: unitCounts.Ready,
+      Exceptions: exceptionUnits,
+    }),
+    [totalUnits, unitCounts.Waiting, unitCounts.Cleaning, unitCounts.QC, unitCounts.Ready, remainingUnits, exceptionUnits],
+  )
 
   /* §1.5 — Reset job state, derived from the queue, never hand-set and never written to the booking. */
   const untouched = counts.Cleaning + counts.QC + counts.Ready + exceptionRows.length === 0
@@ -666,7 +674,7 @@ export default function ResetWorkspace({
     {
       label: 'Every item Ready or recorded as an exception',
       pass: remainingCount === 0,
-      detail: remainingCount === 0 ? null : `${remainingCount} item${remainingCount > 1 ? 's' : ''} still in the queue`,
+      detail: remainingCount === 0 ? null : `${remainingUnits} unit${remainingUnits > 1 ? 's' : ''} still in the queue`,
     },
     hasSerializedUnits
       ? {
@@ -1216,7 +1224,7 @@ export default function ResetWorkspace({
         if (damageCount > 0) {
           showSuccessToast(
             'Reset & Damage Case Opened',
-            `Rental ${floor.bookingNo} reset completed. ${damageCount} damage case${damageCount > 1 ? 's' : ''} opened for Manager review (W44, W23).`,
+            `Rental ${floor.bookingNo} reset completed. ${damageCount} damage case${damageCount > 1 ? 's' : ''} opened for Manager review.`,
           )
         } else {
           showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
@@ -1384,7 +1392,7 @@ export default function ResetWorkspace({
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 'var(--t-meta)', color: remainingCount ? 'var(--progress-text)' : 'var(--success-text)', fontWeight: 600 }}>
                   <Icon name={remainingCount ? 'alert_triangle' : 'checklist'} size={12} />
-                  {remainingCount ? `${remainingCount} item${remainingCount > 1 ? 's' : ''} still in the queue` : 'All items Ready'}
+                  {remainingCount ? `${remainingUnits} unit${remainingUnits > 1 ? 's' : ''} still in the queue` : 'All items Ready'}
                 </div>
               </div>
             </div>
@@ -1413,7 +1421,7 @@ export default function ResetWorkspace({
                 { l: 'Status', v: floor.stage, big: true },
                 { l: 'Reset job', v: jobState },
                 { l: 'Units', v: String(totalUnits) },
-                { l: 'Exceptions', v: String(exceptionRows.length), tone: exceptionRows.length ? 'var(--danger-text)' : undefined },
+                { l: 'Exceptions', v: String(exceptionUnits), tone: exceptionRows.length ? 'var(--danger-text)' : undefined },
               ].map((f) => (
                 <div key={f.l} className="floor-summary-cell">
                   <div className="floor-summary-label">{f.l}</div>
@@ -1431,10 +1439,10 @@ export default function ResetWorkspace({
             {!embedded && (
             <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
               {([
-                { key: 'Waiting', label: 'WAITING', sub: 'Not started', value: counts.Waiting, icon: 'timer' as const, tone: TONE.Waiting },
-                { key: 'Cleaning', label: 'CLEANING', sub: 'In progress', value: counts.Cleaning, icon: 'refresh' as const, tone: TONE.Cleaning },
-                { key: 'QC', label: 'QC', sub: 'Quality check', value: counts.QC, icon: 'eye' as const, tone: TONE.QC },
-                { key: 'Ready', label: 'READY', sub: 'Ready to rent', value: counts.Ready, icon: 'checklist' as const, tone: TONE.Ready },
+                { key: 'Waiting', label: 'WAITING', sub: 'Not started', value: unitCounts.Waiting, icon: 'timer' as const, tone: TONE.Waiting },
+                { key: 'Cleaning', label: 'CLEANING', sub: 'In progress', value: unitCounts.Cleaning, icon: 'refresh' as const, tone: TONE.Cleaning },
+                { key: 'QC', label: 'QC', sub: 'Quality check', value: unitCounts.QC, icon: 'eye' as const, tone: TONE.QC },
+                { key: 'Ready', label: 'READY', sub: 'Ready to rent', value: unitCounts.Ready, icon: 'checklist' as const, tone: TONE.Ready },
               ]).map((t) => (
                 <div
                   key={t.key}
@@ -2105,13 +2113,13 @@ export default function ResetWorkspace({
                                         <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
                                           {draft.evidence > 0
                                             ? `${draft.evidence} evidence photo(s) saved for this unit.`
-                                            : 'At least 1 saved photo of the damage is required before recording (Ruling W27).'}
+                                            : 'At least 1 saved photo of the damage is required before recording.'}
                                         </p>
                                       </>
                                     )}
                                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
                                       {draft.type === 'Damaged'
-                                        ? 'Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000) (Ruling W44, W23).'
+                                        ? 'Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000).'
                                         : `${PROBLEM_ROUTE[draft.type as Exclude<ProblemState, 'No Problems'>]} — the item is excluded from the reset dispatch.`}
                                     </p>
                                     <div style={{ display: 'flex', gap: 6 }}>
@@ -2205,7 +2213,7 @@ export default function ResetWorkspace({
                                   onChange={(e) => setBatchAloneOnShift(e.target.checked)}
                                   aria-label="Batch: I am alone on shift"
                                 />
-                                <span>I am alone on shift (W43, L7)</span>
+                                <span>I am alone on shift</span>
                               </label>
                             )}
                             <input
@@ -2309,7 +2317,7 @@ export default function ResetWorkspace({
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--text)' }}>Decontamination &amp; Cleaning</div>
                         <div style={{ color: 'var(--text2)', fontSize: '11px' }}>
-                          {counts.Cleaning > 0 ? `${counts.Cleaning} in progress` : counts.Waiting > 0 ? `${counts.Waiting} awaiting cleaner` : 'Cleaning complete'}
+                          {counts.Cleaning > 0 ? `${unitCounts.Cleaning} in progress` : counts.Waiting > 0 ? `${unitCounts.Waiting} awaiting cleaner` : 'Cleaning complete'}
                         </div>
                       </div>
                     </div>
@@ -2322,7 +2330,7 @@ export default function ResetWorkspace({
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--text)' }}>Technical QC &amp; Config Reset</div>
                         <div style={{ color: 'var(--text2)', fontSize: '11px' }}>
-                          {counts.QC > 0 ? `${counts.QC} units in QC queue` : counts.Ready > 0 ? `${counts.Ready} units passed QC` : 'Awaiting cleaning completion'}
+                          {counts.QC > 0 ? `${unitCounts.QC} units in QC queue` : counts.Ready > 0 ? `${unitCounts.Ready} units passed QC` : 'Awaiting cleaning completion'}
                         </div>
                       </div>
                     </div>
@@ -2335,7 +2343,7 @@ export default function ResetWorkspace({
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--text)' }}>Restocked to Ready</div>
                         <div style={{ color: 'var(--text2)', fontSize: '11px' }}>
-                          {counts.Ready} of {rows.length} units restocked and ready for dispatch
+                          {readyUnits} of {totalUnits} units restocked and ready for dispatch
                         </div>
                       </div>
                     </div>
@@ -2346,8 +2354,11 @@ export default function ResetWorkspace({
                 <Card title="Groups">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {groups.map((g) => {
-                      const ready = g.rows.filter((r) => recOf(r.key).queueState === 'Ready' && recOf(r.key).problem === 'No Problems').length
-                      const allDone = ready === g.rows.length
+                      const ready = g.rows
+                        .filter((r) => recOf(r.key).queueState === 'Ready' && recOf(r.key).problem === 'No Problems')
+                        .reduce((n, r) => n + r.qty, 0)
+                      const groupUnits = g.rows.reduce((n, r) => n + r.qty, 0)
+                      const allDone = ready === groupUnits
                       return (
                         <div
                           key={g.name}
@@ -2395,7 +2406,7 @@ export default function ResetWorkspace({
                               borderRadius: 'var(--r-badge)',
                             }}
                           >
-                            {ready}/{g.rows.length}
+                            {ready}/{groupUnits}
                           </span>
                         </div>
                       )
@@ -2501,10 +2512,10 @@ export default function ResetWorkspace({
             <Card title="This Session's Reset Summary">
               <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: 'var(--sp-md)' }}>
                 {[
-                  { l: 'Ready', v: counts.Ready, tone: 'var(--success-text)', bg: 'var(--st-in-bg)' },
-                  { l: 'Remaining', v: remainingCount, tone: 'var(--progress-text)', bg: 'var(--card2)' },
-                  { l: 'Pending QC', v: counts.QC, tone: 'var(--text)', bg: 'var(--card2)' },
-                  { l: 'Exceptions', v: exceptionRows.length, tone: exceptionRows.length ? 'var(--danger-text)' : 'var(--text)', bg: exceptionRows.length ? 'var(--st-danger-bg)' : 'var(--card2)' },
+                  { l: 'Ready', v: unitCounts.Ready, tone: 'var(--success-text)', bg: 'var(--st-in-bg)' },
+                  { l: 'Remaining', v: remainingUnits, tone: 'var(--progress-text)', bg: 'var(--card2)' },
+                  { l: 'Pending QC', v: unitCounts.QC, tone: 'var(--text)', bg: 'var(--card2)' },
+                  { l: 'Exceptions', v: exceptionUnits, tone: exceptionRows.length ? 'var(--danger-text)' : 'var(--text)', bg: exceptionRows.length ? 'var(--st-danger-bg)' : 'var(--card2)' },
                 ].map((s) => (
                   <div key={s.l} style={{ padding: '10px 12px', borderRadius: 'var(--r-sm)', background: s.bg, border: '1px solid var(--border)' }}>
                     <div className="figure" style={{ fontSize: 'var(--t-h2)', fontWeight: 700, color: s.tone }}>{s.v}</div>
@@ -2513,7 +2524,7 @@ export default function ResetWorkspace({
                 ))}
               </div>
               <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                Ready + Remaining + Exceptions = {counts.Ready + remainingCount + exceptionRows.length} of {rows.length} rows.
+                Ready + Remaining + Exceptions = {readyUnits + remainingUnits + exceptionUnits} of {totalUnits} units.
                 Local to this session until Complete Reset lands.
               </p>
             </Card>
@@ -2541,7 +2552,7 @@ export default function ResetWorkspace({
                     type="button"
                     disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeResetJob}
-                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
+                    title={!isOnline ? 'Custody transitions require an internet connection' : undefined}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 56, padding: '0 16px', borderRadius: 'var(--r-btn)',
                       fontSize: 'var(--t-ui)', fontWeight: 600, fontFamily: 'inherit', cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
@@ -2664,8 +2675,8 @@ function QcRowControls({
           ? 'Nobody is signed in, so a QC pass cannot be recorded against anyone.'
           : selfCheck
             ? isAlone
-              ? `QC will be recorded as ${actor} (Self-QC · alone on shift · audited, W43/L7).`
-              : `QC will be recorded as ${actor}. You cleaned this item: there is no staff picker yet, so a second person is required (0003:887), or confirm you are alone on shift (W43, L7).`
+              ? `QC will be recorded as ${actor} (Self-QC · alone on shift · audited).`
+              : `QC will be recorded as ${actor}. You cleaned this item: there is no staff picker yet, so a second person is required, or confirm you are alone on shift.`
             : `QC will be recorded as ${actor} (Verified 2nd-party inspection; cleaned by ${rec.cleanedBy ?? 'colleague'}).`}
       </span>
       {selfCheck && (
@@ -2687,7 +2698,7 @@ function QcRowControls({
               onChange={(e) => onAloneOnShiftChange(e.target.checked)}
               aria-label="I am alone on shift"
             />
-            <span>I am alone on shift (W43, L7)</span>
+            <span>I am alone on shift</span>
           </label>
           <input
             value={reason}

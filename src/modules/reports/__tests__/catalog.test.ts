@@ -114,7 +114,7 @@ describe('never a zero', () => {
   it('gives every projection a formula and a source, which is what hover shows', () => {
     for (const p of Object.values(PROJECTIONS)) {
       expect(p.formula.length).toBeGreaterThan(20)
-      expect(p.source).toMatch(/pulse/)
+      expect(p.source).toMatch(/Pulse daily ledger/)
       /* The label column plus at least one figure column. */
       expect(p.columns.length).toBeGreaterThanOrEqual(2)
     }
@@ -142,7 +142,7 @@ describe('rulings §11.3 — the three duplications spec 09 left open are closed
        must not have handed it a projection to tidy the catalog up. */
     expect(receivables?.projection).toBeNull()
     expect(receivables?.needs).toMatch(/Outstanding/)
-    expect(receivables?.needs).toMatch(/§4\.17/)
+    expect(receivables?.needs).toMatch(/recalculation/)
   })
 
   it('makes Payments and Expenses deep-link into their Finance tab, not duplicate it', () => {

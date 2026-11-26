@@ -104,7 +104,7 @@ describe('Return damage signature and refusal (T2-19, B19, R-39)', () => {
     await flush()
 
     // Clean return notice displayed
-    expect(host.textContent).toContain('Clean return — 0 flagged items. No signature is required (R-39).')
+    expect(host.textContent).toContain('Clean return — 0 flagged items. No signature is required.')
     expect(complete().disabled).toBe(false)
 
     // Complete session with no signature

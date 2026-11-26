@@ -138,9 +138,7 @@ export async function fetchStaffDirectory(): Promise<StaffDirectoryResult> {
   if (IS_MOCK) {
     return {
       kind: 'unavailable',
-      message:
-        'The staff directory reads staff_directory_v, which the mock corpus does not serve. ' +
-        'Run against the live project or the local Supabase stack (VITE_DATA_SOURCE=mock is set).',
+      message: 'The staff list is not available in this preview. It loads only from the live system.',
     }
   }
 
@@ -197,7 +195,7 @@ export async function fetchStaffDirectory(): Promise<StaffDirectoryResult> {
  */
 export async function revokeStaffPinFor(userId: string): Promise<{ error: string | null }> {
   if (IS_MOCK) {
-    return { error: 'Revoking a PIN needs the live Supabase project (VITE_DATA_SOURCE=mock).' }
+    return { error: 'Revoking a PIN is not available in this preview.' }
   }
   try {
     const { error } = await supabase.rpc('revoke_staff_pin_for', { p_user_id: userId })
@@ -279,7 +277,7 @@ export async function recordPasswordResetRequest(userId: string): Promise<{ erro
  */
 export async function setStaffRole(userId: string, role: SystemRole): Promise<{ error: string | null }> {
   if (IS_MOCK) {
-    return { error: 'Assigning a role needs the live Supabase project (VITE_DATA_SOURCE=mock).' }
+    return { error: 'Assigning a role is not available in this preview.' }
   }
   try {
     const { error } = await supabase.rpc('set_staff_role', { p_user_id: userId, p_role: role })
@@ -304,7 +302,7 @@ export async function setStaffRole(userId: string, role: SystemRole): Promise<{ 
  */
 export async function setStaffActive(userId: string, active: boolean): Promise<{ error: string | null }> {
   if (IS_MOCK) {
-    return { error: "Changing a staff account's status needs the live Supabase project (VITE_DATA_SOURCE=mock)." }
+    return { error: "Changing a staff account's status is not available in this preview." }
   }
   try {
     const { error } = await supabase.rpc('set_staff_active', { p_user_id: userId, p_active: active })

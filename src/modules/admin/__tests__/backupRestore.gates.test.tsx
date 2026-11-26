@@ -134,7 +134,10 @@ describe('Backup & Restore — the Owner gate §10.7 never mentions', () => {
     await mount()
     const reasons = [...container.querySelectorAll('[aria-disabled]')].map((n) => n.getAttribute('aria-label') ?? '')
     expect(reasons.some((r) => r.includes('Owner-only'))).toBe(true)
-    expect(reasons.some((r) => r.toLowerCase().includes('law 6'))).toBe(true)
+    expect(reasons.some((r) => r.toLowerCase().includes('money column'))).toBe(true)
+    /* Each disabled control says what it would do, not one shared restore sentence. */
+    expect(reasons.some((r) => r.includes('A restore overwrites live data'))).toBe(true)
+    expect(reasons.some((r) => r.includes('A full backup file carries every money column'))).toBe(true)
   })
 
   it('gives an Owner the live controls', async () => {
@@ -169,6 +172,7 @@ describe('Backup & Restore — the restore flow, and the failure it must report'
 
     const reasons = [...container.querySelectorAll('[aria-disabled]')].map((n) => n.getAttribute('aria-label') ?? '')
     expect(reasons.some((r) => r.includes('No restore service exists in this build'))).toBe(true)
+    expect(reasons.some((r) => r.includes('No export service exists in this build'))).toBe(true)
   })
 
   it('tells a non-Owner who reaches the dialog that it is not theirs', async () => {

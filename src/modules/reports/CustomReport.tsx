@@ -8,6 +8,7 @@ import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportTool
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import Icon from '../../components/ui/Icon'
 import { formatMoney, rupees } from '../../lib/money'
+import type { Paisa } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { IS_MOCK } from '../../lib/supabase'
@@ -213,9 +214,8 @@ export default function CustomReport() {
   // KPIs derived from custom query
   const kpis = useMemo<Kpi[]>(() => {
     const count = rows.length
-    const totalAmount = rupees(
-      rows.reduce((sum: number, r: CustomRow) => sum + r.rawTotal, 0),
-    )
+    // rawTotal is already integer paisa on every domain, so the sum is paisa too.
+    const totalAmount = rows.reduce((sum: number, r: CustomRow) => sum + r.rawTotal, 0) as Paisa
 
     return [
       {

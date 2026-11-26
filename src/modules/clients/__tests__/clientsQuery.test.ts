@@ -111,6 +111,7 @@ const {
   listClientRecords,
   getClientRecord,
   listMembershipPlans,
+  worstDaysPastDue,
   UNJOINED_MEMBERSHIP_PLACEHOLDER,
 } = await import('../../../lib/queries/clients')
 
@@ -258,6 +259,63 @@ describe('listClientRecords — the select list', () => {
   it('excludes deactivated clients rather than deleting them (Law 3)', async () => {
     await listClientRecords()
     expect(db.state.calls).toContainEqual(['is', 'deactivated_at', null])
+  })
+})
+
+describe('listClientRecords — membership, as the view publishes it', () => {
+  it('carries the view\'s own reading on membershipLevel: a tier, or null for no membership row', async () => {
+    db.state.rows = [row({ membership_level: null }), row({ membership_level: 'Elite' })]
+    const records = await listClientRecords()
+    expect(records.map((r) => r.membershipLevel)).toEqual([null, 'Elite'])
+  })
+})
+
+describe('worstDaysPastDue — the overdue limb of On Stop', () => {
+  // 12:00 on 24 Nov 2026 in Kathmandu, the day the directory audit read.
+  const now = new Date('2026-11-24T12:00:00+05:45')
+
+  it('is 0 when the client holds no issued invoice', () => {
+    expect(worstDaysPastDue([], now)).toBe(0)
+  })
+
+  it('reads the most overdue issued, unpaid invoice: 10 Aug to 24 Nov 2026 is 106 days', () => {
+    expect(
+      worstDaysPastDue(
+        [
+          { status: 'Partially Paid', outstandingAmount: 3_466_725, dueDateAd: '2026-08-10' },
+          { status: 'Sent', outstandingAmount: 4_027_350, dueDateAd: '2026-08-17' },
+        ],
+        now,
+      ),
+    ).toBe(106)
+  })
+
+  it('skips drafts and settled invoices, even when their due dates are long past', () => {
+    expect(
+      worstDaysPastDue(
+        [
+          { status: 'Draft', outstandingAmount: 100_000, dueDateAd: '2026-01-01' },
+          { status: 'Paid', outstandingAmount: 0, dueDateAd: '2026-01-01' },
+        ],
+        now,
+      ),
+    ).toBe(0)
+  })
+
+  it('is 0 for an invoice that is not yet due', () => {
+    expect(worstDaysPastDue([{ status: 'Sent', outstandingAmount: 100_000, dueDateAd: '2026-12-01' }], now)).toBe(0)
+  })
+
+  it('reports unknown, not the best case, when one due date will not parse', () => {
+    expect(
+      worstDaysPastDue(
+        [
+          { status: 'Sent', outstandingAmount: 100_000, dueDateAd: '2026-08-10' },
+          { status: 'Sent', outstandingAmount: 100_000, dueDateAd: 'not-a-date' },
+        ],
+        now,
+      ),
+    ).toBeNull()
   })
 })
 

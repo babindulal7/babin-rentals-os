@@ -48,7 +48,7 @@ export const saveMessageTemplateConfig: ActionConfig<SaveMessageTemplateInput, S
 
   execute: async (input, ctx: ActionContext) => {
     if (!canManageMessageTemplates(ctx.role)) {
-      throw new Error(`Your role (${ctx.role}) cannot edit message templates. Only Owner and Admin can modify templates (B20).`)
+      throw new Error(`Your role (${ctx.role}) cannot edit message templates. Only Owner and Admin can modify templates.`)
     }
 
     const clientUuid = input.clientUuid || generateClientUuid()
@@ -115,7 +115,7 @@ export const restoreMessageTemplateConfig: ActionConfig<RestoreMessageTemplateIn
 
   execute: async (input, ctx: ActionContext) => {
     if (!canManageMessageTemplates(ctx.role)) {
-      throw new Error(`Your role (${ctx.role}) cannot restore message templates. Only Owner and Admin can modify templates (B20).`)
+      throw new Error(`Your role (${ctx.role}) cannot restore message templates. Only Owner and Admin can modify templates.`)
     }
 
     const clientUuid = input.clientUuid || generateClientUuid()

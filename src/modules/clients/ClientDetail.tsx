@@ -22,14 +22,17 @@ import { useClientProfile } from '../../lib/queries/useClients'
 import { useList } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { listBookings, type BookingListRow } from '../../lib/queries/bookings'
-import { listInvoices, invoicesForClient, financeRestriction, type InvoiceListRow } from '../../lib/queries/finance'
+import { invoicesForClient, financeRestriction, type InvoiceListRow } from '../../lib/queries/finance'
 import { listDocuments, documentsForClient, type DocRow } from '../../lib/queries/documents'
 import {
   fetchClientIdDocument,
   fetchClientCollectors,
+  worstDaysPastDue,
   type ClientIdDocument,
   type ClientCollector,
 } from '../../lib/queries/clients'
+import { fetchClientInvoices } from './clientOverdue'
+import { creditLimitLabel } from './clientDisplay'
 import { AddClientIdModal } from './modals/AddClientIdModal'
 import { AddCollectorModal } from './modals/AddCollectorModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
@@ -50,7 +53,6 @@ import type { BrandKey } from '../../lib/status'
 import {
   TIER_TONE,
   creditStopFactsOf,
-  daysPastDue,
   evaluateCreditStop,
   readOverdueStopDays,
   type ClientRecord,
@@ -273,11 +275,6 @@ async function fetchClientBookings(filters: ListFilters) {
   // No `withDeposit`: `bookings.deposit_required` is unmasked money on a base
   // table (Law 6), and this list shows no deposit column.
   return listBookings(filters)
-}
-
-async function fetchClientInvoices(filters: ListFilters) {
-  if (!filters.chips?.['client_id']?.[0]) return { rows: [], total: 0 }
-  return listInvoices(filters)
 }
 
 function ClientDetailView() {
@@ -554,15 +551,8 @@ function ClientDetailView() {
   const overdueDays = useMemo<number | null>(() => {
     if (!money) return null
     if (invoices.loading || invoices.error) return null
-    let worst = 0
-    for (const inv of invoices.rows) {
-      if (inv.status === 'Draft') continue
-      if (inv.outstandingAmount <= 0) continue
-      const late = daysPastDue(inv.dueDateAd)
-      if (late === null) return null
-      if (late > worst) worst = late
-    }
-    return worst
+    /* The same rule the directory preview applies (`useClientOverdueDays`). */
+    return worstDaysPastDue(invoices.rows)
   }, [money, invoices.loading, invoices.error, invoices.rows])
 
   const creditStop = useMemo(
@@ -712,20 +702,15 @@ function ClientDetailView() {
     }
   }
 
-  const creditAvailablePaisa =
-    client.creditLimitPaisa !== undefined && client.creditUsedPaisa !== undefined
-      ? (Math.max(0, client.creditLimitPaisa - client.creditUsedPaisa) as Paisa)
-      : undefined
-
+  /* Credit Available is not tracked yet. Credit used has no source (`toClientRecord`
+     leaves a placeholder 0), so subtracting it from the limit would print the whole
+     limit as a balance. The tile says so and keeps the recorded limit in its note. */
   const kpis: Kpi[] = [
     { label: 'On rent now', value: rentals.error || rentals.loading ? '—' : String(rentals.rows.filter(row => row.stage === 'On Rent' && !row.isCancelled && !row.isClosed).length), icon: 'checklist', accent: 'neutral', note: `${client.totalRentalsCount} total rentals` },
     ...(money
       ? [
           { label: 'Outstanding', value: formatMoney(client.outstandingPaisa), icon: 'card' as const, accent: (client.outstandingPaisa > 0 ? 'danger' : 'neutral') as BrandKey },
-          ...(creditAvailablePaisa !== undefined
-            ? [{ label: 'Credit Available', value: formatMoney(creditAvailablePaisa), icon: 'card' as const, accent: 'neutral' as const }]
-            : [{ label: 'Deposit Held', value: formatMoney(client.depositHeldPaisa), icon: 'box' as const, accent: 'neutral' as const }]
-          ),
+          { label: 'Credit Available', value: 'Not tracked yet', note: `Credit limit: ${creditLimitLabel(client.creditLimitPaisa)}`, icon: 'card' as const, accent: 'neutral' as const },
           { label: 'Lifetime Spend', value: formatMoney(client.totalSpentPaisa), icon: 'activity' as const, accent: 'neutral' as const },
         ]
       : []),
@@ -901,7 +886,7 @@ function ClientDetailView() {
           title="Client On Stop."
           message={
             creditStop.reasons.length > 0
-              ? `${creditStop.reasons.join('. ')}. New rental confirmation is blocked until the account issue is resolved.`
+              ? `${creditStop.reasons.join(' ')} New rental confirmation is blocked until the account issue is resolved.`
               : 'New rental confirmation is blocked until the account issue is resolved.'
           }
         />
@@ -1094,7 +1079,7 @@ function ClientDetailView() {
                       { key: 'discountSource', label: 'Discount source', value: client.discountSource ?? '—' },
                       // Open ⭐ #1 (HIS v2.1) — no per-category deposit-% table is ruled yet.
                       { label: 'Deposit override', value: /* Not set (Open ⭐ #1) */ "Not set" },
-                      { key: 'creditLimitPaisa', label: 'Credit limit', value: formatMoney(client.creditLimitPaisa) },
+                      { key: 'creditLimitPaisa', label: 'Credit limit', value: creditLimitLabel(client.creditLimitPaisa) },
                     ] satisfies EditableRowDef[])
                   : []),
               ]}
@@ -1354,7 +1339,7 @@ function ClientDetailView() {
               rows={[
                 { label: 'Outstanding', value: formatMoney(client.outstandingPaisa), ...(client.outstandingPaisa > 0 ? { tone: 'danger' as const } : {}) },
                 { label: 'Deposit Held', value: formatMoney(client.depositHeldPaisa) },
-                { label: 'Credit Limit', value: formatMoney(client.creditLimitPaisa) },
+                { label: 'Credit Limit', value: creditLimitLabel(client.creditLimitPaisa) },
                 /* No 'Credit Used' row — see the Membership & Credit card. The
                    column does not exist and the formula is unruled, so the Rs 0
                    this used to print was not a balance. */
@@ -1473,7 +1458,7 @@ function ClientDetailView() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           {/* Client ID on File (W50, W51) */}
           <Card
-            title="Client ID on File (W50, W51)"
+            title="Client ID on File"
             action={
               <Button
                 variant="secondary"
@@ -1503,7 +1488,7 @@ function ClientDetailView() {
                   <div>
                     <span style={{ display: 'block', fontSize: 'var(--t-caption)', color: 'var(--text2)' }}>Validity</span>
                     <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
-                      {clientIdDoc.expiryDate ? `Expires ${formatAd(new Date(clientIdDoc.expiryDate))}` : 'Permanent (Nepal Citizenship, W51)'}
+                      {clientIdDoc.expiryDate ? `Expires ${formatAd(new Date(clientIdDoc.expiryDate))}` : 'Permanent (Nepal Citizenship)'}
                     </span>
                   </div>
                   <div>
@@ -1517,7 +1502,7 @@ function ClientDetailView() {
             ) : (
               <EmptyState
                 title="No ID document on file"
-                description="Ruling W50 requires one government ID (citizenship, passport, license) on file before the first equipment handover. Stored once and reused (W51)."
+                description="One government ID (citizenship, passport, license) must be on file before the first equipment handover. It is stored once and reused."
                 actionLabel="Record ID on File"
                 onAction={() => setShowAddIdModal(true)}
               />
@@ -1572,7 +1557,7 @@ function ClientDetailView() {
             ) : (
               <EmptyState
                 title="No authorized collectors saved"
-                description="Save people the client usually sends (assistant, AC, driver). At handover, staff pick the receiver from the list in 1 tap (Rulings W28, W34)."
+                description="Save people the client usually sends (assistant, AC, driver). At handover, staff pick the receiver from the list in 1 tap."
                 actionLabel="Add Collector"
                 onAction={() => setShowAddCollectorModal(true)}
               />
@@ -1890,7 +1875,7 @@ function ClientDetailView() {
                       }}
                     >
                       <Icon name="info" size={12} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span>A reason is required to pause payment reminders (W18b).</span>
+                      <span>A reason is required to pause payment reminders.</span>
                     </span>
                   )}
                 </label>

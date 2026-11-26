@@ -6,7 +6,7 @@ import { Unavailable } from '../../components/ui/Unavailable'
 import { LineChart } from '../../components/ui/Charts'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { useViewport } from '../../lib/device'
-import { formatMoney, parseMoney, rupees } from '../../lib/money'
+import { formatMoney, parseMoney, roundHalfUp, rupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import {
   straightLineSchedule,
@@ -418,14 +418,15 @@ function BookValueCurve({ schedule, openingPaisa }: { schedule: DepreciationYear
   const points = [openingPaisa / 100, ...schedule.map((r) => r.closingPaisa / 100)]
   const labels = ['0', ...schedule.map((r) => String(r.year))]
   const top = Math.max(...points)
-  const yTicks = [3, 2, 1, 0].map((i) => formatMoney(((top * i) / 3) * 100 as Paisa))
+  // Whole paisa: a third of the top value is fractional paisa, which formatMoney would print in full.
+  const yTicks = [3, 2, 1, 0].map((i) => formatMoney(roundHalfUp(((top * i) / 3) * 100) as Paisa))
   return (
     <LineChart
       points={points}
       labels={labels}
       yTicks={yTicks}
       seriesLabel="Written-down value"
-      format={(v) => formatMoney((v * 100) as Paisa)}
+      format={(v) => formatMoney(roundHalfUp(v * 100) as Paisa)}
     />
   )
 }

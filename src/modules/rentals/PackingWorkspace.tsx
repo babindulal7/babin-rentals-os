@@ -819,7 +819,7 @@ export default function PackingWorkspace({
     {
       label: 'Evidence photo taken for this booking',
       pass: !needsPhoto,
-      detail: needsPhoto ? 'Ruled mandatory (§4.31): one photo per booking before completion' : null,
+      detail: needsPhoto ? 'One photo per booking is required before completion.' : null,
     },
   ]
 
@@ -2058,7 +2058,7 @@ export default function PackingWorkspace({
                     type="button"
                     disabled={!isOnline || !canComplete || dispatching}
                     onClick={completePacking}
-                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
+                    title={!isOnline ? 'Custody transitions require an internet connection' : undefined}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',

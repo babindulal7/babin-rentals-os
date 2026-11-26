@@ -294,7 +294,19 @@ export function categoriesFor(money: boolean, rows?: DocRow[]): CategoryMeta[] {
   }))
 }
 
+/**
+ * The All count: exactly the rows the All list shows. Archived documents are
+ * hidden from All (§6), so they are counted on their own Archived tab and left
+ * out here.
+ */
 export function totalDocuments(money: boolean, rows?: DocRow[]): number {
+  return categoriesFor(money, rows)
+    .filter((c) => c.key !== 'Archived')
+    .reduce((a, c) => a + c.count, 0)
+}
+
+/** §6 — everything not deleted, archived included. Backs the Total Documents tile. */
+export function totalDocumentsIncludingArchived(money: boolean, rows?: DocRow[]): number {
   return categoriesFor(money, rows).reduce((a, c) => a + c.count, 0)
 }
 
@@ -331,7 +343,7 @@ export function kpisFor(money: boolean, rows?: DocRow[]): Kpi[] {
   return [
     {
       label: 'Total Documents',
-      value: grouped(totalDocuments(money, rows)),
+      value: grouped(totalDocumentsIncludingArchived(money, rows)),
       icon: 'file',
       accent: 'neutral',
       // §6 — Total counts everything not deleted, **including archived**, and says so.

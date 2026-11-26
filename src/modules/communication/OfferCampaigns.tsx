@@ -287,7 +287,7 @@ export function OfferCampaigns(): React.ReactElement {
           </div>
           <h2 className="text-lg font-bold text-slate-900">Access Restricted</h2>
           <p className="mt-2 text-sm text-slate-700 leading-relaxed">
-            Only <strong>Owner</strong>, <strong>Admin</strong>, and <strong>Manager</strong> (B43) have authority to write and broadcast client offer emails.
+            Only <strong>Owner</strong>, <strong>Admin</strong>, and <strong>Manager</strong> have authority to write and broadcast client offer emails.
           </p>
           <p className="mt-3 text-xs text-slate-500">
             Current role: <span className="font-semibold text-slate-700">{role || 'Unidentified'}</span>. Floor roles, coordinators, and clients are restricted from marketing broadcasts.
@@ -314,7 +314,6 @@ export function OfferCampaigns(): React.ReactElement {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Offer Emails to Clients</h1>
-            <span className="px-2 py-0.5 text-xs font-semibold rounded bg-sky-100 text-sky-800">T5-12</span>
           </div>
           <p className="mt-1 text-sm text-slate-600">
             Compose and broadcast promotional offers to active clients with server-side consent and one-click unsubscribe.
@@ -487,7 +486,7 @@ export function OfferCampaigns(): React.ReactElement {
                 </span>
               </div>
               <div className="pt-4 border-t border-slate-200 text-xs text-slate-500 space-y-1">
-                <p>Every marketing email carries a mandatory one-click unsubscribe link (K6).</p>
+                <p>Every marketing email carries a mandatory one-click unsubscribe link.</p>
                 <p className="text-slate-400">List-Unsubscribe: &lt;https://app.babinrentals.com/unsubscribe?token=...&gt;</p>
               </div>
             </div>
@@ -534,9 +533,10 @@ export function OfferCampaigns(): React.ReactElement {
                 className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
                 <option value="all">All Active Clients</option>
-                <option value="Gold">Gold Members Only</option>
-                <option value="Silver">Silver Members Only</option>
-                <option value="Platinum">Platinum Members Only</option>
+                {/* The membership labels the database and Settings define (membership_label). */}
+                <option value="Access Member">Access Members Only</option>
+                <option value="Partner">Partners Only</option>
+                <option value="Elite Member">Elite Members Only</option>
               </select>
             </div>
 

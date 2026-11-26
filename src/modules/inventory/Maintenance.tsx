@@ -259,7 +259,7 @@ function pillCountsOf(
   records: readonly MaintenanceRecord[],
 ): Record<MaintenanceRegistryFlag | MaintenanceCondition, number> {
   return Object.fromEntries([
-    ...MAINTENANCE_REGISTRY_FLAGS.map((f) => [f, records.filter((m) => (m.flags as string[]).includes(f)).length]),
+    ...MAINTENANCE_REGISTRY_FLAGS.map((f) => [f, records.filter((m) => (registryFlagsShownFor(m) as string[]).includes(f)).length]),
     ...MAINTENANCE_CONDITIONS.map((c) => [c, records.filter((m) => (m.conditions as string[]).includes(c)).length]),
   ]) as Record<MaintenanceRegistryFlag | MaintenanceCondition, number>
 }
@@ -364,6 +364,13 @@ const ACTIVE_STATUSES: MaintenanceStatus[] = ['In Progress', 'Waiting Parts', 'A
 const isOverdue = (m: MaintenanceRecord): boolean =>
   Boolean(m.estCompletion) && m.status !== 'Completed' && m.status !== 'Cancelled' && daysFromToday(m.estCompletion as Date) < 0
 
+/**
+ * The registry flags a row shows. On this screen `Overdue` is the date rule above and nothing else:
+ * the chip count, the filter, the row, the card and the CSV all read this, so they cannot disagree
+ * with the Overdue KPI, which counts `isOverdue` directly. A stored `flags` entry is not consulted.
+ */
+export const registryFlagsShownFor = (m: MaintenanceRecord): MaintenanceRegistryFlag[] => (isOverdue(m) ? ['Overdue'] : [])
+
 function Pill({ tone, icon, title, children }: { tone: StatusKey; icon: IconName; title?: string; children: ReactNode }) {
   const c = STATUS[tone]
   return (
@@ -416,7 +423,7 @@ function JobCard({
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-xs)' }}>
         <Pill tone={STATUS_TONE[m.status]} icon={STATUS_ICON[m.status]}>{m.status}</Pill>
-        {m.flags.map((f) => (
+        {registryFlagsShownFor(m).map((f) => (
           <Pill key={f} tone={registryFlagTone(f)} icon={MAINTENANCE_REGISTRY_FLAG_ICON[f]} title={REGISTRY_FLAG_TITLE}>
             {f}
           </Pill>
@@ -491,7 +498,7 @@ function exportCsv(rows: MaintenanceRecord[], money: boolean) {
       m.type,
       m.priority,
       m.status,
-      m.flags.join(' · ') || '—',
+      registryFlagsShownFor(m).join(' · ') || '—',
       m.conditions.join(' · ') || '—',
       m.technician ?? '—',
       m.vendor ?? '—',
@@ -726,7 +733,7 @@ export function Maintenance({
         if ((MAINTENANCE_STATUSES as string[]).includes(activeFilter)) {
           if (m.status !== activeFilter) return false
         } else if (
-          !(m.flags as string[]).includes(activeFilter) &&
+          !(registryFlagsShownFor(m) as string[]).includes(activeFilter) &&
           !(m.conditions as string[]).includes(activeFilter)
         ) {
           return false
@@ -763,11 +770,14 @@ export function Maintenance({
    */
   const filteredWithIntel = useMemo(
     () =>
-      filteredRecords.map((m) => ({
-        record: m,
-        glance: maintenanceGlance(m, gctx),
-        detail: maintenanceDetailGroups(m, gctx),
-      })),
+      filteredRecords.map((m) => {
+        const shown = { ...m, flags: registryFlagsShownFor(m) }
+        return {
+          record: m,
+          glance: maintenanceGlance(shown, gctx),
+          detail: maintenanceDetailGroups(shown, gctx),
+        }
+      }),
     [filteredRecords, gctx],
   )
 
@@ -1023,7 +1033,8 @@ export function Maintenance({
               </thead>
               <tbody>
                 {filteredWithIntel.map(({ record: m, glance, detail }) => {
-                  const overdue = m.flags.includes('Overdue')
+                  const shownFlags = registryFlagsShownFor(m)
+                  const overdue = shownFlags.includes('Overdue')
                   const bs = m.estCompletion ? toBs(m.estCompletion) : null
                   const days = m.estCompletion ? daysFromToday(m.estCompletion) : null
                   return (
@@ -1077,10 +1088,10 @@ export function Maintenance({
                         <Pill tone={STATUS_TONE[m.status]} icon={STATUS_ICON[m.status]}>
                           {m.status}
                         </Pill>
-                        {(m.flags.length > 0 || m.conditions.length > 0) && (
+                        {(shownFlags.length > 0 || m.conditions.length > 0) && (
                           <span style={{ display: 'flex', gap: 'var(--sp-xs)', marginTop: 6, flexWrap: 'wrap' }}>
                             {/* §1.9 registry flags. */}
-                            {m.flags.map((f) => (
+                            {shownFlags.map((f) => (
                               <Pill key={f} tone={registryFlagTone(f)} icon={MAINTENANCE_REGISTRY_FLAG_ICON[f]} title={REGISTRY_FLAG_TITLE}>
                                 {f}
                               </Pill>
@@ -1210,7 +1221,9 @@ export function Maintenance({
         onSuccess={(job: MaintenanceJobPayload) => upsertRecord(recordFromStartedJob(job))}
       />
 
+      {/* Keyed on the job: the detail seeds its state from `job` on mount only, so a job opened from a row must mount fresh. */}
       <MaintenanceJobDetail
+        key={selectedJobForDetail?.id ?? 'none'}
         job={selectedJobForDetail}
         isOpen={isDetailOpen}
         onClose={() => {

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
 
-const forbidden = /§|\bLaw\s+\d+|\blib\/|TODO|⭐|query module|\bschema\b|\b(?:booking_lines|booking_transport|booking_stage_transitions|document_registry|security_deposits|deposit_movements)\b/i
+const forbidden = /§|\bLaw\s+\d+|\blib\/|TODO|⭐|query module|\bschema\b|\b(?:booking_lines|booking_transport|booking_stage_transitions|document_registry|security_deposits|deposit_movements|supplier_invoices|accounts_payable|audit_events|backup_logs|staff_auth_pins)\b|\b[a-z]+(?:_[a-z]+)*_v\b|(?<![\w-])[WBD]\d{2,3}[a-z]?(?![\w-])|(?<![\w-])O-\d{1,2}(?![\w-])|(?<![\w-])T\d-\d{2}(?![\w-])|\bRULING\b|\bRuling\s+\w|\bcustomer\b|\(\d{4}:\d+\)|\bVITE_\w+/i
 const copyKeys = /^(title|description|reason|message|label|hint|note|tooltip|subtitle|emptyMessage|emptyTitle)$/
 
 export const CONVERTED_MODULES = [

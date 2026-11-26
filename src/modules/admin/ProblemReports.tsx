@@ -156,6 +156,7 @@ export default function ProblemReports() {
               value={status}
               onChange={(v) => patch(() => setStatus(v))}
               options={PROBLEM_REPORT_STATUSES}
+              labelOf={(o) => PROBLEM_REPORT_STATUS_LABELS[o as keyof typeof PROBLEM_REPORT_STATUS_LABELS] ?? o}
               allLabel="All statuses"
             />
             <Filter
@@ -708,12 +709,15 @@ function Filter({
   value,
   onChange,
   options,
+  labelOf,
   allLabel,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   options: readonly string[]
+  /** The text a staff member reads for a stored option value. The value itself is what is filtered on. */
+  labelOf?: (option: string) => string
   /** The "no constraint" row. Omit for a select whose options already cover everything (Period's 'All time'). */
   allLabel?: string
 }) {
@@ -728,7 +732,7 @@ function Filter({
         {allLabel && <option value={ALL}>{allLabel}</option>}
         {options.map((o) => (
           <option key={o} value={o}>
-            {o}
+            {labelOf ? labelOf(o) : o}
           </option>
         ))}
       </select>

@@ -256,7 +256,7 @@ export function ExtendRentalModal({
     }
     if (clashes.length > 0) {
       if (!isManager) {
-        setError('Cannot extend booking alone: an availability clash requires an Owner, Admin, or Manager decision (B41).')
+        setError('Cannot extend booking alone: an availability clash requires an Owner, Admin, or Manager decision.')
         return
       }
       if (managerReason.trim().length < 10) {
@@ -339,7 +339,7 @@ export function ExtendRentalModal({
               type="button"
               onClick={() => {
                 setSentToManager(true)
-                alert('Extension request sent to Manager for decision (B41).')
+                alert('Extension request sent to Manager for decision.')
                 onClose()
               }}
               style={{ minHeight: 44, fontWeight: 700 }}
@@ -543,7 +543,7 @@ export function ExtendRentalModal({
           >
             <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Icon name="alert_triangle" size={16} />
-              Reservation Clash Detected (B41)
+              Reservation Clash Detected
             </div>
             {clashes.map((c, idx) => (
               <div key={idx} style={{ marginTop: 2 }}>
@@ -554,7 +554,7 @@ export function ExtendRentalModal({
             {isManager ? (
               <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 'var(--t-meta)' }}>
-                  Manager Decision on Clash (B41):
+                  Manager Decision on Clash:
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <button
@@ -570,7 +570,7 @@ export function ExtendRentalModal({
                     }}
                   >
                     <div style={{ fontWeight: 700, fontSize: 'var(--t-fine, 12px)', color: 'var(--text)' }}>
-                      a) Extend, and move next booking to similar unit or sub-rent (T3-13)
+                      a) Extend, and move next booking to similar unit or sub-rent
                     </div>
                   </button>
 
@@ -587,7 +587,7 @@ export function ExtendRentalModal({
                     }}
                   >
                     <div style={{ fontWeight: 700, fontSize: 'var(--t-fine, 12px)', color: 'var(--text)' }}>
-                      b) Extend, and mark next booking At risk (B42)
+                      b) Extend, and mark next booking At risk
                     </div>
                   </button>
 
@@ -633,7 +633,7 @@ export function ExtendRentalModal({
               </div>
             ) : (
               <div style={{ marginTop: 6, fontSize: 'var(--t-meta)', color: 'var(--muted)', background: 'var(--card)', padding: 10, borderRadius: 'var(--r-btn)' }}>
-                This clash requires an Owner, Admin, or Manager decision. Coordinators cannot override alone (B41). Use &quot;Send to Manager&quot; below.
+                This clash requires an Owner, Admin, or Manager decision. Coordinators cannot override alone. Use &quot;Send to Manager&quot; below.
               </div>
             )}
           </div>
@@ -648,7 +648,7 @@ export function ExtendRentalModal({
         {canSeeMoney && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-              Pricing for Extra Days (W41)
+              Pricing for Extra Days
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <button

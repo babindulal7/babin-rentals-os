@@ -456,7 +456,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
                 }}
               >
                 <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: 'var(--t-meta)' }}>
-                  Credit for unused days (Ruling D22)
+                  Credit for unused days
                 </span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 6, columnGap: 12, fontSize: 'var(--t-meta)' }}>
                   <span style={{ color: 'var(--text2)' }}>Current plan fee:</span>
@@ -559,7 +559,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
                     }}
                     disabled={saving}
                   />
-                  Renew for a new term (Ruling D23)
+                  Renew for a new term
                 </label>
                 {isRenewal && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 6, columnGap: 12, fontSize: 'var(--t-meta)', marginTop: 4 }}>

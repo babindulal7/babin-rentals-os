@@ -57,6 +57,23 @@ describe('Calendar feed link recovery', () => {
     revokeToken.mockResolvedValue({ revoked: true })
   })
   afterEach(async () => { await unmount() })
+  it('looks the link up as the signed-in user, never as an anonymous call', async () => {
+    await mount()
+    expect(getStatus).toHaveBeenCalledWith({}, { userId: 'owner-1', role: 'Owner' })
+  })
+  it('shows a plain error, and not "No active link", when the lookup fails', async () => {
+    getStatus.mockRejectedValue(new Error('"getCalendarFeedTokenStatus" was called without a session context.'))
+    await mount()
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe('Could not load your calendar feed link. Please try again.')
+    expect(container.textContent).not.toContain('No active link')
+    expect(container.textContent).not.toContain('session context')
+  })
+  it('says "No active link" only when the lookup succeeded with no token', async () => {
+    getStatus.mockResolvedValue({ hasToken: false, createdAt: null, revokedAt: null })
+    await mount()
+    expect(container.textContent).toContain('No active link')
+    expect(container.querySelector('[role="alert"]')).toBeNull()
+  })
   it('explains an active but unrecoverable link without empty copy/open controls', async () => {
     await mount()
     expect(container.querySelector('[role="status"]')?.textContent).toContain('cannot be recovered')

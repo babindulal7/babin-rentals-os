@@ -13,9 +13,12 @@ import { canCreateCalendarFeedToken, canRevokeCalendarFeedToken, canViewCalendar
 export function CalendarFeedControl() {
   const { user } = useAuth()
   const role = user?.role ?? null
+  const userId = user?.id ?? null
   const { showSuccessToast } = useToast()
 
   const [hasToken, setHasToken] = useState(false)
+  // Only a completed lookup can say "No active link". A failed lookup cannot.
+  const [statusKnown, setStatusKnown] = useState(false)
   const [createdAt, setCreatedAt] = useState<string | null>(null)
   const [revokedAt, setRevokedAt] = useState<string | null>(null)
   const [rawToken, setRawToken] = useState<string | null>(null)
@@ -32,18 +35,21 @@ export function CalendarFeedControl() {
     if (!canView) return
     setLoading(true)
     try {
-      const result = await getCalendarFeedTokenStatus({})
+      // The dispatcher refuses a call without the signed-in identity (`ActionContext`).
+      const result = await getCalendarFeedTokenStatus({}, userId && role ? { userId, role } : undefined)
       setHasToken(result.hasToken)
       setCreatedAt(result.createdAt)
       setRevokedAt(result.revokedAt)
+      setStatusKnown(true)
       setError(null)
-    } catch (err) {
+    } catch {
       // Inline, never a toast: a failed read is not a success (UI copy rule).
-      setError(err instanceof Error ? err.message : 'Failed to load calendar feed link')
+      // The raw error stays out of view: it names internal calls, not something staff can act on.
+      setError('Could not load your calendar feed link. Please try again.')
     } finally {
       setLoading(false)
     }
-  }, [canView])
+  }, [canView, userId, role])
 
   useEffect(() => {
     loadStatus()
@@ -53,7 +59,7 @@ export function CalendarFeedControl() {
     if (!canCreate) return
     setSaving(true)
     try {
-      const result = await createCalendarFeedToken({})
+      const result = await createCalendarFeedToken({}, userId && role ? { userId, role } : undefined)
       setRawToken(result.rawToken)
       setHasToken(true)
       setCreatedAt(new Date().toISOString())
@@ -71,7 +77,7 @@ export function CalendarFeedControl() {
     if (!canRevoke || !hasToken) return
     setSaving(true)
     try {
-      const result = await revokeCalendarFeedToken(user?.id ? { userId: user.id } : {})
+      const result = await revokeCalendarFeedToken(userId ? { userId } : {}, userId && role ? { userId, role } : undefined)
       if (result.revoked) {
         setRawToken(null)
         setHasToken(false)
@@ -109,7 +115,7 @@ export function CalendarFeedControl() {
     <Card title="Calendar feed">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
-          {hasToken ? 'Link active — add to Google Calendar, Apple Calendar, Outlook, etc.' : 'No active link'}
+          {hasToken ? 'Link active — add to Google Calendar, Apple Calendar, Outlook, etc.' : statusKnown ? 'No active link' : null}
         </p>
 
         {error && (
@@ -129,7 +135,7 @@ export function CalendarFeedControl() {
             <p style={{ margin: '0 0 var(--sp-sm)', fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
               Create a private iCal feed link to add your jobs to your phone calendar.
               The link contains <strong>only</strong> booking number, time, and client name —
-              no amounts, addresses, or phone numbers (B29, K5).
+              no amounts, addresses, or phone numbers.
             </p>
             <Button variant="primary" onClick={handleCreate} loading={saving}>
               Create calendar feed link

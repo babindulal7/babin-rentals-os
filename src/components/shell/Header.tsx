@@ -255,7 +255,13 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     }
   }
 
-  const initials = (user?.name || 'BR').slice(0, 2).toUpperCase()
+  // First letter of the first and last name ("Babin Dulal" → "BD"). A single name keeps its first two letters.
+  const nameParts = (user?.name ?? '').trim().split(/\s+/).filter(Boolean)
+  const initials = (
+    nameParts.length >= 2
+      ? `${nameParts[0]?.[0] ?? ''}${nameParts[nameParts.length - 1]?.[0] ?? ''}`
+      : (nameParts[0] ?? 'BR').slice(0, 2)
+  ).toUpperCase()
 
   // Evaluate action registry from workspace header data if available
   const hasDirty = Boolean(hData?.unsavedChanges || hData?.isDirty)
@@ -855,7 +861,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 }}
                 title={
                   syncStatus === 'syncing'
-                    ? 'Syncing with Supabase Cloud...'
+                    ? 'Syncing with the cloud...'
                     : pendingCount > 0
                     ? `${pendingCount} offline mutations pending. Click to sync now.`
                     : syncStatus === 'offline'
@@ -1220,8 +1226,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   display: 'grid',
                   placeItems: 'center',
                   color: 'var(--text)',
-                  fontSize: 'var(--t-meta)',
+                  /* The phone "Mock" label is four letters in a 36px disc: it takes the type floor, so it sits inside the ring. */
+                  fontSize: IS_MOCK && isPhone ? 'var(--t-th)' : 'var(--t-meta)',
                   fontWeight: 700,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {IS_MOCK && isPhone ? 'Mock' : initials}

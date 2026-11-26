@@ -390,6 +390,8 @@ function SimpleView({ figures, whyNoFigures }: { figures: PeriodFigures | null; 
   }
 
   const top = [...figures.equipment].sort((a, b) => (b.revenue as number) - (a.revenue as number)).slice(0, 8)
+  // Counted from the rows drawn below, so the heading never promises more models than the table shows.
+  const topHeading = `Top ${top.length} ${top.length === 1 ? 'model' : 'models'} by revenue`
   const maxRevenue = Math.max(...figures.buckets.map((b) => b.revenue as number), 1)
 
   return (
@@ -437,8 +439,8 @@ function SimpleView({ figures, whyNoFigures }: { figures: PeriodFigures | null; 
         under "ROI" would be a fabricated figure with a correct number in it,
         which is the hardest kind to catch.
       */}
-      <Card title="Top 8 models by revenue">
-        <DataTableShell ariaLabel="Top 8 models by revenue" data-table-scroll style={{ overflowX: 'auto' }}>
+      <Card title={topHeading}>
+        <DataTableShell ariaLabel={topHeading} data-table-scroll style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'var(--th-bg)' }}>

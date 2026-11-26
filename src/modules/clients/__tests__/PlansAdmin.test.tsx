@@ -113,6 +113,13 @@ describe('PlansAdmin UI component', () => {
     expect(reactivateBtn).not.toBeNull()
   })
 
+  it('shows each plan fee and default credit once, with a single Rs prefix', async () => {
+    await mount()
+    expect(host?.textContent).toContain('Rs 10,000')
+    expect(host?.textContent).toContain('Rs 50,000')
+    expect(host?.textContent).not.toContain('Rs Rs')
+  })
+
   it('displays read-only view for Coordinator without create or edit buttons', async () => {
     currentRole = 'Coordinator'
     currentCanViewMoney = true

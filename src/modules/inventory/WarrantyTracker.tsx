@@ -194,7 +194,7 @@ function WarrantyPreview() {
                 </tr>
               )}
               {filtered.map((item) => {
-                const roi = item.premiumCost > 0 ? Math.round((item.claimsRecovered / item.premiumCost) * 100) : 0
+                const recoveredPct = item.premiumCost > 0 ? Math.round((item.claimsRecovered / item.premiumCost) * 100) : 0
                 return (
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '10px 16px' }}>
@@ -230,8 +230,8 @@ function WarrantyPreview() {
                           {formatMoney(rupees(item.claimsRecovered))}
                         </div>
                       )}
-                      <div style={{ fontSize: '11px', color: canViewMoney && roi >= 100 ? 'var(--success-text)' : item.claimsCount > 0 ? 'var(--ready-text)' : 'var(--text3)' }}>
-                        {item.claimsCount} claim{item.claimsCount === 1 ? '' : 's'} {canViewMoney && item.claimsCount > 0 ? `· ${roi}% ROI` : ''}
+                      <div style={{ fontSize: '11px', color: canViewMoney && recoveredPct >= 100 ? 'var(--success-text)' : item.claimsCount > 0 ? 'var(--ready-text)' : 'var(--text3)' }}>
+                        {item.claimsCount} claim{item.claimsCount === 1 ? '' : 's'} {canViewMoney && item.claimsCount > 0 ? `· ${recoveredPct}% of premium recovered` : ''}
                       </div>
                     </td>
                     <td style={{ padding: '10px 16px', textAlign: 'right' }}>

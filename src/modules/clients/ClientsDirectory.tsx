@@ -55,7 +55,10 @@ import {
   readOverdueStopDays,
   type ClientRecord,
   type CreditStopVerdict,
+  type DirectoryClientRecord,
 } from '../../lib/queries/clients'
+import { creditLimitLabel, membershipLabel } from './clientDisplay'
+import { useClientOverdueDays } from './clientOverdue'
 import './clients.css'
 
 /* ── last-rental sort key ──────────────────────────────────────────────── */
@@ -428,7 +431,7 @@ export function ClientsDirectory({
   filtersOpen: controlledFiltersOpen,
   onFiltersOpenChange,
 }: {
-  clients: ClientRecord[]
+  clients: DirectoryClientRecord[]
   onRequestAdd: () => void
   /**
    * Re-read the directory from the database after a block or an unblock landed.
@@ -767,6 +770,21 @@ export function ClientsDirectory({
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId) ?? null,
     [clients, selectedClientId],
+  )
+
+  /* The preview answers On Stop with the overdue limb the directory row cannot
+     supply. `useClientOverdueDays` reads the invoices the profile reads, through
+     the same rule, so both screens name the same reason. */
+  const previewOverdueDays = useClientOverdueDays(selectedClient?.dbId ?? null, money)
+  const previewStop = useMemo<CreditStopVerdict | null>(
+    () =>
+      selectedClient
+        ? evaluateCreditStop(
+            creditStopFactsOf(selectedClient, { canViewMoney: money, daysPastDueOnOldestUnpaidInvoice: previewOverdueDays }),
+            { overdueStopDays: stopThresholdDays, canViewMoney: money },
+          )
+        : null,
+    [selectedClient, money, previewOverdueDays, stopThresholdDays],
   )
 
   const resetPage = () => setPage(1)
@@ -1691,6 +1709,7 @@ export function ClientsDirectory({
                           {!narrow && <td style={{ ...td, color: 'var(--text2)' }}>{client.clientType}</td>}
 
                           <td style={td}>
+                            <span style={{ display: 'block', color: 'var(--text)' }}>{membershipLabel(client)}</span>
                             {client.isBlocked ? (
                               <StatusPill tone="red" label="Blocked" icon="alert_triangle" />
                             ) : stopVerdicts.get(client.id)?.onStop ? (
@@ -1701,9 +1720,7 @@ export function ClientsDirectory({
                               <StatusPill tone="emerald" label="Active" icon="check" liveDot />
                             ) : client.isVerified ? (
                               <StatusPill tone="emerald" label="Verified" icon="check" />
-                            ) : (
-                              <StatusPill tone="slate" label={client.membership || 'Standard'} icon="user" />
-                            )}
+                            ) : null}
                           </td>
 
                           {!narrow && (
@@ -1919,7 +1936,7 @@ export function ClientsDirectory({
             open={Boolean(selectedClient)}
             onClose={() => setSelectedClientId(null)}
             title="CLIENT PREVIEW"
-            subtitle={selectedClient ? `${selectedClient.id} · ${selectedClient.membership}` : undefined}
+            subtitle={selectedClient ? `${selectedClient.id} · ${membershipLabel(selectedClient)}` : undefined}
             status={selectedClient?.isVip ? <Tone text="VIP" entity /> : undefined}
             actions={
               selectedClient ? (
@@ -1953,7 +1970,7 @@ export function ClientsDirectory({
                     )}
                   </div>
                   <div className="figure" style={{ fontSize: '13px', color: 'var(--muted)', marginTop: 4 }}>
-                    #{selectedClient.id} · {selectedClient.membership} · {selectedClient.clientType}
+                    #{selectedClient.id} · {membershipLabel(selectedClient)} · {selectedClient.clientType}
                   </div>
                 </div>
 
@@ -2002,7 +2019,7 @@ export function ClientsDirectory({
                   balances behind it are the money surface Law 6 removes.
                 */}
                 {(() => {
-                  const stop = stopVerdicts.get(selectedClient.id)
+                  const stop = previewStop
                   if (!stop) return null
                   if (stop.onStop) {
                     return (
@@ -2175,7 +2192,7 @@ export function ClientsDirectory({
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)' }}>
                         <span style={{ color: 'var(--text2)' }}>{t('clients.drawer.approvedCreditLimit', 'Approved credit limit')}</span>
                         <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
-                          {formatMoney(selectedClient.creditLimitPaisa)}
+                          {creditLimitLabel(selectedClient.creditLimitPaisa)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', marginTop: 6 }}>

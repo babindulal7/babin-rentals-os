@@ -20,7 +20,9 @@ export default function QrGenerator() {
   const [tagText, setTagText] = useState('FX3-9941')
   const [format, setFormat] = useState<'QR' | 'Barcode'>('QR')
   const assetCode = tagText.trim()
-  const supported = assetCode.length > 0 && (format === 'QR' || /^[\\x20-\\x7E]+$/.test(assetCode))
+  // Code 128 subset B encodes every printable ASCII character, space through tilde
+  // (see generateCode128Svg), so the 1D check accepts exactly that range.
+  const supported = assetCode.length > 0 && (format === 'QR' || /^[\x20-\x7E]+$/.test(assetCode))
   // Only numeric SVG geometry comes from these generators; asset text is never
   // interpolated into raw markup. A failure is shown as unavailable, not faked.
   const previewSvg = useMemo(() => {

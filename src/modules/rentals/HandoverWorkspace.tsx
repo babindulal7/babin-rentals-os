@@ -876,7 +876,7 @@ export default function HandoverWorkspace({
       n: 6,
       label: 'Evidence Captured',
       passing: evidencePassing,
-      blocking: evidencePassing ? null : 'Ruled mandatory (§4.31): one photo per booking before completion',
+      blocking: evidencePassing ? null : 'One photo per booking is required before completion.',
     },
   ]
   const firstBlockedGate = gates.find((g) => !g.passing) ?? null
@@ -1521,7 +1521,7 @@ export default function HandoverWorkspace({
             {!embedded && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-lg)', flexWrap: 'wrap' }}>
               {!embedded && (
-                <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ minWidth: 0, flex: phone ? '1 1 100%' : 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
                     <h1 style={{ margin: 0, fontSize: 'var(--t-h1)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.015em' }}>
                       Handover Workspace
@@ -1563,7 +1563,8 @@ export default function HandoverWorkspace({
                 </div>
               )}
 
-              <div style={{ minWidth: 260, flex: 1 }}>
+              {/* Phone: the progress panel takes its own line under the title, so the two never share a row (sweep-A-floor-6). */}
+              <div style={{ minWidth: phone ? 0 : 260, flex: phone ? '1 1 100%' : 1 }}>
                 <div style={{ display: 'flex', gap: 10, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                   <span>Handover Progress</span>
                   {/* HO-14 — the bar is UNIT-weighted and the checklist chips below count
@@ -1677,7 +1678,7 @@ export default function HandoverWorkspace({
                   <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                       <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-                        Client Government ID (W50, W51)
+                        Client Government ID
                       </span>
                       {idDocument ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'color-mix(in srgb, var(--success) 12%, var(--card))', color: 'var(--success-text)', fontSize: 'var(--t-caption)', fontWeight: 700 }}>
@@ -1712,7 +1713,7 @@ export default function HandoverWorkspace({
                     ) : (
                       <div style={{ padding: '8px 10px', borderRadius: 'var(--r-xs)', background: 'color-mix(in srgb, var(--warn-text) 8%, var(--card))', border: '1px solid color-mix(in srgb, var(--warn-text) 30%, transparent)' }}>
                         <span style={{ fontSize: 'var(--t-caption)', color: 'var(--warn-text)', fontWeight: 600 }}>
-                          First-time client — one government ID must be recorded on file before handover (Ruling W50).
+                          First-time client — one government ID must be recorded on file before handover.
                         </span>
                       </div>
                     )}
@@ -1722,7 +1723,7 @@ export default function HandoverWorkspace({
                   <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                       <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-                        Receiver / Collector (1 Tap, W28/W34)
+                        Receiver / Collector (1 Tap)
                       </span>
                       <button
                         type="button"
@@ -1906,12 +1907,7 @@ export default function HandoverWorkspace({
                   title="Equipment"
                   bodyStyle={{ padding: 0 }}
                   action={
-                    phone ? (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
-                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
-                      </div>
-                    ) : (
+                    phone ? undefined : (
                       <>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan Barcode</Button>
@@ -1921,6 +1917,13 @@ export default function HandoverWorkspace({
                     )
                   }
                 >
+                  {/* Phone: these actions wrap in the body. In the header they could not wrap and ran off a 375px screen (sweep-A-floor-6). */}
+                  {phone && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+                      <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
+                      <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', alignItems: 'center', background: 'var(--card2)' }}>
                     <div
                       className="floor-scanner-input-wrap"
@@ -2163,9 +2166,10 @@ export default function HandoverWorkspace({
                 <Card title="Session Gates">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
                     {gates.map((g) => (
-                      <div key={g.n} data-operation-gate={g.n} className={`floor-gate-row ${g.passing ? 'is-pass' : 'is-pending'}`}>
+                      <div key={g.n} data-operation-gate={g.n} className={`floor-gate-row ${g.passing ? 'is-pass' : 'is-pending'}`} style={phone ? { flexWrap: 'wrap' } : undefined}>
                         <Icon name={g.passing ? 'checklist' : 'alert_triangle'} size={14} style={{ color: g.passing ? 'var(--success-text)' : 'var(--progress-text)', marginTop: 2, flexShrink: 0 }} />
-                        <div style={{ minWidth: 0, flex: 1 }}>
+                        {/* Phone: the text takes its own line so the gate's buttons wrap under it instead of running off the screen (sweep-A-floor-6). */}
+                        <div style={{ minWidth: 0, flex: phone ? '1 1 160px' : 1 }}>
                           <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: g.passing ? 'var(--text)' : 'var(--progress-text)' }}>{g.label}</div>
                           {!g.passing && g.blocking && <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>{g.blocking}</div>}
                         </div>
@@ -2559,12 +2563,12 @@ export default function HandoverWorkspace({
                 <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
                   Nothing is saved until {primaryLabel} — cancelling discards this session
                 </span>
-                <span style={{ marginLeft: 'auto' }} title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : (gateSummary ?? undefined)}>
+                <span style={{ marginLeft: 'auto' }} title={!isOnline ? 'Custody transitions require an internet connection' : (gateSummary ?? undefined)}>
                   <button
                     type="button"
                     disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeSession}
-                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
+                    title={!isOnline ? 'Custody transitions require an internet connection' : undefined}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',

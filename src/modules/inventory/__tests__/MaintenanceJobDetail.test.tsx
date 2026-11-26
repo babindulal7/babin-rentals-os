@@ -74,6 +74,18 @@ describe('MaintenanceJobDetail component', () => {
     })
   }
 
+  it('shows no not-found card when no job is selected (tab view, nothing opened)', async () => {
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <MaintenanceJobDetail job={null} isOpen={false} onClose={() => {}} />
+        </MemoryRouter>
+      )
+    })
+    expect(container.textContent).not.toContain('Maintenance Job Not Found')
+    expect(container.textContent).not.toContain('undefined')
+  })
+
   it('renders equipment details, serial number, and status', async () => {
     await mount()
     expect(container.textContent).toContain('Sony FX3 Cinema Camera')

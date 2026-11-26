@@ -59,7 +59,7 @@ export default function CrewTdsReport() {
         value: m.configuredRate !== null ? `${m.configuredRate}%` : 'Rate not set',
         icon: 'receipt',
         accent: m.configuredRate !== null ? 'neutral' : 'warn',
-        note: m.configuredRate !== null ? 'Configured in Settings ▸ Financial' : 'Accountant must set rate (O-5)',
+        note: m.configuredRate !== null ? 'Configured in Settings ▸ Financial' : 'Accountant must set rate',
         definition: 'Applicable TDS rate for contractor / crew service payments in Nepal.',
       },
       {
@@ -147,7 +147,7 @@ export default function CrewTdsReport() {
       <PageHeader
         icon="receipt"
         title="Crew TDS Report"
-        description="Monthly crew payouts, TDS withheld, and net payable for the accountant (Ruling D25 / O-5)."
+        description="Monthly crew payouts, TDS withheld, and net payable for the accountant."
       />
 
       <ReportToolbar

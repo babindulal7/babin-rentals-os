@@ -204,6 +204,13 @@ describe('Settings page — load states', () => {
     await mount('?tab=business')
     expect(text()).toContain('Tax & fiscal year')
   })
+
+  it('Restricted (texts): the panel reads Owner and Admin, then a full stop, then Your role', async () => {
+    state.role = 'Manager'
+    await mount('?tab=texts')
+    expect(text()).toContain('Access Restricted')
+    expect(text()).toContain('restricted to Owner and Admin. Your role')
+  })
 })
 
 describe('Settings ▸ People ▸ Staff Directory — read states', () => {

@@ -245,7 +245,7 @@ export function PaymentLinkModal({
             >
               <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--brand-info, #3b82f6)' }} />
               <span>
-                <strong>Deposit Policy (O-3, B38):</strong> Security deposits are never included in online payment links. They are handled separately at equipment handover.
+                <strong>Deposit Policy:</strong> Security deposits are never included in online payment links. They are handled separately at equipment handover.
               </span>
             </div>
 

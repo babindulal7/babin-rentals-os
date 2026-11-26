@@ -202,7 +202,7 @@ export interface ResetDamageCaseInput {
 export function validateResetDamageReport(i: ResetDamageCaseInput): { valid: boolean; errors: string[] } {
   const errors: string[] = []
   if (i.photos < MIN_PHOTOS) {
-    errors.push(`At least ${MIN_PHOTOS} saved evidence photo is required for damage found during reset (Ruling W27).`)
+    errors.push(`At least ${MIN_PHOTOS} saved evidence photo is required for damage found during reset.`)
   }
   if (!i.description || i.description.trim().length < 5) {
     errors.push('Damage description of at least 5 characters is required.')

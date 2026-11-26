@@ -96,7 +96,7 @@ describe('ItemCardSheet (T2-14, W91)', () => {
       qcSkipped: false,
       qcSkipReason: null,
       problemState: 'No Problems',
-      summary: 'Cleaned & self-checked by Roshan Shrestha (alone on shift, W43)',
+      summary: 'Cleaned & self-checked by Roshan Shrestha (alone on shift)',
     },
     openDamage: {
       hasDamage: false,
@@ -126,7 +126,7 @@ describe('ItemCardSheet (T2-14, W91)', () => {
     expect(host.textContent).toContain('On Rent')
 
     // Who has it now (W91)
-    expect(host.textContent).toContain('Who Has It Now (W91)')
+    expect(host.textContent).toContain('Who Has It Now')
     expect(host.textContent).toContain('Kathmandu Cine Arts')
     expect(host.textContent).toContain('9841000000')
     expect(host.textContent).toContain('#BK-2026-0001')
@@ -141,7 +141,7 @@ describe('ItemCardSheet (T2-14, W91)', () => {
     expect(host.textContent).toContain('Starts in 2 days')
 
     // Last reset
-    expect(host.textContent).toContain('Cleaned & self-checked by Roshan Shrestha (alone on shift, W43)')
+    expect(host.textContent).toContain('Cleaned & self-checked by Roshan Shrestha (alone on shift)')
 
     // Open damage
     expect(host.textContent).toContain('No open damage')

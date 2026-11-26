@@ -181,7 +181,7 @@ describe('getItemCardData & lookupItemCard (T2-14, W91)', () => {
     // Reset (W43 self-checked)
     expect(card?.lastReset).not.toBeNull()
     expect(card?.lastReset?.qcSelfChecked).toBe(true)
-    expect(card?.lastReset?.summary).toContain('alone on shift, W43')
+    expect(card?.lastReset?.summary).toContain('alone on shift)')
 
     // Open damage
     expect(card?.openDamage.hasDamage).toBe(false)

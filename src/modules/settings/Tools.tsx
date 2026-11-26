@@ -1095,23 +1095,23 @@ const QUICK_ACTIONS: readonly string[] = ['dof', 'timecode', 'shutter']
 const OPEN_DECISIONS: ReadonlyArray<{ q: string; why: string }> = [
   {
     q: 'Do clients ask you for call sheets and shot lists, or is that their AD’s job?',
-    why: 'It decides whether §4 is a free tool, a paid service line, or nothing at all.',
+    why: 'It decides whether this is a free tool, a paid service line, or nothing at all.',
   },
   {
     q: 'Which calculators do you and your crew actually use today — on paper, on a phone app, or not at all?',
-    why: 'Eight are built from §3. Which of them earn their place is unknown.',
+    why: 'Eight are built from the camera and lens formulas. Which of them earn their place is unknown.',
   },
   {
     q: 'Battery draw figures — measured per body, or manufacturer specification?',
-    why: '§3.8 insists on measured. Nothing in the build stores either.',
+    why: 'The battery calculator insists on measured figures. Nothing in the build stores either.',
   },
   {
     q: 'Should the storage and battery calculators add items to a booking, or just inform?',
-    why: '§2.1 calls the add-to-booking step "the one that turns a calculator into revenue".',
+    why: 'Add-to-booking is "the one that turns a calculator into revenue".',
   },
   {
     q: 'Palette or page — is ⌘K the primary way into a tool, with this page as the browse view?',
-    why: '§7. The palette exists in the shell but indexes navigation only; it does not know a tool by name.',
+    why: 'The palette exists in the shell but indexes navigation only; it does not know a tool by name.',
   },
 ]
 
@@ -1451,7 +1451,7 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
                 <thead>
                   <tr style={{ background: 'var(--th-bg)' }}>
                     <th style={thStyle}>Render category</th>
-                    <th style={thStyle}>Ruling</th>
+                    <th style={thStyle}>Outcome</th>
                   </tr>
                 </thead>
                 <tbody>

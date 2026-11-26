@@ -74,7 +74,8 @@ export const StickyFloorBar: FC<StickyFloorBarProps> = ({
           flexDirection: 'column',
           justifyContent: 'center',
           minWidth: 0,
-          flexShrink: 1,
+          /* Never squeezed: the counter must stay readable beside the buttons (sweep-A-floor-6). */
+          flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -131,7 +132,7 @@ export const StickyFloorBar: FC<StickyFloorBarProps> = ({
       </div>
 
       {/* ── Right: Handheld Action Buttons ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 }}>
         {secondaryAction && (
           <button
             type="button"
@@ -219,7 +220,7 @@ export const StickyFloorBar: FC<StickyFloorBarProps> = ({
           }}
         >
           <Icon name={primaryAction.icon ?? 'check'} size={16} />
-          <span>{primaryAction.label}</span>
+          <span style={{ whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.2 }}>{primaryAction.label}</span>
         </button>
       </div>
     </aside>

@@ -103,14 +103,14 @@ export default function RentalReports() {
       },
       {
         label: 'Shortest Rental',
-        value: `${durationData.shortestDuration} Day`,
+        value: `${durationData.shortestDuration} ${durationData.shortestDuration === 1 ? 'Day' : 'Days'}`,
         icon: 'calendar',
         accent: 'neutral',
         note: 'Shortest non-cancelled booking',
       },
       {
         label: 'Longest Rental',
-        value: `${durationData.longestDuration} Days`,
+        value: `${durationData.longestDuration} ${durationData.longestDuration === 1 ? 'Day' : 'Days'}`,
         icon: 'calendar',
         accent: 'progress',
         note: 'Longest non-cancelled booking',
@@ -618,11 +618,13 @@ export default function RentalReports() {
               <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
                 Categorization of lost quotes and dropped reservations.
               </p>
-              {reasonSlices.length > 0 && (
+              {reasonSlices.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', alignItems: 'center' }}>
                   <Donut slices={reasonSlices} size={180} />
                   <Legend slices={reasonSlices} />
                 </div>
+              ) : (
+                <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', margin: 0 }}>No cancelled bookings to show.</p>
               )}
             </div>
 

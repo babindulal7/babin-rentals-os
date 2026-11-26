@@ -181,6 +181,8 @@ function mapTypeToCategory(docType: string): Exclude<CategoryKey, 'Archived'> {
     case 'Damage Report':
     case 'Insurance Claim':
       return 'Cases'
+    case 'Template':
+      return 'Templates'
     default:
       return 'Rental'
   }

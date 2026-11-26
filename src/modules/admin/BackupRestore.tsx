@@ -218,8 +218,14 @@ export default function BackupRestore() {
    * If that predicate ever moves, this page moves with it by construction.
    */
   const mayManage = canManageSettings(user?.role ?? 'Client')
-  const OWNER_ONLY =
-    'Owner-only, and two-factor gated. Administration §25.2 — a restore overwrites live data and a full backup file carries every money column Law 6 hides from the floor, with no RLS in front of it.'
+  /* Each disabled control states its own gate. Owner-only is what every backup control requires; the restore and export
+     reasons add what that control would do if it ran. Administration §25.2 and Law 6 are in the code comments, not the copy. */
+  const OWNER_ONLY = 'Owner-only, and two-factor gated.'
+  const OWNER_ONLY_RESTORE = 'Owner-only, and two-factor gated. A restore overwrites live data.'
+  const OWNER_ONLY_EXPORT =
+    'Owner-only, and two-factor gated. A full backup file carries every money column the floor is not allowed to see, and nothing guards it.'
+  const NO_BACKUP_SERVICE = 'No backup service exists in this build, so pressing this would write nothing while saying it had.'
+  const NO_EXPORT_SERVICE = 'No export service exists in this build, so pressing this would produce nothing.'
 
   /**
    * Phase 2.7's named reason. The previous trigger opened `SystemRestoreModal`,
@@ -228,7 +234,15 @@ export default function BackupRestore() {
    */
   const RESTORE_UNAVAILABLE =
     'No restore service exists in this build — pressing this would stage a checkpoint and a 2FA step that verify nothing. ' +
-    'The real flow arrives with the service (Phase 2.7): Owner-only, two-factor, sandbox-first, mandatory pre-restore checkpoint.'
+    'The real flow arrives with the service: Owner-only, two-factor, sandbox-first, mandatory pre-restore checkpoint.'
+
+  /* A quick action's reason: the Owner is told why this build cannot run it; anyone else is told the gate that applies. */
+  const quickActionReason = (label: string): string => {
+    if (/^Create/.test(label)) return mayManage ? NO_BACKUP_SERVICE : OWNER_ONLY
+    if (/^Restore/.test(label)) return mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY_RESTORE
+    if (/^Export/.test(label)) return mayManage ? NO_EXPORT_SERVICE : OWNER_ONLY_EXPORT
+    return 'Specified but not built — this build has no backup service to run it against.'
+  }
 
   /**
    * Backup History — the real record. RLS on `backup_logs` admits Owner/Admin
@@ -262,7 +276,7 @@ export default function BackupRestore() {
        SUCCESS_FABRICATION_REGISTER entry on the most sensitive file in the
        product. */
     setDownloadError(
-      `No file was downloaded for ${backupNo}. This build has no backup storage service, so there is nothing to fetch — and an ungated download of a full backup would carry every money column Law 6 withholds from the floor. Nothing was written, sent or exposed.`,
+      `No file was downloaded for ${backupNo}. This build has no backup storage service, so there is nothing to fetch — and an ungated download of a full backup would carry every money column that is withheld from the floor. Nothing was written, sent or exposed.`,
     )
   }
 
@@ -287,12 +301,12 @@ export default function BackupRestore() {
                 Back up now
               </Button>
             </Unavailable>
-            <Unavailable reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY}>
+            <Unavailable reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY_RESTORE}>
               <Button icon="refresh" disabled>
                 Restore
               </Button>
             </Unavailable>
-            <Unavailable reason={OWNER_ONLY}>
+            <Unavailable reason={mayManage ? NO_EXPORT_SERVICE : OWNER_ONLY_EXPORT}>
               <Button icon="download" disabled>
                 Export
               </Button>
@@ -421,7 +435,7 @@ export default function BackupRestore() {
                 skeletonRows={6}
                 emptyTitle="No backups recorded yet"
                 emptyMessage={
-                  'Every completed backup writes a row to backup_logs, and this list is that record. ' +
+                  'Every completed backup is written to the backup log, and this list is that log. ' +
                   'It is empty because no backup service has run yet — not because anything was removed.'
                 }
               >
@@ -488,7 +502,7 @@ export default function BackupRestore() {
                                   icon="refresh"
                                   label={`Restore from backup ${b.backupNo}`}
                                   enabled={false}
-                                  reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY}
+                                  reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY_RESTORE}
                                 />
                                 <Unavailable reason="The row menu (verify · duplicate · retention) is specified but not built yet.">
                                   <span style={rowActionStyle(false)}>
@@ -580,7 +594,7 @@ export default function BackupRestore() {
                     and freezing them would make the card unreadable rather than
                     more truthful.
                   */}
-                  <Unavailable reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY} style={{ display: 'block', width: '100%' }}>
+                  <Unavailable reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY_RESTORE} style={{ display: 'block', width: '100%' }}>
                     <button
                       type="button"
                       disabled
@@ -651,7 +665,7 @@ export default function BackupRestore() {
                 control is parked; everyone else reads the Owner gate that will
                 still apply when it arrives.
               */}
-              <Unavailable reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY} style={{ marginTop: 'var(--sp-md)', width: '100%' }}>
+              <Unavailable reason={mayManage ? RESTORE_UNAVAILABLE : OWNER_ONLY_RESTORE} style={{ marginTop: 'var(--sp-md)', width: '100%' }}>
                 <span
                   style={{
                     display: 'inline-flex',
@@ -798,11 +812,7 @@ export default function BackupRestore() {
               {QUICK_ACTIONS.map((q) => (
                 <Unavailable
                   key={q.label}
-                  reason={
-                    /^(Create|Restore|Export)/.test(q.label)
-                      ? OWNER_ONLY
-                      : 'Specified but not built — this build has no backup service to run it against.'
-                  }
+                  reason={quickActionReason(q.label)}
                   style={{ width: '100%' }}
                 >
                   <span

@@ -549,3 +549,37 @@ describe('equipment section save parity', () => {
     expect(saveRecordSection.mock.calls[0]![0]).toMatchObject({section: 'location', values: {}, rows: [{id: 'unit-1', warehouse_id: 'c1', rack: 'B'}]})
   })
 })
+
+describe('record status and staff-facing copy', () => {
+  const recordStatus = () => container.querySelector('[aria-label="Record actions"] [role="status"]')?.textContent
+  const createButton = () => container.querySelector<HTMLButtonElement>('button[aria-label="Create client"]')!
+
+  it('reports No unsaved changes on an untouched new record and keeps Create enabled', async () => {
+    await mount('client')
+    expect(recordStatus()).toBe('No unsaved changes')
+    expect(createButton().disabled).toBe(false)
+  })
+
+  it('reports Unsaved changes on a new record once a field has been edited', async () => {
+    await mount('client')
+    await type('name', 'New Films')
+    expect(recordStatus()).toBe('Unsaved changes')
+  })
+
+  it('keeps the edit indicator: clean until a field changes', async () => {
+    readRecordEditor.mockResolvedValue(clientSnapshot)
+    await mount('client', 'cl-1')
+    expect(recordStatus()).toBe('No unsaved changes')
+    await type('city', 'Lalitpur')
+    expect(recordStatus()).toBe('Unsaved changes')
+  })
+
+  it('shows the catalogue and stock safety copy on the equipment form without internal codes', async () => {
+    await mount('equipment')
+    const text = container.textContent ?? ''
+    expect(text).toContain('Online Catalogue Publication')
+    expect(text).not.toContain('(W64)')
+    expect(text).toContain('Stock safety:')
+    expect(text).not.toContain('Invariant Guarantee')
+  })
+})

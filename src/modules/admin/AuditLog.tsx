@@ -10,6 +10,7 @@ import { PageBody } from '../../components/ui/PageBody'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
 import { toBs, formatBs, formatAdDateTime } from '../../lib/bs'
+import { authEventLabel } from '../../lib/authAudit'
 import { useList } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import type { Json } from '../../types/supabase'
@@ -414,6 +415,18 @@ function isJsonObject(v: Json | null): v is { [key: string]: Json | undefined } 
 }
 
 /**
+ * A snapshot value as the page shows it. An auth event code reads as its label (`auth.login` → Login); the
+ * stored row keeps the code. Anything else goes through `fmtValue` unchanged.
+ */
+function snapshotValue(field: string, v: Json | undefined): string {
+  if (field === 'event') {
+    const label = authEventLabel(v)
+    if (label) return label
+  }
+  return fmtValue(v)
+}
+
+/**
  * §10.4's `before → after`, derived from the two snapshots the writer recorded.
  *
  * The union of keys across `old_values` and `new_values`, keeping only the
@@ -438,7 +451,7 @@ function auditChanges(row: AuditEventListRow): AuditFieldChange[] {
   const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])]
 
   return keys
-    .map((k) => ({ field: k, before: fmtValue(before[k]), after: fmtValue(after[k]) }))
+    .map((k) => ({ field: k, before: snapshotValue(k, before[k]), after: snapshotValue(k, after[k]) }))
     .filter((c) => c.before !== c.after)
 }
 

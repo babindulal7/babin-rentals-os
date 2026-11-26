@@ -106,7 +106,7 @@ describe('OfferCampaigns UI (T5-12, B43, B50)', () => {
     })
 
     expect(container.textContent).toContain('Access Restricted')
-    expect(container.textContent).toContain('Only Owner, Admin, and Manager (B43) have authority')
+    expect(container.textContent).toContain('Only Owner, Admin, and Manager have authority')
   })
 
   it('renders composer and campaign history for authorized role (Owner)', async () => {
@@ -118,6 +118,16 @@ describe('OfferCampaigns UI (T5-12, B43, B50)', () => {
     expect(container.textContent).toContain('Compose Offer')
     expect(container.textContent).toContain('Subject Line')
     expect(container.textContent).toContain('Autumn Cinema Package')
+  })
+
+  it('offers only the membership tiers Settings defines in the audience filter', async () => {
+    await act(async () => {
+      root.render(<OfferCampaigns />)
+    })
+
+    const audience = Array.from(container.querySelectorAll('select')).find((s) => s.querySelector('option[value="all"]'))
+    const values = Array.from(audience?.querySelectorAll('option') ?? []).map((o) => o.value)
+    expect(values).toEqual(['all', 'Access Member', 'Partner', 'Elite Member'])
   })
 
   it('disables Broadcast button until test email is verified', async () => {

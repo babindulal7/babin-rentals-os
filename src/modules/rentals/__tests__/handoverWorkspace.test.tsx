@@ -244,7 +244,7 @@ describe('HO-12 — the bulk control says what it does, and moves only Ready row
     expect(checkbox('Government ID Verified')?.checked).toBe(false)
     expect(checkbox('Booking Authorization Verified')?.checked).toBe(false)
     expect(text()).toContain('Receiver and warehouse signatures not yet captured')
-    expect(text()).toContain('one photo per booking before completion')
+    expect(text()).toContain('One photo per booking is required before completion.')
     expect(button('Complete Handover')?.disabled).toBe(true)
     expect(settleDispatch).toBeNull()
   })

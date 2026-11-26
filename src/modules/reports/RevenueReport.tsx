@@ -346,12 +346,14 @@ export default function RevenueReport() {
             </PageBody>
           )}
 
+          {/* Developer note, not UI copy: the category and project-revenue figures that were once hard-coded seed
+              values are withheld until their attribution can be verified. */}
           <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 4 }}>
             Detailed invoice records and settlement corrections remain available in{' '}
             <Link to="/finance?tab=invoices" style={{ color: 'var(--link)' }}>
               Finance invoices
             </Link>
-            . Previously hardcoded category and project-revenue figures are withheld until their attribution can be verified.
+            . Category and project revenue figures are not shown until their attribution is verified.
           </p>
         </>
       )}

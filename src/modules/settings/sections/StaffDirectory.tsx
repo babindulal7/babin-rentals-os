@@ -343,8 +343,8 @@ export function StaffDirectoryCard() {
      */
     showSuccessToast(
       'Reset link requested',
-      `Supabase will email ${confirming.email} if that address still has an account. ` +
-        'It cannot confirm delivery, so check with them rather than assuming it arrived.',
+      `The system will email ${confirming.email} if that address still has an account. ` +
+        'It cannot confirm delivery, so do not assume it arrived.',
     )
     setConfirming(null)
   }, [confirming, requestPasswordReset, showSuccessToast])
@@ -473,7 +473,7 @@ export function StaffDirectoryCard() {
     return (
       <span style={{ display: 'flex', gap: 'var(--sp-sm)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {!row.hasAuthAccount ? (
-          <Unavailable reason="This staff row has no Supabase sign-in account, so there is nothing for a reset link to reach. Create the account with a matching id first — 0041's identity contract is auth.users.id IS users.id, and 0060's header explains what happens when it is not.">
+          <Unavailable reason="This staff row has no sign-in account, so there is nothing for a reset link to reach. Create the account with a matching id first.">
             <Button variant="secondary" disabled>
               Send reset link
             </Button>
@@ -526,7 +526,7 @@ export function StaffDirectoryCard() {
         title="Staff Directory"
         action={
           <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            {state === 'ok' ? `${filtered.length} of ${rows.length}` : 'staff_directory_v'}
+            {state === 'ok' ? `${filtered.length} of ${rows.length}` : null}
           </span>
         }
       >
@@ -709,7 +709,7 @@ export function StaffDirectoryCard() {
           confirming && (
             <>
               <p style={{ margin: '0 0 8px' }}>
-                Supabase will email a reset link to <strong>{confirming.email}</strong> — the address on{' '}
+                The system will email a reset link to <strong>{confirming.email}</strong> — the address on{' '}
                 <strong>{confirming.fullName || 'this staff row'}</strong>&rsquo;s record.
               </p>
               <p style={{ margin: '0 0 8px' }}>
@@ -717,7 +717,7 @@ export function StaffDirectoryCard() {
                 one keeps working until they use the link.
               </p>
               <p style={{ margin: 0, color: 'var(--text2)' }}>
-                Supabase cannot confirm delivery — it answers the same way for an address with an account and one
+                The system cannot confirm delivery — it answers the same way for an address with an account and one
                 without — so this screen will say the link was requested, never that it arrived.
               </p>
             </>
@@ -776,7 +776,7 @@ export function StaffDirectoryCard() {
                 <p style={{ margin: '0 0 8px' }}>
                   This does <strong>not</strong> revoke their sign-in. The password and any PIN keep working; what
                   they lose is the app, because an inactive identity resolves to Client in every policy. Revoking the
-                  account itself needs the Supabase admin API, which this screen deliberately cannot reach.
+                  account itself needs the cloud admin tools, which this screen deliberately cannot reach.
                 </p>
               )}
 

@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, Rail } from '../../components/ui/Page'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
+import { isOverdueInvoice } from './invoiceOverdue'
 import { PageShell } from '../../components/ui/PageShell'
 import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
@@ -1975,9 +1976,10 @@ export default function Finance() {
  * follows.
  */
 function StatusBadge({ row }: { row: InvoiceListRow }) {
-  const label = row.isVoid ? 'Void' : row.status
-  const tone = row.isVoid ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'slate'
-  const icon: IconName = row.isVoid ? 'alert_triangle' : label === 'Paid' ? 'check' : label === 'Partially Paid' ? 'timer' : label === 'Sent' ? 'sparkles' : 'queues'
+  const overdue = isOverdueInvoice(row)
+  const label = row.isVoid ? 'Void' : overdue ? 'Overdue' : row.status
+  const tone = row.isVoid || overdue ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'slate'
+  const icon: IconName = row.isVoid || overdue ? 'alert_triangle' : label === 'Paid' ? 'check' : label === 'Partially Paid' ? 'timer' : label === 'Sent' ? 'sparkles' : 'queues'
   return <StatusPill tone={tone} label={label} icon={icon} />
 }
 

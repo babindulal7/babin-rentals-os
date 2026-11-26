@@ -400,11 +400,13 @@ export default function DamageMaintenanceReports() {
               <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
                 Classification of physical condition findings recorded at check-in.
               </p>
-              {severitySlices.length > 0 && (
+              {severitySlices.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', alignItems: 'center' }}>
                   <Donut slices={severitySlices} size={180} />
                   <Legend slices={severitySlices} />
                 </div>
+              ) : (
+                <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', margin: 0 }}>No damage findings to show.</p>
               )}
             </div>
 
@@ -417,6 +419,9 @@ export default function DamageMaintenanceReports() {
                 Hardware failure and handling incident distribution.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+                {typeSlices.length === 0 && (
+                  <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', margin: 0 }}>No damage findings to show.</p>
+                )}
                 {typeSlices.map((ts) => (
                   <div
                     key={ts.label}

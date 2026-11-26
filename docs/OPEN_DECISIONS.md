@@ -1,5 +1,32 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 24 November 2026 - Open decisions from the mock-app audit (OPEN, nothing assumed)
+
+These came from a full audit of the mock app on branch fix/app-audit-20261124 (154 candidates, 84 confirmed; the fixes and their verification are in PROGRESS.md, 24 Nov 2026). Nothing below has been answered. Each item keeps the current behaviour until Babin rules. Index rows: PLAN.md section 4.2, AUD-1 to AUD-22.
+
+- **AUD-1 Warranty figure.** The warranty tracker shows recovered divided by premium, now labelled "% of premium recovered". The app's other ROI is net of cost: (recovered minus premium) divided by premium. Which should warranty show? Sources: src/modules/inventory/WarrantyTracker.tsx, src/lib/queries/warranty.ts.
+- **AUD-2 Public business phone.** /rider prints 01-4412345 and dials 9851000000; /pay/link dials +977-9841000000; /unsubscribe prints +977-1-4780000; return settlement uses +977-9712052571; the WhatsApp share fallback is 9800000000. Which number is public, and should every public page read one settings value? docs/ holds no ruling.
+- **AUD-3 Retention of sign-in records.** The audit rules say 1 year archive for authentication; the activity log says 90 days; the audit log footer says 7 years. Which period applies? A grep of docs/ for retention near authentication or login found no ruling.
+- **AUD-4 Problem Reports link.** Problem Reports is reached only by URL. Add a link in Settings or the sidebar, or keep it URL-only?
+- **AUD-5 Seed figures shown as live.** Audit dashboard figures and rules, backup history and schedule, branch alerts, the Owner's today money and counts (src/lib/queries/roleTasks.ts), and the fleet exceptions "2 late" are typed literals. Hide them, label them as sample data, or wire them to live data? The System Summary statuses now read Not tracked yet.
+- **AUD-6 Spare-capacity insight.** src/data/warehouse.ts ranks branches by lowest occupancy, but the line pairs "most spare capacity" with free slots. Rank by free slots, or change the words?
+- **AUD-7 Handover Fulfillment Method basis.** The split counts non-cancelled bookings by delivery type and shows only when completed handover sessions exist; otherwise it reads "No completed handovers to show." Is the booking basis right, or should the split count completed handover sessions?
+- **AUD-8 Money tile precision.** On Sales and VAT, Collections and Outstanding show paise; the other tiles show whole rupees. Whole rupees or paise throughout? src/lib/money.ts prints paise only when present; the Booqable reference row R2 says whole rupees.
+- **AUD-9 Pulse quarters and revenue basis.** Are BS quarters Nepali (Shrawan to Ashadh) or AD? The quarter presets stay unavailable. Which basis recognises revenue: booking, pickup or rental days?
+- **AUD-10 Storage levels.** Rulings section 11.3 asks for structured rack, shelf and case identifiers; zone, rack and shelf are free text today. Is the fourth level a bin or a case, and how many levels should Warehouse use?
+- **AUD-11 Referral codes.** The referral panel offers Generate Referral Code, but nothing is issued or stored (GenerateReferralCode.tsx). Build issuing and storage, or hide the button until it is built?
+- **AUD-12 Last rental date.** The client directory view supplies only the latest pickup date, so a last rental in the past cannot be shown without a view change. Approve a view change? (It would be a migration, which this pass did not write or apply.)
+- **AUD-13 Document and delivery categories.** The database maps Delivery Note, Packing List, Return Report and Inspection Report to Rental, so Operations and Inventory read 0 against the seed categories. Is that mapping intended?
+- **AUD-14 Taxable turnover versus the register.** The Taxable Turnover tile counts standard-VAT invoices only; the register lists every invoice in the period. This belongs with the open non-VAT bills question (O-7).
+- **AUD-15 Maintenance overdue.** The KPI, chip, filter and row now share one rule: the date rule (past estimated completion). Confirm that is the intended definition.
+- **AUD-16 Packing late pickup.** A packing row is flagged when it is Booked or Packed and its pickup time has passed. No shared definition was found in the rentals list. Confirm this rule.
+- **AUD-17 Boot fallback timing.** An error during mount that is not a module-load failure reaches the fallback only after 25 seconds. An earlier paint needs a mount signal from src/main.tsx. Keep 25 seconds, or add the signal?
+- **AUD-18 Developer invariant messages.** Errors thrown in src/lib/bookingQuery.ts and src/data/today.ts name tables and constraints. If any reach a staff screen, they need staff wording. Confirm where they are shown.
+- **AUD-19 Booking launcher label.** The compact launcher in the BookingDetail top bar is icon-only with an accessible name. Add a visible label?
+- **AUD-20 Tools decision cards.** Settings Tools shows two decision cards to staff ("Open, needs Babin" and a note about the fifteen categories). Keep them visible, or move them to the docs?
+- **AUD-21 Admin date format.** Five date formats appear across admin screens, while Settings sets D MMM YYYY. Which format should every admin screen use?
+- **AUD-22 Duplicate tier names.** Two membership tiers are both named Access Member, with different credit policies. Is that intended?
+
 ## 20 November 2026 — Phase 1 launch scope + accountant owner decisions (ANSWERED)
 
 **Physical peripherals are post-launch:** Babin explicitly deferred all physical iPad, Bluetooth/barcode scanner, camera barcode, label/shop printer and native hardware share-sheet verification/purchases to **Phase 2 after live**. Do not treat these as pre-live launch blockers; preserve software/emulation tests and keep physical acceptance statuses pending. For Phase 1, use counter PC/desktop and manual item lookup with working staged Pack/Handover/Return/Reset, security, payments, availability and audit. See `docs/plans/T1_RELEASE.md`, `T2_FLOOR.md`, `T3_BOOKING_MONEY.md`, `T9_CUTOVER.md`.

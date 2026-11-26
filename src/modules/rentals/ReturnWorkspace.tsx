@@ -996,7 +996,7 @@ export default function ReturnWorkspace({
       pass: noDecision.length === 0 && mixedDecisionLines.length === 0,
       detail:
         noDecision.length > 0
-          ? `${noDecision.length} item${noDecision.length > 1 ? 's' : ''} without a decision (0003:378 demands one)`
+          ? `${noDecision.length} item${noDecision.length > 1 ? 's' : ''} without a decision`
           : mixedDecisionLines.length > 0
             ? `${mixedDecisionLines.length} line${mixedDecisionLines.length > 1 ? 's carry' : ' carries'} conflicting decisions — the engine records ONE decision per booking line, so its units must agree`
             : null,
@@ -1004,7 +1004,7 @@ export default function ReturnWorkspace({
     ...(hasFlaggedItems
       ? [
           {
-            label: 'Returning person signature or recorded refusal under flagged items (B19)',
+            label: 'Returning person signature or recorded refusal under flagged items',
             pass: sigReturning !== null || (refusedToSign && refusalReason.trim().length >= MIN_REASON),
             detail:
               sigReturning !== null
@@ -2351,7 +2351,7 @@ export default function ReturnWorkspace({
                     type="button"
                     disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeSession}
-                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
+                    title={!isOnline ? 'Custody transitions require an internet connection' : undefined}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -2442,7 +2442,7 @@ export default function ReturnWorkspace({
                 </Card>
                 )}
 
-                <Card title="Signatures & Attestation (B19, R-39)">
+                <Card title="Signatures & Attestation">
                   {hasFlaggedItems ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div
@@ -2458,7 +2458,7 @@ export default function ReturnWorkspace({
                           <span>Flagged Items Detected ({damagedRows.length + missingRows.length})</span>
                         </div>
                         <p style={{ margin: '6px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
-                          At least one unit is flagged damaged or missing. The returning person must sign once under the list of flagged items before Return can complete (B19).
+                          At least one unit is flagged damaged or missing. The returning person must sign once under the list of flagged items before Return can complete.
                         </p>
                         <div style={{ margin: '8px 0 0', padding: '8px 10px', background: 'var(--card, #ffffff)', borderRadius: 'var(--r-subtle)', border: '1px solid var(--border)' }}>
                           <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
@@ -2535,10 +2535,16 @@ export default function ReturnWorkspace({
                         )}
                       </div>
                     </div>
+                  ) : outstandingRows.length > 0 ? (
+                    /* A clean-return claim waits until every item is checked in (sweep-A-floor-9). */
+                    <div style={{ padding: '8px 12px', borderRadius: 'var(--r-subtle)', border: '1px solid var(--border)', color: 'var(--text2)', fontSize: 'var(--t-meta)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Icon name="clock" size={16} />
+                      <span>Clean return appears once every item is checked in and none is outstanding.</span>
+                    </div>
                   ) : (
                     <div style={{ padding: '8px 12px', borderRadius: 'var(--r-subtle)', background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', color: 'var(--success-text, #166534)', fontSize: 'var(--t-meta)', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Icon name="check_circle" size={16} />
-                      <span>Clean return — 0 flagged items. No signature is required (R-39).</span>
+                      <span>Clean return — 0 flagged items. No signature is required.</span>
                     </div>
                   )}
 

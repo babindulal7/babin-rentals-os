@@ -270,6 +270,11 @@ export function UnitEditor({
  * (Law 7 — rendered in Kathmandu, never computed here). `—` for a null column
  * and for an unparseable value, which is a data defect to see, not to crash on.
  */
+/** Running hours with their unit, or an em dash when the unit has none recorded. */
+function runningHoursLabel(hours: number | null | undefined): string {
+  return hours == null ? '—' : `${hours}h`
+}
+
 function adDate(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -889,7 +894,7 @@ function AssetDetailView() {
                   <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
                     {u.serialNo ? <span className="identifier">{u.serialNo}</span> : 'No manufacturer serial'}
                     {' · '}
-                    <span className="figure">{u.runningHours}h</span> run
+                    {u.runningHours == null ? '—' : <><span className="figure">{u.runningHours}h</span> run</>}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Button variant="secondary" size="sm" onClick={() => openItemCard(u.assetTag)}>Item Card</Button>
@@ -983,7 +988,7 @@ function AssetDetailView() {
                               {unitLocationOf(u) ?? '—'}
                             </td>
                             <td style={{ padding: '10px 8px' }}>
-                              <span className="figure">{u.runningHours}h</span>
+                              <span className="figure">{runningHoursLabel(u.runningHours)}</span>
                             </td>
                             <td style={{ padding: '10px 8px', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
                               {adDate(u.nextMaintenanceAtAd)}
@@ -1071,8 +1076,7 @@ function AssetDetailView() {
         <Card title="Availability & Bookings">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-              Per-unit booking bars are not tracked yet — they need the booking-line join
-              (product_units → booking_line_units → bookings). Each unit&rsquo;s current state below is live.
+              Per-unit booking bars are not tracked yet. Each unit&rsquo;s current state below is live.
             </p>
             {units.map(u => (
               <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)', padding: '8px 0', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
@@ -1145,7 +1149,7 @@ function AssetDetailView() {
                       {conditionChip(u.condition)}
                     </div>
                     <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                      <span className="figure">{u.runningHours}h</span> run
+                      {u.runningHours == null ? '—' : <><span className="figure">{u.runningHours}h</span> run</>}
                       {' · Last '}{adDate(u.lastMaintenanceAtAd)}
                       {' · Next '}{adDate(u.nextMaintenanceAtAd)}
                     </div>
@@ -1176,7 +1180,7 @@ function AssetDetailView() {
                         <tr key={u.id} style={{ borderBottom: '1px solid var(--border)' }}>
                           <td style={{ padding: '10px 8px' }}><span className="inventory-asset-code">{u.assetTag}</span></td>
                           <td style={{ padding: '10px 8px' }}>{conditionChip(u.condition)}</td>
-                          <td style={{ padding: '10px 8px' }}><span className="figure">{u.runningHours}h</span></td>
+                          <td style={{ padding: '10px 8px' }}><span className="figure">{runningHoursLabel(u.runningHours)}</span></td>
                           <td style={{ padding: '10px 8px', color: 'var(--text2)' }}>{adDate(u.lastMaintenanceAtAd)}</td>
                           <td style={{ padding: '10px 8px', color: 'var(--text2)' }}>{adDate(u.nextMaintenanceAtAd)}</td>
                           <td style={{ padding: '10px 8px', color: 'var(--text2)' }}>{adDate(u.warrantyExpiresAd)}</td>
@@ -1192,7 +1196,7 @@ function AssetDetailView() {
             )}
 
             <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-              Per-event service history is not tracked yet — there is no service-ticket table wired to units.
+              Per-event service history is not tracked yet.
             </div>
           </div>
         </Card>

@@ -748,7 +748,7 @@ export default function App() {
           path="/reports/vat-tax"
           element={
             <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'VAT / Tax Reports' }]}>
-              <SalesVatReports />
+              <SalesVatReports defaultTab="vat" />
             </Shell>
           }
         />

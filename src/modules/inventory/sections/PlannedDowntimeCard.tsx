@@ -74,7 +74,7 @@ export function PlannedDowntimeCard({
 
   return (
     <Card
-      title="Planned Downtime & Blocks (T2-21)"
+      title="Planned Downtime & Blocks"
       action={
         canPlan ? (
           <Button variant="primary" onClick={() => setIsModalOpen(true)}>
@@ -85,7 +85,7 @@ export function PlannedDowntimeCard({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md, 16px)' }}>
         <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted, #6b7280)' }}>
-          Block units for scheduled maintenance, calibration, partner loans or studio shoots (B10).
+          Block units for scheduled maintenance, calibration, partner loans or studio shoots.
           During downtime, units cannot be booked or reserved on the floor or online.
         </p>
 

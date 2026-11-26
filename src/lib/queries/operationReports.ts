@@ -73,6 +73,8 @@ export interface PackingJobItem {
   pickupScheduled: string
   itemCount: number
   state: 'pending' | 'packed' | 'partial'
+  /** Still Booked or Packed with its pickup at or before now, to the minute: the `latePickups` rule in queries/bookings.ts. */
+  latePickup: boolean
 }
 
 export interface OperationsReportData {
@@ -170,7 +172,10 @@ export async function getOperationsReport(options?: ReportFilterOptions, now: Da
   const byId = new Map(bookings.map((b) => [b.id, b]))
   const staffName = new Map(users.map((u) => [u.id, u.full_name?.trim() || '—']))
   const nowMs = now.getTime()
+  // Floored to the minute like `latePickups`: a pickup at or before the current minute is late.
+  const lateCutoffMs = Math.floor(nowMs / 60_000) * 60_000
 
+  // TODO(decision): the Handover Fulfillment Method split below counts bookings by delivery type. Should it count completed handover sessions instead, as Total Dispatches does? Not ruled.
   const deliveryMap = new Map<string, number>()
   const overdueList: OverdueRentalItem[] = []
   const packingJobs: PackingJobItem[] = []
@@ -205,6 +210,7 @@ export async function getOperationsReport(options?: ReportFilterOptions, now: Da
     }
 
     if (b.stage === 'Booked' || b.stage === 'Packed') {
+      const pickupMs = Date.parse(b.pickup_at)
       packingJobs.push({
         id: b.id,
         bookingNo: b.booking_no,
@@ -213,6 +219,7 @@ export async function getOperationsReport(options?: ReportFilterOptions, now: Da
         pickupScheduled: b.pickup_at,
         itemCount: (b.booking_lines ?? []).filter((l) => !l.voided_at).reduce((acc, l) => acc + (Number(l.qty) || 0), 0),
         state: b.stage === 'Packed' ? 'packed' : 'pending',
+        latePickup: !Number.isNaN(pickupMs) && pickupMs <= lateCutoffMs,
       })
     }
   }

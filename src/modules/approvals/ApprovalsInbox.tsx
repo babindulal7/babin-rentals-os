@@ -28,6 +28,7 @@ import {
   type ApprovalType,
   type ApprovalStatus,
 } from '../../lib/queries/approvals'
+import { approvalTypeLabel } from './approvalTypeLabels'
 
 export function ApprovalsInbox() {
   const { user } = useAuth()
@@ -205,7 +206,7 @@ export function ApprovalsInbox() {
           </span>
         </div>
         <div style={{ fontSize: 'var(--t-body)', color: 'var(--muted)' }}>
-          Authorizations waiting on management: damage charges, late-fee waivers, commercial credit overrides, purchases, and write-offs (W57, W58).
+          Authorizations waiting on management: damage charges, late-fee waivers, commercial credit overrides, purchases, and write-offs.
         </div>
       </div>
 
@@ -363,7 +364,7 @@ export function ApprovalsInbox() {
                         textTransform: 'capitalize',
                       }}
                     >
-                      {item.type.replace('_', ' ')}
+                      {approvalTypeLabel(item.type)}
                     </span>
 
                     {/* Authority Level Badge */}

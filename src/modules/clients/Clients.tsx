@@ -12,6 +12,7 @@ import { ModuleSubHeader } from '../../components/ui/module-shell'
 import type { Kpi } from '../../components/ui/Page'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ClientsDirectory } from './ClientsDirectory'
+import { creditLimitLabel } from './clientDisplay'
 import { useClients } from '../../lib/queries/useClients'
 import { EmptyState } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
@@ -594,7 +595,7 @@ function CreditView({
                       </span>
                     </td>
                     <td className="figure client-outfit" style={td}>
-                      {formatMoney(c.creditLimitPaisa)}
+                      {creditLimitLabel(c.creditLimitPaisa)}
                     </td>
                     <td
                       className="figure client-outfit"

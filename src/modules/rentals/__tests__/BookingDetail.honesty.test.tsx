@@ -248,6 +248,21 @@ window.matchMedia = ((q: string) => ({
 })) as unknown as typeof window.matchMedia
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
+/* The Quote availability read (lifecycle-1-1). The knobs let one case fail it and
+   count the reads, so the banner's Retry can be seen to run the read again. */
+const availability = vi.hoisted(() => ({ fails: false, message: 'Availability read failed', reads: 0 }))
+vi.mock('../../../lib/queries/smartReservationQueries', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../../../lib/queries/smartReservationQueries')>()
+  return {
+    ...real,
+    queryBookingAvailability: async (bookingId: string) => {
+      availability.reads += 1
+      if (availability.fails) throw new Error(availability.message)
+      return real.queryBookingAvailability(bookingId)
+    },
+  }
+})
+
 const { default: BookingDetail } = await import('../BookingDetail')
 
 let container: HTMLDivElement
@@ -301,6 +316,9 @@ afterEach(async () => {
   clientFails = false
   noteRows = []
   navigate = null
+  availability.fails = false
+  availability.message = 'Availability read failed'
+  availability.reads = 0
 })
 
 const text = () => container.textContent ?? ''
@@ -604,5 +622,43 @@ describe('BD-19 — a staff uuid is not shown to an operator', () => {
     paymentRows = [payment('1', 'Received')]
     await mount()
     expect(text()).not.toContain('99999999-9999-4999-8999-999999999999')
+  })
+})
+
+describe('lifecycle-1-1 — a quote whose availability read fails says so, and Retry runs it again', () => {
+  it('offers Retry on the banner, and running it again reads availability again', async () => {
+    stage = 'Quote'
+    availability.fails = true
+    await mount()
+    const bannerText = 'Availability cannot be verified right now'
+    expect(text()).toContain(bannerText)
+
+    const readsBeforeRetry = availability.reads
+    const banner = () => [...document.querySelectorAll<HTMLElement>('[role="alert"]')].find((el) => el.textContent?.includes(bannerText))
+    const retry = [...(banner()?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) => b.textContent?.trim() === 'Retry')
+    expect(retry).toBeTruthy()
+
+    await act(async () => {
+      retry?.click()
+    })
+    await flush()
+    expect(availability.reads).toBeGreaterThan(readsBeforeRetry)
+    expect(text()).toContain(bannerText)
+  })
+})
+
+describe('lifecycle-1-2 — a confirm refused because the stock check could not be read says what to do', () => {
+  it('shows the plain refusal with a next step, and never the engine wording', async () => {
+    stage = 'Quote'
+    availability.fails = true
+    availability.message = 'A live reservation has an unknown state; availability could not be checked.'
+    await mount()
+    await act(async () => {
+      button('Confirm Booking')?.click()
+    })
+    await flush(8)
+    expect(text()).toContain('We could not check stock for these dates, so this rental was not confirmed.')
+    expect(text()).toContain('Try again in a minute.')
+    expect(text()).not.toContain('A live reservation has an unknown state')
   })
 })

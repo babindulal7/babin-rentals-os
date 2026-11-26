@@ -252,7 +252,7 @@ describe('CrewSection', () => {
         expandBtn?.click()
       })
 
-      expect(host.textContent).toContain('Shoot Day Overtime (D24)')
+      expect(host.textContent).toContain('Shoot Day Overtime')
       expect(host.textContent).toContain('Day 1:')
       expect(host.textContent).toContain('Day 2:')
       expect(host.textContent).toContain('Day 3:')

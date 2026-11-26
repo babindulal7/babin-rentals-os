@@ -39,7 +39,12 @@
     <script>
       (function () {
         var shown = false
+        /* The first failure of any kind: console detail, and the watchdog's copy. */
         var first = null
+        /* A failure that by itself means the app cannot start. Paints at once. */
+        var fatal = null
+        /* What the watchdog reports when nothing failed at all: the silent case. */
+        var SILENT = { kind: 'The app did not start', msg: 'No error was reported, and nothing rendered.', where: '' }
 
         /*
           ⛔ The first cut of this called show() straight from the handlers, and
@@ -51,62 +56,73 @@
           perfectly healthy app was blanked by its own error screen.
 
           So the rule is: this reporter speaks ONLY for a page that never
-          started. It records the first error, waits, and paints only if #root
-          is still empty by then. A failed SW registration, a lazy chunk that
-          404s later, an error inside a mounted app — none of those are its
-          business; the app's own ErrorBoundary owns those.
+          started. Only a failure that stops the app outright paints at once:
+          the app's own module script failing to load. Everything else (a
+          failed SW registration, a lazy chunk that 404s later, an error inside
+          a mounted app) is kept for the console and left to the app's own
+          ErrorBoundary. A page that is merely slow is not a failed page, so
+          only the 25 second watchdog paints for one whose #root is still empty.
         */
-        function paintIfDead() {
-          if (shown || !first) return
+        function paintIfDead(why) {
+          if (shown) return
           var root = document.getElementById('root')
           if (root && root.childElementCount > 0) return /* it started — say nothing */
           shown = true
-          render(root || document.body, first)
+          render(root || document.body, why)
         }
 
-        function record(kind, msg, where) {
+        /* Kept for the console. Never paints by itself. */
+        function remember(kind, msg, where) {
           if (!first) first = { kind: kind, msg: msg, where: where }
-          /* Give React its chance first; only an empty #root is a failure. */
-          setTimeout(paintIfDead, 6000)
+        }
+
+        /* Paints now, while #root is still empty. */
+        function fatalFailure(kind, msg, where) {
+          if (!fatal) fatal = { kind: kind, msg: msg, where: where }
+          paintIfDead(fatal)
         }
 
         function render(root, e) {
+          /* The details go to the console only. The page itself carries plain,
+             client-facing words and no developer copy or browser details. */
+          try {
+            console.error('Babin Rentals did not start: ' + e.kind + ': ' + e.msg + (e.where ? ' ' + e.where : ''))
+            console.error('User agent: ' + navigator.userAgent)
+          } catch (err) {
+            /* No console is not a reason to hide the page message below. */
+          }
           try {
             root.innerHTML =
               '<div style="font:14px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;' +
               'max-width:640px;margin:8vh auto;padding:20px;color:#1b1b1b">' +
-              '<h1 style="font-size:19px;margin:0 0 10px">This browser could not start the app</h1>' +
-              '<p style="margin:0 0 14px;color:#555">' +
-              'The page loaded, so the link and the network are fine — the app itself stopped. ' +
-              'Read this out or screenshot it.</p>' +
-              '<pre style="white-space:pre-wrap;word-break:break-word;background:#f4f2ee;' +
-              'border:1px solid #ddd8cf;border-radius:8px;padding:12px;margin:0 0 12px;' +
-              'font:12px/1.5 ui-monospace,Menlo,monospace">' +
-              esc(e.kind + ': ' + e.msg) + (e.where ? '\n' + esc(e.where) : '') + '</pre>' +
-              '<p style="margin:0;font-size:12px;color:#777">' + esc(navigator.userAgent) + '</p>' +
+              '<h1 style="font-size:19px;margin:0 0 10px">This page could not open</h1>' +
+              '<p style="margin:0;color:#555">' +
+              'Refresh the page to try again. If it still does not open, contact Babin Rentals.</p>' +
               '</div>'
-          } catch (e) {
+          } catch (err) {
             /* Last resort: if even that failed, at least stop showing nothing. */
-            document.title = 'App failed to start'
+            document.title = 'This page could not open'
           }
-        }
-        function esc(s) {
-          return String(s).replace(/[&<>]/g, function (c) {
-            return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'
-          })
         }
         window.addEventListener('error', function (e) {
           /* A failed <script>/<link> fires an error event with no `message`;
              those are the chunk 404s, and they matter as much as a throw. */
           if (e && e.target && e.target !== window && (e.target.src || e.target.href)) {
-            record('Failed to load', e.target.src || e.target.href, '')
+            var src = e.target.src || e.target.href
+            /* Only the app's own module script stops the app outright. The Vite dev
+               client is a separate module, and its failure is transient. */
+            if (e.target.tagName === 'SCRIPT' && e.target.type === 'module' && src.indexOf('/@vite/client') === -1) {
+              fatalFailure('Failed to load', src, '')
+            } else {
+              remember('Failed to load', src, '')
+            }
             return
           }
-          record('Error', (e && e.message) || 'unknown', e && e.filename ? e.filename + ':' + e.lineno : '')
+          remember('Error', (e && e.message) || 'unknown', e && e.filename ? e.filename + ':' + e.lineno : '')
         }, true)
         window.addEventListener('unhandledrejection', function (e) {
           var r = e && e.reason
-          record('Unhandled promise rejection', (r && (r.message || r)) || 'unknown', (r && r.stack) || '')
+          remember('Unhandled promise rejection', (r && (r.message || r)) || 'unknown', (r && r.stack) || '')
         })
         /* The silent failure: no error at all, just an empty #root — an engine
            that refused to parse the entry module logs to the console and throws
@@ -114,8 +130,7 @@
            not accused of being broken. */
         window.addEventListener('load', function () {
           setTimeout(function () {
-            if (!first) first = { kind: 'The app did not start', msg: 'No error was reported, and nothing rendered.', where: '' }
-            paintIfDead()
+            paintIfDead(fatal || first || SILENT)
           }, 25000)
         })
       })()

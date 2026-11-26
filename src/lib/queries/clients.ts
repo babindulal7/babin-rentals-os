@@ -31,7 +31,7 @@ import type { Database } from '../../types/supabase'
 import { rupees, type Paisa } from '../money'
 import { formatBsOrAd, formatAd } from '../bs'
 import type { ClientIdDocumentType } from '../../types/database'
-import type { ClientRecord, MembershipTier } from '../../data/clients'
+import { daysPastDue, type ClientRecord, type MembershipTier } from '../../data/clients'
 import type { GateContext } from '../fieldGating'
 import { canViewMoneyField, canViewPII } from '../fieldGating'
 export * from '../../data/clients'
@@ -333,6 +333,53 @@ export function toClientRecord(row: DirectoryRow): ClientRecord {
 }
 
 /**
+ * A directory record that also carries the membership reading the view
+ * publishes.
+ *
+ * `membership` on the base record is the placeholder for an unjoined client
+ * (see `UNJOINED_MEMBERSHIP_PLACEHOLDER`). `membershipLevel` is the view's own
+ * answer: the tier, or `null` when no membership row exists. It is optional so a
+ * `ClientRecord` built anywhere else still satisfies this type, and an absent
+ * value means "not read on this record", never "no membership".
+ */
+export interface DirectoryClientRecord extends ClientRecord {
+  membershipLevel?: MembershipTier | null
+}
+
+/** `toClientRecord`, plus the membership reading the view actually holds. */
+export function toDirectoryClientRecord(row: DirectoryRow): DirectoryClientRecord {
+  return { ...toClientRecord(row), membershipLevel: row.membership_level ?? null }
+}
+
+/**
+ * Days past due on the client's most overdue **issued, unpaid** invoice — the
+ * overdue limb of the On Stop check.
+ *
+ * `0` when none is late. `null` when a due date will not parse: one unreadable
+ * date makes the worst overdue unknown, so the limb reports unknown rather than
+ * the best case. Drafts are skipped (a draft has not been issued, so it cannot
+ * be late), and so are settled invoices.
+ *
+ * Deciding whether the rows were readable at all (a money-blind session, a
+ * query still in flight, a failed read) belongs to the caller, which must answer
+ * `null` for those without calling this.
+ */
+export function worstDaysPastDue(
+  invoices: ReadonlyArray<{ status: string; outstandingAmount: number; dueDateAd: string }>,
+  now: Date = new Date(),
+): number | null {
+  let worst = 0
+  for (const inv of invoices) {
+    if (inv.status === 'Draft') continue
+    if (inv.outstandingAmount <= 0) continue
+    const late = daysPastDue(inv.dueDateAd, now)
+    if (late === null) return null
+    if (late > worst) worst = late
+  }
+  return worst
+}
+
+/**
  * ⚠ **BLOCKED — this is not a tier any client holds.**
  *
  * `client_directory_v` builds `membership_level` from `mem.level` over a LEFT
@@ -440,7 +487,7 @@ export async function listClients(opts: ListClientsOptions = {}): Promise<Client
  * "money withheld" — see `toClientRecord` for exactly where that lossiness is
  * and why every caller must still gate money on the role.
  */
-export async function listClientRecords(opts: ListClientsOptions = {}): Promise<ClientRecord[]> {
+export async function listClientRecords(opts: ListClientsOptions = {}): Promise<DirectoryClientRecord[]> {
   const query = (cols: string) => {
     let q = supabase
       .from('client_directory_v')
@@ -464,7 +511,7 @@ export async function listClientRecords(opts: ListClientsOptions = {}): Promise<
   }
 
   if (error) throw new Error(`listClientRecords failed: ${error.message}`)
-  return (data ?? []).map((r) => toClientRecord(r as unknown as DirectoryRow))
+  return (data ?? []).map((r) => toDirectoryClientRecord(r as unknown as DirectoryRow))
 }
 
 /** What {@link sumDepositsHeld} returns: the liability, and how many rows it was summed over. */

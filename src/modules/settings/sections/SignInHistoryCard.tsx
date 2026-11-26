@@ -103,7 +103,7 @@ export function SignInHistoryCard() {
       action={
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
           <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            Owner & Admin access only (B22)
+            Owner & Admin access only
           </span>
           <Button
             variant="secondary"
@@ -118,7 +118,7 @@ export function SignInHistoryCard() {
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
         <p style={{ margin: 0, fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>
-          Server-recorded authentication events, PIN screen-unlock switches, and first-seen device alerts (B23).
+          Server-recorded authentication events, PIN screen-unlock switches, and first-seen device alerts.
         </p>
 
         {loading && (

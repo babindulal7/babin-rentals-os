@@ -151,8 +151,10 @@ export function BundleDetail() {
   /*
    * Integrated in-page: When action === 'edit', render EditBundle in-place
    * within BundleDetail workspace instead of bouncing to a detached shortcut page.
+   * Only once the bundle has loaded: an unknown code falls through to the
+   * not-found state below rather than opening an editor for nothing.
    */
-  if (isEdit && user && canUpdateBundle(user.role)) {
+  if (isEdit && bundle && user && canUpdateBundle(user.role)) {
     return (
       <EditBundle
         bundleRef={bundleRef}

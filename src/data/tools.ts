@@ -626,7 +626,7 @@ export const TOOLS: readonly Tool[] = [
       reason: /* Open — §12. A call sheet is a production document the client’s AD normally writes. */ "Open — A call sheet is a production document the client’s AD normally writes.",
     },
     decision:
-      'Do clients ask you for call sheets and shot lists, or is that their AD’s job? It decides whether this is a free tool, a paid service line, or nothing at all. §4 and §12 both flag it, unanswered.',
+      'Do clients ask you for call sheets and shot lists, or is that their AD’s job? It decides whether this is a free tool, a paid service line, or nothing at all. It is still unanswered.',
   },
 
   /* ── Deep links — §1. Permissions belong to the owner, not to Tools. ──── */
@@ -733,17 +733,17 @@ export interface Disposition {
  * looks like an unfinished copy of the render rather than a decision.
  */
 export const RENDER_DISPOSITION: readonly Disposition[] = [
-  { category: '01 QR & Barcode Tools', outcome: 'Stays with Tools (§1) — not built', tone: 'kept' },
-  { category: '02 Label Printing', outcome: 'Stays with Tools (§1) — not built', tone: 'kept' },
+  { category: '01 QR & Barcode Tools', outcome: 'Stays with Tools — not built', tone: 'kept' },
+  { category: '02 Label Printing', outcome: 'Stays with Tools — not built', tone: 'kept' },
   { category: '03 Document Generator', outcome: 'Deep-links to Finance ▸ Documents', tone: 'moved' },
   { category: '04 Import / Export Center', outcome: 'Deep-links to each module’s own import', tone: 'moved' },
   { category: '05 Bulk Operations', outcome: 'Deep-links to the owning module’s table', tone: 'moved' },
-  { category: '06 File Converter', outcome: 'Cut (§1) — real cost, no rental value', tone: 'cut' },
-  { category: '07 Currency & Tax Tools', outcome: 'Stays, but calls the Finance engines (§5)', tone: 'kept' },
+  { category: '06 File Converter', outcome: 'Cut — real cost, no rental value', tone: 'cut' },
+  { category: '07 Currency & Tax Tools', outcome: 'Stays, but calls the Finance engines', tone: 'kept' },
   { category: '08 Equipment Utilities', outcome: 'Deep-links to Inventory ▸ Maintenance', tone: 'moved' },
-  { category: '09 Camera & Lens Tools', outcome: 'Stays — built here, all eight (§3)', tone: 'kept' },
-  { category: '10 Production Tools', outcome: 'Split — checklists deep-link, shot list open (§12)', tone: 'kept' },
-  { category: '11 AI Utilities', outcome: 'Gated on the data policy, Administration §21.2 unanswered', tone: 'cut' },
+  { category: '09 Camera & Lens Tools', outcome: 'Stays — built here, all eight', tone: 'kept' },
+  { category: '10 Production Tools', outcome: 'Split — checklists deep-link, shot list open', tone: 'kept' },
+  { category: '11 AI Utilities', outcome: 'Gated on the data policy, which is still unanswered', tone: 'cut' },
   { category: '12 Backup & Restore', outcome: 'Deep-links to Administration ▸ Backup', tone: 'moved' },
   { category: '13 API & Integrations', outcome: 'Deep-links to Administration ▸ Integrations', tone: 'moved' },
   { category: '14 Diagnostics', outcome: 'Deep-links to System Monitor', tone: 'moved' },
@@ -769,9 +769,10 @@ export const SEED_ERRORS: string[] = (() => {
 
   const available = TOOLS.filter((t) => t.action.kind !== 'blocked').length
   const unavailable = TOOLS.filter((t) => t.action.kind === 'blocked').length
+  // Spec §6 invariant: Active + Inactive = Total Tools.
   if (available + unavailable !== TOOLS.length) {
     errors.push(
-      `Tool counts do not reconcile: ${available} available + ${unavailable} unavailable is not ${TOOLS.length} registered. §6 requires Active + Inactive = Total.`,
+      `Tool counts do not reconcile: ${available} available + ${unavailable} unavailable is not ${TOOLS.length} registered. Active + Inactive must equal Total.`,
     )
   }
 

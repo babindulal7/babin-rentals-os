@@ -41,6 +41,7 @@ import {
   SORTS,
   documentsFor,
   categoriesFor,
+  totalDocuments,
   expiringFor,
   missingFor,
   type CategoryKey,
@@ -311,7 +312,8 @@ export default function Documents({
       }
     })
   }, [money, allDocs])
-  const total = useMemo(() => categories.reduce((a, c) => a + c.count, 0), [categories])
+  // The All count is the rows the All list shows: archived documents are hidden from it.
+  const total = useMemo(() => totalDocuments(money, allDocs), [money, allDocs])
 
   /*
    * 3.7 — the category selection (the tab strip and the rail's category list,

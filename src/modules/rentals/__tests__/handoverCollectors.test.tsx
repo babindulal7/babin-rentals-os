@@ -126,8 +126,12 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
     await mount()
 
     const text = container?.textContent ?? ''
-    expect(text).toContain('First-time client — one government ID must be recorded on file before handover (Ruling W50)')
+    expect(text).toContain('First-time client — one government ID must be recorded on file before handover.')
     expect(text).toContain('+ Add ID on File')
+    // The visible labels carry no internal ruling code (those stay in code comments).
+    expect(text).toContain('Client Government ID')
+    expect(text).toContain('Receiver / Collector (1 Tap)')
+    expect(text).not.toMatch(/\bW(?:28|34|50|51)\b|Ruling W/)
   })
 
   it('renders "ID on file ✓" with masked number and marks Government ID verified for repeat client (W50, W51)', async () => {

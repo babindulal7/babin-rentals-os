@@ -302,7 +302,7 @@ export function CrewSection({
                             <div style={{ marginBottom: 12 }}>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                                 <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-                                  Shoot Day Overtime (D24)
+                                  Shoot Day Overtime
                                 </span>
                                 {getEffectiveOvertimeDays(c) > 0 && (
                                   <span style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--primary)' }}>
@@ -365,7 +365,7 @@ export function CrewSection({
                                 })}
                               </div>
                               <p style={{ margin: '6px 0 0', fontSize: 'var(--t-micro)', color: 'var(--text2)', lineHeight: 1.4 }}>
-                                Adds +½ or +1 day at the same day rate to the client bill and crew member payout (D24).
+                                Adds +½ or +1 day at the same day rate to the client bill and crew member payout.
                               </p>
                             </div>
 

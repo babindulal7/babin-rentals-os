@@ -21,7 +21,7 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ClientRecord } from '../../data/clients'
 import { rupees } from '../../lib/money'
 
@@ -122,11 +122,25 @@ import { WorkspaceProvider } from '../../lib/workspaceContext'
 let container: HTMLDivElement
 let root: Root
 
-async function mountInShell(page: 'inventory' | 'clients' | 'operations', query = '') {
-  const Page = page === 'inventory'
-    ? (await import('../../modules/inventory/Inventory')).default
-    : page === 'clients' ? (await import('../../modules/clients/Clients')).default
-    : (await import('../../modules/operations/OperationsQueues')).default
+type ListPage = 'inventory' | 'clients' | 'operations'
+
+/* The page modules are heavy: a cold transform takes about 30 s here. Under a full parallel
+   run the first test's import alone passed its 90 s budget, and the test kept rendering after
+   the timeout, so its mounted header then took the "/" key in the tests that followed. Load
+   every page once, before any test starts its clock; mountInShell only renders. */
+const loadListPage = (page: ListPage) =>
+  page === 'inventory'
+    ? import('../../modules/inventory/Inventory').then((m) => m.default)
+    : page === 'clients'
+      ? import('../../modules/clients/Clients').then((m) => m.default)
+      : import('../../modules/operations/OperationsQueues').then((m) => m.default)
+
+beforeAll(async () => {
+  await Promise.all((['inventory', 'clients', 'operations'] as const).map(loadListPage))
+}, 240_000)
+
+async function mountInShell(page: ListPage, query = '') {
+  const Page = await loadListPage(page)
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)

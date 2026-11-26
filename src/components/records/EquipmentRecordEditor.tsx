@@ -1199,7 +1199,7 @@ export function EquipmentRecordEditor({
 
         <div className="equipment-form-span-full" style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 8 }}>
           <strong style={{ display: 'block', fontSize: 'var(--t-ui, 14px)', marginBottom: 8, color: 'var(--text)' }}>
-            Online Catalogue Publication (W64)
+            Online Catalogue Publication
           </strong>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <label className="record-field record-field--inline" htmlFor="record-show_online">
@@ -1496,7 +1496,7 @@ export function EquipmentRecordEditor({
         <div className="equipment-invariant-box" style={{ padding: 12, borderRadius: 'var(--r-card, 8px)' }}>
           <Icon name="check" size={16} style={{ color: 'var(--success-text)', flexShrink: 0 }} />
           <div style={{ fontSize: 'var(--t-meta)', lineHeight: 1.5 }}>
-            <strong>Precision Cinema Invariant Guarantee:</strong> Intake records reconcile stock directly into warehouse inventory. No new unit can carry a booking or be placed On Rent during intake creation.
+            <strong>Stock safety:</strong> units added at intake go straight into warehouse inventory. No new unit can carry a booking or be placed On Rent while it is being created.
           </div>
         </div>
       </div>

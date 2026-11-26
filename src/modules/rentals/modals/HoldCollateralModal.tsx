@@ -105,7 +105,7 @@ export function HoldCollateralModal({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
           An ID card (citizenship card, passport, driving licence) can be held as deposit collateral
-          in lieu of a cash deposit (Ruling D1). Collateral is non-monetary and is kept apart from
+          in lieu of a cash deposit. Collateral is non-monetary and is kept apart from
           revenue and totals.
         </p>
 

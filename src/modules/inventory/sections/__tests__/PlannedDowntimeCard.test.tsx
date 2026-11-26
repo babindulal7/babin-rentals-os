@@ -100,7 +100,9 @@ describe('PlannedDowntimeCard (T2-21)', () => {
       await new Promise((r) => setTimeout(r, 10))
     })
 
-    expect(container!.textContent).toContain('Planned Downtime & Blocks (T2-21)')
+    expect(container!.textContent).toContain('Planned Downtime & Blocks')
+    expect(container!.textContent).not.toContain('T2-21')
+    expect(container!.textContent).not.toContain('(B10)')
     expect(container!.textContent).toContain('Unit CAM-01')
     expect(container!.textContent).toContain('Repair')
     expect(container!.textContent).toContain('Active Now')

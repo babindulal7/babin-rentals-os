@@ -53,14 +53,14 @@ export function ManagerApprovalRoutingCard() {
             }}
           >
             <Icon name={routing === 'owner_only' ? 'lock' : 'check'} size={12} fill />
-            {routing === 'owner_only' ? 'Owner Only (R-22.1)' : 'Standard Ladder'}
+            {routing === 'owner_only' ? 'Owner Only' : 'Standard Ladder'}
           </span>
         </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md, 16px)' }}>
         <p style={{ margin: 0, fontSize: 'var(--t-body, 14px)', color: 'var(--text2, #64748b)', lineHeight: 1.5 }}>
-          Determines authorization authority for management-level operational decisions (R-22.1 / R-22.8).
+          Determines authorization authority for management-level operational decisions.
           In single-owner mode, all four approval categories route strictly to the Owner seat.
         </p>
 
@@ -148,7 +148,7 @@ export function ManagerApprovalRoutingCard() {
                 )}
               </span>
               <span style={{ fontWeight: 700, fontSize: 'var(--t-meta, 13px)', color: 'var(--text, #0f172a)' }}>
-                Route All to Owner (R-22.1)
+                Route All to Owner
               </span>
             </div>
             <span style={{ fontSize: 'var(--t-fine, 12px)', color: 'var(--text2, #64748b)', paddingLeft: 24 }}>
@@ -160,7 +160,7 @@ export function ManagerApprovalRoutingCard() {
         {/* 4 Covered Approval Categories (R-22.8) */}
         <div style={{ borderTop: '1px solid var(--border, #e2e8f0)', paddingTop: 12 }}>
           <span style={{ display: 'block', fontSize: 'var(--t-th, 11px)', fontWeight: 700, color: 'var(--muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-            Governed Approval Categories (R-22.8 / O-33)
+            Governed Approval Categories
           </span>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta, 13px)', color: 'var(--text, #0f172a)' }}>
@@ -173,11 +173,11 @@ export function ManagerApprovalRoutingCard() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta, 13px)', color: 'var(--text, #0f172a)' }}>
               <Icon name="check" size={14} fill style={{ color: 'var(--success, #16a34a)' }} />
-              <span>3. Extension clashes (T3-29)</span>
+              <span>3. Extension clashes</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta, 13px)', color: 'var(--text, #0f172a)' }}>
               <Icon name="check" size={14} fill style={{ color: 'var(--success, #16a34a)' }} />
-              <span>4. Approvals inbox (T5-10)</span>
+              <span>4. Approvals inbox</span>
             </div>
           </div>
         </div>

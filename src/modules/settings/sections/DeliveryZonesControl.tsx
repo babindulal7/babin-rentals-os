@@ -427,11 +427,11 @@ export function DeliveryZonesControl() {
               </div>
               <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
                 Shortest practical driving route from Boudha, not straight-line. A check for staff only: it does not change any
-                price (O-28b). Use 0 as the lower distance for the nearest zone. Leave both blank for not set.
+                price. Use 0 as the lower distance for the nearest zone. Leave both blank for not set.
               </p>
               <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
                 Amounts are set per zone and vehicle class in Settings ▸ Financial ▸ Delivery fees. A zone is quoted per trip
-                from that grid, not from this form (O-28, 18 Nov 2026).
+                from that grid, not from this form.
               </p>
               {editingZone && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta)' }}>

@@ -16,6 +16,7 @@ import { IS_MOCK, supabase } from '../../lib/supabase'
 import { useOptionalToast } from '../../components/ui/Toast'
 import { canReadTeamNotes } from '../../lib/rbac'
 import { useTranslation } from '../../lib/i18n'
+import { noteInCategory } from './noteCategoryFilter'
 import {
   listTeamNotes,
   createTeamNote,
@@ -177,7 +178,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
   const filteredNotes = useMemo(() => {
     const list = filterCategory === 'All'
       ? notes
-      : notes.filter(n => n.category.toLowerCase() === filterCategory.toLowerCase())
+      : notes.filter(n => noteInCategory(n, filterCategory))
 
     return [...list].sort((a, b) => {
       if (a.pinned && !b.pinned) return -1
@@ -590,7 +591,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
   const filteredNotes = useMemo(() => {
     const list = filterCategory === 'All'
       ? notes
-      : notes.filter(n => n.category.toLowerCase() === filterCategory.toLowerCase())
+      : notes.filter(n => noteInCategory(n, filterCategory))
 
     // Sort: pinned first, then newest timestamp
     return [...list].sort((a, b) => {

@@ -24,7 +24,6 @@ import {
   GROUP_FINANCE,
   TRANSFER_STAGES,
   RACKS_NOT_TRACKED,
-  STORAGE_VOCABULARY_TODO,
   equipmentSlices,
   totalsOf,
   warehousesOfBranch,
@@ -947,7 +946,8 @@ export function BranchesPane({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 'var(--sp-md)', paddingTop: 'var(--sp-sm)', borderTop: '1px solid var(--border)' }}>
-              <OpenDecision text={STORAGE_VOCABULARY_TODO} />
+              {/* TODO(decision): is the fourth storage level a bin or a case, and how many levels should Warehouse use (Rulings §11.3)? */}
+              <OpenDecision text="Zone, rack and shelf are stored as free text, and the fourth level is called a bin. The vocabulary and the number of levels are not settled." />
               <OpenDecision text={/* TODO(decision) — Rulings §9.12: is “Bhaktapur Heavy Grip & Rigging” a fourth BRANCH or a fourth WAREHOUSE of an existing one? It joins to Head Office here because that is the only assignment under which the branch records’ own declared counts (2 / 1 / 1) reconcile. If it is really a fourth branch, every group total on this tab moves with it. */ "Branch assignment has not been confirmed."} />
             </div>
           </Card>

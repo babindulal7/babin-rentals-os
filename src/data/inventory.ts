@@ -879,21 +879,21 @@ export const FILTER_RAIL: RailRow[] = [
     label: 'Location',
     icon: 'package',
     reason:
-      'The database splits location across product_units.rack, .shelf and .bin plus warehouse_id and storage_zone_id (0004:203-207). A single free-text value like “Shelf A1” maps onto no one of them, and deciding it means shelf=“A1” rather than rack=“Shelf A1” would be an invention. Every unit shows its own rack · shelf · bin when the row is expanded.',
+      'Location is split across separate rack, shelf, bin, warehouse and storage zone fields, so a single free-text value like “Shelf A1” matches none of them, and choosing one would be a guess. Every unit shows its own rack · shelf · bin when the row is expanded.',
   },
   {
     kind: 'blocked',
     label: 'Warehouse',
     icon: 'home',
     reason:
-      'product_units.warehouse_id exists (0004:203), but it is a uuid and this rail must offer warehouse NAMES. No query joins warehouses to the catalogue.',
+      'Warehouse names are not joined to units yet, so this facet is not offered.',
   },
   {
     kind: 'blocked',
     label: 'Case',
     icon: 'box',
     reason:
-      'product_units.container_id exists (0004:208), but it is a uuid and this rail must offer container names. No query joins containers to the catalogue.',
+      'Case names are not joined to units yet, so this facet is not offered.',
   },
   {
     kind: 'blocked',
@@ -907,14 +907,14 @@ export const FILTER_RAIL: RailRow[] = [
     label: 'Supplier',
     icon: 'truck',
     reason:
-      'products.supplier_id exists (0004:125), but it is a uuid and this rail must offer supplier names. No query joins suppliers to the catalogue.',
+      'Supplier names are not joined to the catalogue yet, so this facet is not offered.',
   },
   {
     kind: 'blocked',
     label: 'Purchase Date',
     icon: 'calendar_event',
     reason:
-      'products.purchase_date is a real column (0004:102). A date facet is a RANGE, and this rail draws checkbox lists — ListFilters carries dateRange, but no control here emits one.',
+      'Filtering by purchase date needs a range control this panel does not have yet.',
   },
   {
     kind: 'blocked',
@@ -1139,7 +1139,7 @@ export type SortKey = (typeof SORTS)[number]
  */
 export const SORT_UNAVAILABLE: Partial<Record<SortKey, string>> = {
   'Units, most first':
-    'There is no unit count on products to order by. total_quantity (0004:97) is the quantity-tracking figure and is 0 on every serialised SKU, so ordering by it would sort the serialised catalogue by a column that is zero for all of it. Sorting the page instead would rank twenty-five models and call it the catalogue.',
+    'There is no unit count on products to order by. Total quantity is the quantity-tracking figure and is 0 on every serialised SKU, so ordering by it would sort the serialised catalogue by a figure that is zero for all of it. Sorting the page instead would rank twenty-five models and call it the catalogue.',
   'Needs attention first':
     'The attention score is a weighted sum over a model’s unit states (Missing×3, Maintenance×2, Inspection, Cleaning). The weights live in the app and there is no column or view carrying the result, so the database cannot order by it — and sorting the page would rank the rows in hand rather than the catalogue.',
 }

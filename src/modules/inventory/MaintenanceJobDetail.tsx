@@ -384,7 +384,7 @@ export function MaintenanceJobDetail({
     if (!jobData) return
     const trimmedNote = note.trim()
     if (!trimmedNote || trimmedNote.length < 3) {
-      setErrorMessage('A completion note of at least 3 characters is required to close a repair job (Ruling D4).')
+      setErrorMessage('A completion note of at least 3 characters is required to close a repair job.')
       return
     }
 
@@ -474,6 +474,8 @@ export function MaintenanceJobDetail({
     }
 
     if (!jobData) {
+      // No job id in the route and none passed in: nothing is selected, so the list is the whole screen.
+      if (!activeId) return null
       return (
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: 'var(--sp-md)' }}>
           <EmptyState
@@ -660,7 +662,7 @@ export function MaintenanceJobDetail({
 
       {/* Linked Damage Finding Card (if linked) */}
       {jobData.damageFinding && (
-        <Card title="Linked Damage Finding (D4)">
+        <Card title="Linked Damage Finding">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <span className="identifier" style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
@@ -742,7 +744,7 @@ export function MaintenanceJobDetail({
                 background: 'var(--card2)',
               }}
             >
-              No repair photos attached yet. Multiple photos permitted (W27: damage & repair ≤ 10 MB).
+              No repair photos attached yet. Multiple photos permitted (up to 10 MB each for damage and repair).
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 'var(--sp-xs)' }}>
@@ -811,10 +813,10 @@ export function MaintenanceJobDetail({
 
       {/* Close Job Section (Ruling D4) */}
       {!isCompleted ? (
-        <Card title="Close Maintenance Job (Ruling D4)">
+        <Card title="Close Maintenance Job">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
             <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.4 }}>
-              Closing this job completes the record, marks linked damage findings repaired, restores unit condition, and re-runs the status engine so the unit becomes reservable (Ruling D4).
+              Closing this job completes the record, marks linked damage findings repaired, restores unit condition, and re-runs the status engine so the unit becomes reservable.
             </p>
 
             {canClose ? (
@@ -912,7 +914,7 @@ export function MaintenanceJobDetail({
             ) : (
               <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="lock" size={14} />
-                <span>Warehouse seats cannot close repair jobs. A Technician or Manager must inspect and close the job to return unit to reservable stock (Ruling D4).</span>
+                <span>Warehouse seats cannot close repair jobs. A Technician or Manager must inspect and close the job to return unit to reservable stock.</span>
               </div>
             )}
           </div>

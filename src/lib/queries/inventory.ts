@@ -1366,8 +1366,8 @@ async function fetchLastReset(unitId: string | null): Promise<ItemCardLastReset 
   let summary = ''
   if (entry.qc_self_checked) {
     summary = cleanedByName
-      ? `Cleaned & self-checked by ${cleanedByName} (alone on shift, W43)`
-      : 'Cleaned & self-checked (alone on shift, W43)'
+      ? `Cleaned & self-checked by ${cleanedByName} (alone on shift)`
+      : 'Cleaned & self-checked (alone on shift)'
   } else if (entry.qc_skipped) {
     const reason = entry.qc_skip_reason ? ` (${String(entry.qc_skip_reason)})` : ''
     summary = cleanedByName ? `Cleaned by ${cleanedByName} · QC skipped${reason}` : `QC skipped${reason}`

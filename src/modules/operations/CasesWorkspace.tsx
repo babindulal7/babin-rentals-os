@@ -295,6 +295,9 @@ export function CasesWorkspace({ embedded = false, searchControl }: {
        above landed in state but not on screen until a chip was flicked. */
   }, [casesList, routeCaseId, searchQuery, activeFilter])
 
+  /* A route id, a search or a status chip narrows the queue; the empty copy says which one applies. */
+  const queueFiltered = Boolean(routeCaseId) || searchQuery.trim() !== '' || activeFilter !== 'All'
+
   /**
    * **RS-09 — the strip, the chips and the table now count the same array.**
    *
@@ -542,17 +545,21 @@ export function CasesWorkspace({ embedded = false, searchControl }: {
           onRetry={() => setReadVersion((v) => v + 1)}
           hasRows={filteredCases.length > 0}
           empty={filteredCases.length === 0}
-          emptyIsFiltered={Boolean(routeCaseId) || searchQuery.trim() !== '' || activeFilter !== 'All'}
+          emptyIsFiltered={queueFiltered}
           onClearFilters={() => (routeCaseId ? navigate('/inventory/cases') : patch({ status: null, q: null }))}
           {...(routeCaseId ? { clearLabel: 'Show all cases' } : {})}
           noun="cases"
           skeleton="table"
           skeletonRows={5}
-          emptyTitle={routeCaseId ? `No case matches ${routeCaseId}` : 'No cases found'}
+          emptyTitle={
+            routeCaseId ? `No case matches ${routeCaseId}` : queueFiltered ? 'No cases found' : 'No incident cases yet'
+          }
           emptyMessage={
             routeCaseId
               ? 'Nothing in the queue carries this case ID. It may have been renumbered, or the link that brought you here is stale.'
-              : 'Adjust your filters or search query to find incident cases.'
+              : queueFiltered
+                ? 'Adjust your filters or search query to find incident cases.'
+                : 'Nothing has been added here.'
           }
         >
           <DataTableShell ariaLabel="Incident cases">

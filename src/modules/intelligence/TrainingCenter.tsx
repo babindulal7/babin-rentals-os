@@ -28,6 +28,7 @@ import {
   SYNTHETIC_GOLDEN_CASES,
   exportGoldenCasesToJsonl,
 } from '../../lib/intelligence/goldenCases'
+import { formatAdDateTime } from '../../lib/bs'
 import {
   REAL_PILOT_GOLDEN_CASES,
 } from '../../lib/intelligence/realGoldenCases'
@@ -60,6 +61,19 @@ export type TrainingCenterTab =
   | 'library'
   | 'evaluations'
   | 'feedback'
+
+/** A stored code (`rental_rules`, `reject_action`, `synthetic-demo-v1`) as the words staff read. */
+function plainLabel(code: string): string {
+  const words = code.replace(/-v[0-9]+$/, '').replace(/[_-]+/g, ' ').trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+/** Staff read the evaluation environment as a plain label, never the code it is recorded under. */
+const EVALUATION_ENVIRONMENT_LABELS: Record<string, string> = {
+  synthetic_offline: 'Synthetic data, offline',
+  real_pilot_offline: 'Real pilot data, offline',
+  authorized_staging: 'Authorized staging',
+}
 
 export default function TrainingCenter() {
   const { user } = useAuth()
@@ -298,11 +312,9 @@ export default function TrainingCenter() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
             <Icon name="check" size={16} />
             <span>SYNTHETIC OFFLINE MODE</span>
-            <span style={{ fontWeight: 400, opacity: 0.85 }}>• Zero live DB writes • Zero external AI cost • 47 Golden Cases active</span>
+            <span style={{ fontWeight: 400, opacity: 0.85 }}>• Zero live DB writes • Zero external AI cost • {SYNTHETIC_GOLDEN_CASES.length} Golden Cases active</span>
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--success-text)', fontWeight: 500 }}>
-            Base SHA: <code>4c8fe9d7</code>
-          </div>
+          {/* The commit SHA the run was evaluated at is a developer identifier, so the staff banner does not show it. */}
         </div>
 
         {/* Page Header */}
@@ -350,7 +362,7 @@ export default function TrainingCenter() {
               { id: 'overview', label: 'Overview', icon: 'chart', count: null },
               { id: 'quality', label: 'Data Quality', icon: 'checklist', count: SYNTHETIC_DATA_QUALITY_ISSUES.length },
               { id: 'reviews', label: 'Knowledge Review', icon: 'eye', count: reviewItems.filter((r) => r.status === 'pending').length },
-              { id: 'library', label: 'Golden Test Library', icon: 'box', count: SYNTHETIC_GOLDEN_CASES.length },
+              { id: 'library', label: 'Golden Test Library', icon: 'box', count: allAvailableCases.length },
               { id: 'evaluations', label: 'Evaluation Runs', icon: 'settings', count: null },
               { id: 'feedback', label: 'Staff Feedback', icon: 'message', count: feedbackItems.filter((f) => f.status === 'pending').length },
             ] as const
@@ -547,7 +559,7 @@ export default function TrainingCenter() {
                       return (
                         <tr key={suite} style={{ borderBottom: '1px solid var(--divider)' }}>
                           <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text)' }}>
-                            <code>{suite}</code>
+                            {plainLabel(suite)}
                           </td>
                           <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text)' }}>{total}</td>
                           <td style={{ padding: '0.75rem 0.5rem', color: 'var(--success-text)', fontWeight: 600 }}>{passed}</td>
@@ -928,7 +940,7 @@ export default function TrainingCenter() {
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Golden Test Case Library</h3>
                   <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
-                    Curated collection of 47 synthetic golden assertions with explicit expected dispositions.
+                    Curated collection of {allAvailableCases.length} golden assertions with explicit expected dispositions.
                   </p>
                 </div>
                 <button
@@ -1025,7 +1037,7 @@ export default function TrainingCenter() {
                 >
                   <option value="all">All Suites</option>
                   {suitesList.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>{plainLabel(s)}</option>
                   ))}
                 </select>
                 <select
@@ -1059,7 +1071,7 @@ export default function TrainingCenter() {
                     {filteredCases.map((c) => (
                       <tr key={c.id} style={{ borderBottom: '1px solid var(--divider)' }}>
                         <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600, color: 'var(--text)' }}><code>{c.id}</code></td>
-                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--text)' }}>{c.suite}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--text)' }}>{plainLabel(c.suite)}</td>
                         <td style={{ padding: '0.625rem 0.5rem' }}>
                           <span
                             style={{
@@ -1082,7 +1094,7 @@ export default function TrainingCenter() {
                               fontWeight: 600,
                             }}
                           >
-                            {c.expectedDisposition}
+                            {plainLabel(c.expectedDisposition)}
                           </span>
                         </td>
                         <td style={{ padding: '0.625rem 0.5rem', color: 'var(--muted)' }}>{c.audience}</td>
@@ -1142,7 +1154,7 @@ export default function TrainingCenter() {
                   </div>
                   <div style={{ fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div><strong>Question:</strong> {selectedCaseModal.question}</div>
-                    <div><strong>Expected Disposition:</strong> <code>{selectedCaseModal.expectedDisposition}</code></div>
+                    <div><strong>Expected Disposition:</strong> {plainLabel(selectedCaseModal.expectedDisposition)}</div>
                     <div>
                       <strong>Required Assertions:</strong>
                       <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: 'var(--success-text)' }}>
@@ -1159,8 +1171,8 @@ export default function TrainingCenter() {
                         ))}
                       </ul>
                     </div>
-                    <div><strong>Labels:</strong> {selectedCaseModal.labels.join(', ')}</div>
-                    <div><strong>Fixture:</strong> <code>{selectedCaseModal.fixtureId}</code></div>
+                    <div><strong>Labels:</strong> {selectedCaseModal.labels.map(plainLabel).join(', ')}</div>
+                    <div><strong>Fixture:</strong> {plainLabel(selectedCaseModal.fixtureId)}</div>
                   </div>
                 </div>
               </div>
@@ -1223,9 +1235,8 @@ export default function TrainingCenter() {
               {currentRun && (
                 <div>
                   <div style={{ backgroundColor: 'var(--surface-2)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8125rem' }}>
-                    <div><strong>Run ID:</strong> <code>{currentRun.runId}</code></div>
-                    <div><strong>Environment:</strong> <code>{currentRun.environment}</code></div>
-                    <div><strong>Evaluated At:</strong> {new Date(currentRun.asOf).toLocaleTimeString()}</div>
+                    <div><strong>Environment:</strong> {EVALUATION_ENVIRONMENT_LABELS[currentRun.environment] ?? '—'}</div>
+                    <div><strong>Evaluated At:</strong> {formatAdDateTime(currentRun.asOf)}</div>
                     <div><strong>Passed:</strong> <span style={{ color: 'var(--success-text)', fontWeight: 700 }}>{currentRun.counts.pass}</span> / {currentRun.counts.total}</div>
                   </div>
 
@@ -1246,7 +1257,7 @@ export default function TrainingCenter() {
                         {currentRun.results.map((res) => (
                           <tr key={res.caseId} style={{ borderBottom: '1px solid var(--divider)' }}>
                             <td style={{ padding: '0.5rem', fontWeight: 600, color: 'var(--text)' }}><code>{res.caseId}</code></td>
-                            <td style={{ padding: '0.5rem', color: 'var(--text)' }}>{res.suite}</td>
+                            <td style={{ padding: '0.5rem', color: 'var(--text)' }}>{plainLabel(res.suite)}</td>
                             <td style={{ padding: '0.5rem' }}>
                               <span
                                 style={{

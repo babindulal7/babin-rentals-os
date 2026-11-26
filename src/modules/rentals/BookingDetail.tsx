@@ -944,6 +944,11 @@ function NotWiredNote({ children }: { children: React.ReactNode }) {
  * operator can see editing IS a future possibility and knows WHY it is absent
  * today. A missing button would read as "this screen is read-only by design."
  */
+/* The confirm refusal when the stock check cannot be read: what happened, whether a
+   retry may help, and what to do next. The engine wording names state, not a step
+   (lifecycle-1-2). */
+const AVAILABILITY_UNREADABLE_COPY =
+  'We could not check stock for these dates, so this rental was not confirmed. Try again in a minute. If it keeps happening, tell the office.'
 const NO_INVOICE_PAYMENT_UNAVAILABLE =
   'No invoice has been raised for this booking yet, and a payment settles against an invoice. ' +
   'Use Create Invoice to raise the Draft first — it stays a Draft, so an advance can be taken against it.'
@@ -1552,6 +1557,8 @@ function BookingDetailView() {
   const [draftOverlapNotice, setDraftOverlapNotice] = useState<string | null>(null)
   const [availabilityEvaluation, setAvailabilityEvaluation] = useState<BookingAvailabilityEvaluation | null>(null)
   const [availabilityError, setAvailabilityError] = useState<string | null>(null)
+  /* Bumped by the banner's Retry control so the same availability read runs again (lifecycle-1-1). */
+  const [availabilityAttempt, setAvailabilityAttempt] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -1580,7 +1587,7 @@ function BookingDetailView() {
     return () => {
       active = false
     }
-  }, [id, booking?.stage, head.lastFetchedAt])
+  }, [id, booking?.stage, head.lastFetchedAt, availabilityAttempt])
 
   const confirmBooking = useCallback(() => {
     const ctx = actionCtx(user)
@@ -1631,6 +1638,9 @@ function BookingDetailView() {
       })
       .catch((err: unknown) => {
         const formatted = formatGateError(err)
+        const shown = formatted.toLowerCase().includes('availability could not be checked')
+          ? AVAILABILITY_UNREADABLE_COPY
+          : formatted
         if (
           formatted.toLowerCase().includes('conflict') ||
           formatted.toLowerCase().includes('stock free') ||
@@ -1647,11 +1657,11 @@ function BookingDetailView() {
                   return
                 }
               }
-              setConfirmError(formatted)
+              setConfirmError(shown)
             })
-            .catch(() => setConfirmError(formatted))
+            .catch(() => setConfirmError(shown))
         } else {
-          setConfirmError(formatted)
+          setConfirmError(shown)
         }
       })
       .finally(() => setConfirming(false))
@@ -2858,6 +2868,9 @@ function BookingDetailView() {
         >
           <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
           <span>{availabilityError}</span>
+          <Button variant="tertiary" size="sm" onClick={() => setAvailabilityAttempt((n) => n + 1)}>
+            Retry
+          </Button>
         </div>
       )}
 
@@ -3941,7 +3954,7 @@ function BookingDetailView() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--text-muted)' }}>
-            This booking is currently on rent. How would you like to add additional gear or services (W87)?
+            This booking is currently on rent. How would you like to add additional gear or services?
           </p>
 
           <div

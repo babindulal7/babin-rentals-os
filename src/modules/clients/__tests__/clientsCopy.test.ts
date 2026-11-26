@@ -23,6 +23,10 @@ import directorySrc from '../ClientsDirectory.tsx?raw'
 import clientsSrc from '../Clients.tsx?raw'
 import membershipSrc from '../Membership.tsx?raw'
 import membershipData from '../../../data/membership.ts?raw'
+import detailSrc from '../ClientDetail.tsx?raw'
+import addIdSrc from '../modals/AddClientIdModal.tsx?raw'
+import addCollectorSrc from '../modals/AddCollectorModal.tsx?raw'
+import upgradeSrc from '../modals/UpgradeTierModal.tsx?raw'
 import { PLANS, COMPARISON_ROWS, STACK_NOTE } from '../../../data/membership'
 
 /**
@@ -159,5 +163,51 @@ describe('CL-12 — nothing promises a company field the view has no column for'
   it('emits no always-empty Company column in either CSV', () => {
     expect(code(directorySrc)).not.toContain(`'Company',`)
     expect(code(clientsSrc)).not.toContain(`'Company',`)
+  })
+})
+
+describe('internal ruling codes stay out of staff copy', () => {
+  /*
+   * Ruling codes (W18b, W28, W34, W50, W51, D22, D23) live in code comments only.
+   * `code()` strips comments, so what is tested is what staff read.
+   */
+  const RULING_CODE = /\bW(?:18|28|34|50|51)[ab]?\b|\bRulings?\s+[WD]\d|\bRuling [WD]\d/
+
+  it.each([
+    ['ClientDetail.tsx', detailSrc],
+    ['modals/AddClientIdModal.tsx', addIdSrc],
+    ['modals/AddCollectorModal.tsx', addCollectorSrc],
+    ['modals/UpgradeTierModal.tsx', upgradeSrc],
+  ])('%s names no ruling code in what it renders', (_name, src) => {
+    expect(code(src)).not.toMatch(RULING_CODE)
+  })
+})
+
+describe('the directory names the membership it holds, never the placeholder', () => {
+  it('the Membership column reads the view\'s own reading, with no placeholder fallback', () => {
+    const src = code(directorySrc)
+    expect(src).toContain('{membershipLabel(client)}')
+    expect(src).not.toContain(`label={client.membership || 'Standard'}`)
+  })
+
+  it('the preview header and credit figure use the same helpers as the table', () => {
+    const src = code(directorySrc)
+    expect(src).not.toMatch(/\{selectedClient\.membership\}/)
+    expect(src).toContain('creditLimitLabel(selectedClient.creditLimitPaisa)')
+  })
+})
+
+describe('On Stop is answered from one overdue reader on both screens', () => {
+  it('the directory preview reads the invoice due dates through the shared hook', () => {
+    expect(code(directorySrc)).toContain('useClientOverdueDays(')
+  })
+
+  it('the profile derives overdue days through the same helper, not an inline loop', () => {
+    expect(code(detailSrc)).toContain('worstDaysPastDue(invoices.rows)')
+    expect(code(detailSrc)).not.toContain('daysPastDue(inv.dueDateAd)')
+  })
+
+  it('the On Stop banner joins its reasons with a space, not a second full stop', () => {
+    expect(code(detailSrc)).not.toContain(`reasons.join('. ')`)
   })
 })

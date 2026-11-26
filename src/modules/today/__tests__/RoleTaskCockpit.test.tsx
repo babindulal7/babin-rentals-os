@@ -214,7 +214,8 @@ describe('RoleTaskCockpit Component (T5-11, W61, W79, W31)', () => {
       await new Promise((r) => setTimeout(r, 50))
     })
 
-    expect(container.textContent).toContain('Executive Cockpit (W79)')
+    expect(container.textContent).toContain('Executive Cockpit')
+    expect(container.textContent).not.toContain('(W79)')
     // 1. Approvals waiting
     expect(container.textContent).toContain('Approvals Waiting')
     // 2. Today's money (collected, owed, deposits held)

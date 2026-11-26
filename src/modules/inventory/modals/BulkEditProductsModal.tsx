@@ -298,7 +298,7 @@ export function BulkEditProductsModal({
     }
 
     if (selectedField === 'rates_percentage' && !isOwner) {
-      setSubmitError('Only the Owner can adjust product rental rates by percentage (B32).')
+      setSubmitError('Only the Owner can adjust product rental rates by percentage.')
       return
     }
 

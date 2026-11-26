@@ -144,7 +144,7 @@ export function AddCollectorModal({
         if (!submitting) onClose()
       }}
       title="Add Authorized Collector"
-      subtitle={`Client: ${clientName} (W28, W34)`}
+      subtitle={`Client: ${clientName}`}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)' }}>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
@@ -162,7 +162,7 @@ export function AddCollectorModal({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
-          Save people the client usually sends (assistant, AC, driver). At handover, staff pick the receiver in 1 tap (Rulings W28, W34).
+          Save people the client usually sends (assistant, AC, driver). At handover, staff pick the receiver in 1 tap.
         </p>
 
         {error && (

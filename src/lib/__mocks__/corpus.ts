@@ -583,6 +583,11 @@ export function buildStore(options?: BuildStoreOptions): Store {
         client_uuid: seedUuid(`reservation:nov:${index}`),
         booking_id: booking?.['id'] ?? null,
         asset_id: unit['id'],
+        qty: 1,
+        /* A live row must carry a hold state the availability check accepts; the
+           real schema defaults it to 'confirmed' (0188), and the check refuses a
+           missing one, so the seed has to say so too (lifecycle-1-0). */
+        hold_state: 'confirmed',
         /* Postgres's own text form for a tstzrange — a space rather than `T`
            and `+00` rather than `Z`, which is what `parseTstzRange` normalises. */
         period: '["2026-11-10 04:00:00+00","2026-11-17 04:00:00+00")',

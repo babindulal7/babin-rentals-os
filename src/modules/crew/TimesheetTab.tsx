@@ -233,7 +233,7 @@ export default function TimesheetTab() {
             value: formatMoney(rupees(stats.totalPay ?? 0)),
             icon: 'card' as const,
             accent: 'success' as const,
-            definition: 'Sum of (days + overtime days) × day rate across the crew this week (Ruling D24). Matches Crew Assist payouts.',
+            definition: 'Sum of (days + overtime days) × day rate across the crew this week. Matches Crew Assist payouts.',
           },
         ]
       : []),
@@ -463,7 +463,7 @@ export default function TimesheetTab() {
 
       {canViewMoney && rows.length > 0 && (
         <p style={{ margin: 'var(--sp-md) 0 0', fontSize: 'var(--t-meta)', color: 'var(--text3)', lineHeight: 1.55 }}>
-          Pay is days worked × day rate + recorded overtime days (Ruling D24), matching Crew Assist payouts. Hours are recorded for operational tracking.
+          Pay is days worked × day rate + recorded overtime days, matching Crew Assist payouts. Hours are recorded for operational tracking.
         </p>
       )}
     </PageShell>

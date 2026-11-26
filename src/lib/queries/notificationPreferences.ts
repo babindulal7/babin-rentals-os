@@ -92,7 +92,7 @@ export const NOTIFICATION_CATEGORIES: readonly NotificationCategoryMeta[] = [
     key: 'digest',
     title: 'Morning digest',
     label: 'Morning digest',
-    description: 'One summary email each morning with today’s pick-ups, returns, and crew shifts (O-4).',
+    description: 'One summary email each morning with today’s pick-ups, returns, and crew shifts.',
     emailAllowed: true,
     emailDefault: true,
     inAppDefault: true,

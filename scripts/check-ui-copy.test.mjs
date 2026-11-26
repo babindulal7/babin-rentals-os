@@ -39,3 +39,23 @@ test('rejects raw JSX text in converted modules (T6-02)', () => {
   const compliantSource = 'export default function View() { return <div><p>{t("tools.lateFee.ruleDescription")}</p></div> }'
   assert.equal(copyViolations(convertedPath, compliantSource).length, 0)
 })
+
+test('flags ruling codes, spec and migration references, table and view names, env variables and "customer" in rendered copy', () => {
+  for (const source of [
+    '<p>I am alone on shift (W43, L7)</p>',
+    '<p>Pay follows Ruling D24</p>',
+    '<p>Deposit Policy (O-3, B38)</p>',
+    '<p>Cover from partner (T3-13)</p>',
+    '<p>Stored in backup_logs</p>',
+    '<p>Read from staff_directory_v</p>',
+    '<p>Set VITE_DATA_SOURCE=mock to continue</p>',
+    '<p>Stored at (0003:887)</p>',
+    '<p>Ask the customer first</p>',
+  ]) assert.ok(copyViolations('sample.tsx', source).length > 0, source)
+})
+
+test('permits CSS variables, code comments, and plain English words', () => {
+  assert.equal(copyViolations('sample.tsx', '<p style={{ color: "var(--w08)" }}>Ready</p>').length, 0)
+  assert.equal(copyViolations('sample.tsx', '// W43 and Ruling D24 are recorded in the migration\n<p>Ready</p>').length, 0)
+  assert.equal(copyViolations('sample.tsx', '<p>Schedule the pick-up for Monday</p>').length, 0)
+})

@@ -82,14 +82,14 @@ export const SYSTEM_SECTIONS: Section[] = [
     fields: [
       {
         label: 'My channel & type preferences',
-        note: 'Configure in-app alerts and email notifications per category. Morning digest is on by default (21 Jul lock, T5-05).',
+        note: 'Configure in-app alerts and email notifications per category. Morning digest is on by default.',
         custom: <NotificationPreferencesControl />,
       },
       /* T1-16: no toggle may claim that a notification has been enabled when
          there is no save handler or delivery service behind it. Each future
          capability owns the actual settings/persistence and can replace its
          read-only marker when shipped. */
-      { label: 'Low stock alerts', note: 'Inventory minimum-stock warnings.', readOnlyWhy: 'Not built yet — arrives with T3-30.' },
+      { label: 'Low stock alerts', note: 'Inventory minimum-stock warnings.', readOnlyWhy: 'Not built yet.' /* Implementing task: T3-30. */ },
     ],
   },
   {
@@ -137,8 +137,14 @@ export const SYSTEM_SECTIONS: Section[] = [
    * *against* the recommendation put with it.
    *
    * Every default is the ruled answer, so surfacing these changed no behaviour.
-   * `readBy` names the module that reads each one live, per §11.4 — *"Every
-   * value here is read by a screen. None is hardcoded."*
+   * Per §11.4 every value here is read by a screen, and none is hardcoded. The
+   * modules that read each value live are listed here, not shown to staff:
+   *   operationalDayStart: lib/rentalDays.ts, lib/operationalDay.ts, NewRental.tsx, Today
+   *   unitAvailabilityRule, timeBetweenRentals, rentalTurnaround: lib/queries/availability.ts
+   *   packingTreeGrouping, packingPhotosRequired: modules/rentals/PackingWorkspace.tsx
+   *   evidenceRetentionDays: modules/rentals/EvidenceWorkspace.tsx
+   *   resetNeededNextHours: modules/rentals/ResetWorkspace.tsx
+   *   delivery zones: lib/queries/delivery.ts, modules/operations/DeliveryWorkspace.tsx
    *
    * ⚠ This card is the one place in Settings where a change alters what the
    * **warehouse** can physically do with gear, not how a number is displayed.
@@ -152,55 +158,46 @@ export const SYSTEM_SECTIONS: Section[] = [
         label: 'Rental day starts at',
         note: 'Start of the 24-hour rental day (default 06:00, quarter hours). Decides billed days for new bookings and the operational day boundary.',
         settingKey: 'operationalDayStart',
-        readBy: 'lib/rentalDays.ts, lib/operationalDay.ts, NewRental.tsx, Today',
       },
       {
         label: 'Unit availability',
         note: 'Which units Auto Assign Serials will not pick. Gear already booked for the dates is excluded either way — this is about condition.',
         settingKey: 'unitAvailabilityRule',
-        readBy: 'lib/queries/availability.ts (every Confirm)',
       },
       {
         label: 'Time between rentals',
         note: 'Account-wide uses the turnaround setting below. Per product uses each product\'s prep minutes before pickup and cleaning minutes after return.',
         settingKey: 'timeBetweenRentals',
-        readBy: 'lib/queries/availability.ts (every Confirm & reservation)',
       },
       {
         label: 'Turnaround between rentals',
         note: 'Whether gear returning at 18:00 can go out again at 18:00, or needs time in between.',
         settingKey: 'rentalTurnaround',
-        readBy: 'lib/queries/availability.ts (every Confirm)',
       },
       {
         label: 'Packing tree grouping',
         note: 'How the packing bench groups a booking — by the bundle it was sold as, or by category.',
         settingKey: 'packingTreeGrouping',
-        readBy: 'modules/rentals/PackingWorkspace.tsx',
       },
       {
         label: 'Packing photos required',
         note: 'Photos of the packed booking before Complete Packing is allowed. Zero turns the gate off.',
         settingKey: 'packingPhotosRequired',
-        readBy: 'modules/rentals/PackingWorkspace.tsx',
       },
       {
         label: 'Evidence photo retention',
         note: 'How long a photo file is kept after a booking completes. The record of who took it, and when, is always kept.',
         settingKey: 'evidenceRetentionDays',
-        readBy: 'modules/rentals/EvidenceWorkspace.tsx',
       },
       {
         label: 'Reset "Needed next" window',
-        note: 'How soon a unit\'s next reservation pickup must be to show "Needed next" in the Reset queue and sort to the top. Default 4 hours (Ruling D5).',
+        note: 'How soon a unit\'s next reservation pickup must be to show "Needed next" in the Reset queue and sort to the top. Default 4 hours.',
         settingKey: 'resetNeededNextHours',
-        readBy: 'modules/rentals/ResetWorkspace.tsx',
       },
       {
         label: 'Delivery zones',
         note: 'Zones and fees for delivery dispatch. Pickup at the shop is always Rs 0. Owner, Admin and Manager can create, edit, and deactivate zones.',
         custom: <DeliveryZonesControl />,
-        readBy: 'lib/queries/delivery.ts, modules/operations/DeliveryWorkspace.tsx',
       },
     ],
   },
@@ -211,7 +208,7 @@ export const SYSTEM_SECTIONS: Section[] = [
     fields: [
       {
         label: 'Away mode',
-        note: 'Pause online booking requests during holidays or stocktaking. Public catalogue and rates remain viewable; server refuses new requests (B6).',
+        note: 'Pause online booking requests during holidays or stocktaking. Public catalogue and rates remain viewable; server refuses new requests.',
         custom: <OnlineBookingAwayControl />,
       },
     ],
@@ -228,7 +225,7 @@ export const SYSTEM_SECTIONS: Section[] = [
         custom: <TwoStepAuthControl />,
       },
       { label: 'Password policy', note: 'Min 12 chars, mixed case, number, symbol. 90-day expiry.', settingKey: 'passwordPolicy' },
-      { label: 'Shared-device screen lock', note: 'Name-and-PIN switching on shared tablets.', readOnlyWhy: 'Not built yet — arrives with T1-15. The separate Idle screen lock setting below remains available.' },
+      { label: 'Shared-device screen lock', note: 'Name-and-PIN switching on shared tablets.', readOnlyWhy: 'Not built yet. The separate Idle screen lock setting below remains available.' /* Implementing task: T1-15. */ },
       /*
        * How long that lock waits — moved here from System preferences on
        * 25 Aug 2026, by ruling. It reads as one idea in this order: the lock,

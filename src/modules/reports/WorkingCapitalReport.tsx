@@ -124,7 +124,7 @@ export default function WorkingCapitalReport() {
                         ['Receivables', s.receivables, 'Outstanding on open invoices'],
                         ['Deposits held in trust', s.depositsHeld, 'Owed back to clients — a liability'],
                         ['Approved, unpaid expenses', s.approvedUnpaidExpenses, 'Approved but not yet paid'],
-                        ['Supplier payables', null, 'No supplier-invoice table exists'],
+                        ['Supplier payables', null, 'No supplier invoices are recorded yet'],
                         ['Current ratio', null, 'Needs cash and supplier payables'],
                       ] as const
                     ).map(([label, amount, note]) => (

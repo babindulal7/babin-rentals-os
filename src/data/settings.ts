@@ -3,6 +3,7 @@ import type { Slice } from '../components/ui/Charts'
 import type { StatusKey } from '../lib/status'
 import { rupees, formatMoney, roundHalfUp, grouped } from '../lib/money'
 import type { Paisa } from '../lib/money'
+import { IS_MOCK } from '../lib/supabase'
 import { APP_VERSION, BRANCH } from './nav'
 import { WAREHOUSES } from './warehouse'
 import type { Warehouse } from './warehouse'
@@ -186,7 +187,7 @@ export const TAB_SUMMARY: Record<TabKey, string> = {
   people: 'User list, role assignment, and the nine-role permissions matrix.',
   branches: 'Branch list, and the warehouses, racks and zones under each one.',
   system: 'Appearance, notifications, preferences, security and the admin tools.',
-  texts: 'Automatic client emails, reminder wording, and document texts (B20).',
+  texts: 'Automatic client emails, reminder wording, and document texts.',
 }
 
 
@@ -665,12 +666,14 @@ export interface SummaryRow {
  */
 export const SYSTEM_SUMMARY: SummaryRow[] = [
   { label: 'System version', value: APP_VERSION.split(' ').pop() ?? '', tone: 'default' },
-  { label: 'Database', value: 'Healthy', tone: 'good' },
-  { label: 'Storage used', value: '246.8 GB / 1 TB', tone: 'default' },
-  { label: 'Backup status', value: 'Successful', tone: 'good' },
-  { label: 'Last backup', value: 'Today, 02:15 AM', tone: 'default' },
-  { label: 'Next scheduled backup', value: 'Tomorrow, 02:00 AM', tone: 'default' },
-  { label: 'Environment', value: 'Production', tone: 'default' },
+  // No database, storage or backup reader exists in this build, so each of these states its absence rather than showing a live-looking figure (rulings §8).
+  { label: 'Database', value: 'Not tracked yet', tone: 'default' },
+  { label: 'Storage used', value: 'Not tracked yet', tone: 'default' },
+  { label: 'Backup status', value: 'Not tracked yet', tone: 'default' },
+  { label: 'Last backup', value: 'Not tracked yet', tone: 'default' },
+  { label: 'Next scheduled backup', value: 'Not tracked yet', tone: 'default' },
+  // The build's own data source, not a fixed claim: a mock build must not read as production.
+  { label: 'Environment', value: IS_MOCK ? 'Mock mode' : 'Production', tone: 'default' },
   // Same defect as SYSTEM_STATS above: no session store is read, so the
   // figure states its absence rather than inventing one (rulings §8).
   { label: 'Active sessions', value: 'Not tracked yet', tone: 'default' },

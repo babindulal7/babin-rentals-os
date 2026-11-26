@@ -200,7 +200,7 @@ export function TextsPane() {
         <Icon name="lock" size={36} style={{ color: 'var(--muted)', margin: '0 auto var(--sp-md)' }} />
         <h3 style={{ fontSize: 'var(--t-title)', marginBottom: 'var(--sp-xs)' }}>Access Restricted</h3>
         <p style={{ color: 'var(--text2)', maxWidth: 500, margin: '0 auto' }}>
-          Settings ▸ Texts is restricted to <strong>Owner</strong> and <strong>Admin</strong> (B20). Your role ({role ?? 'Guest'}) does not have permission to view or edit message templates.
+          Settings ▸ Texts is restricted to <strong>Owner</strong> and <strong>Admin</strong>. Your role ({role ?? 'Guest'}) does not have permission to view or edit message templates.
         </p>
       </div>
     )

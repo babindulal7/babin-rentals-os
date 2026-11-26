@@ -608,8 +608,8 @@ export function CreateInvoiceModal({ isOpen, onClose, bookingNo, onSuccess }: Cr
               <Row label="Payment terms" value={preview.paymentTerms} />
               <Row label="Due" value={<BsAdDate date={preview.dueDateAd} layout="inline" />} />
               <span style={{ color: 'var(--muted)' }}>
-                A Draft invoice is created at Confirm (W15), carries no number, and follows the booking — lines and
-                totals update as the booking changes. It is numbered when the accountant's rule fires (W16).
+                A Draft invoice is created at Confirm, carries no number, and follows the booking — lines and
+                totals update as the booking changes. It is numbered when the accountant's rule fires.
               </span>
             </div>
 

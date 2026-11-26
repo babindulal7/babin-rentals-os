@@ -79,7 +79,7 @@ export interface DailyClosing {
 const P = (n: number) => n as Paisa
 
 export const DAY_BOUNDARY_NOTE =
-  'Movement counts use the operational day (D4, default 06:00). Collections use the calendar day, because VAT periods do — so a payment taken before 06:00 sits in a different day here than the return it settles.'
+  'Movement counts use the operational day, which starts at 06:00 Nepal time by default. Collections use the calendar day, because VAT periods do — so a payment taken before 06:00 sits in a different day here than the return it settles.'
 
 /** PostgREST's `max_rows` (supabase/config.toml:18) — the widest page one request can return. */
 const CLOSING_PAGE_SIZE = 1000

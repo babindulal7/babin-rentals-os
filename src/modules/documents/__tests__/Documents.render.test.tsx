@@ -194,4 +194,21 @@ describe('Documents Workspace (Bento 2.0 / Design Taste)', () => {
     expect(el.textContent).toContain('Missing Documents')
     expect(el.textContent).toContain('Expiring / Due Soon')
   })
+
+  it('the All count is the rows the All list shows, archived left out, and Templates counts its two rows (audit sweep-C-finance-reports-1-10, -11)', () => {
+    const el = render(
+      <MemoryRouter initialEntries={['/documents']}>
+        <Documents />
+      </MemoryRouter>,
+    )
+
+    const tabBtns = [...el.querySelectorAll<HTMLButtonElement>('.doc-tab-btn')]
+    const countOf = (label: string) =>
+      tabBtns.find((b) => b.textContent?.startsWith(label))?.querySelector('.doc-tab-count')?.textContent
+    // 27 documents in the seed, 2 archived: All lists 25.
+    expect(countOf('All Documents')).toBe('25')
+    expect(countOf('Archived')).toBe('2')
+    // Both Template rows are in the Templates category and in the All list.
+    expect(countOf('Templates')).toBe('2')
+  })
 })

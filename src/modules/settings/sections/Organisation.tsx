@@ -77,13 +77,13 @@ export const ORGANISATION_SECTIONS: Section[] = [
         label: 'Calendar mode',
         note: 'BS leads AD everywhere. Latin digits always.',
         value: 'BS + AD (Default)',
-        readOnlyWhy: 'Foundation §4.2 — every date shows both calendars. There is no single-calendar mode to switch to.',
+        readOnlyWhy: 'Every date shows both calendars. There is no single-calendar mode to switch to.',
       },
       {
         label: 'Timezone',
         note: 'All dates are stored in UTC and rendered here.',
         value: 'Asia/Kathmandu (UTC+05:45)',
-        readOnlyWhy: 'Law 7 — storage is UTC and rendering is Kathmandu. Neither is configurable; a second zone would need every screen re-checked.',
+        readOnlyWhy: 'Storage is UTC and rendering is Kathmandu. Neither is configurable; a second zone would need every screen re-checked.',
       },
       { label: 'Week starts', note: 'Saturday is the weekend in Nepal.', settingKey: 'weekStarts' },
       {
@@ -100,7 +100,7 @@ export const ORGANISATION_SECTIONS: Section[] = [
         label: 'Number format',
         note: 'South Asian grouping — Rs 1,85,000.',
         value: 'Lakh / crore grouping',
-        readOnlyWhy: '`lib/money.ts` groups this way and nothing else. Changing it is a code change, not a setting.',
+        readOnlyWhy: 'Money groups this way and nothing else. Changing it is a code change, not a setting.',
       },
       {
         label: 'Units',

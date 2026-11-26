@@ -357,7 +357,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
                 Identity Document on File (KYC)
               </h3>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-                Required for equipment custody handover without high cash deposits (D1 / T2-03). Stored in encrypted private storage.
+                Required for equipment custody handover without high cash deposits. Stored in encrypted private storage.
               </p>
 
               {profile?.id_doc_path ? (

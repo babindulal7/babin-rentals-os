@@ -576,7 +576,9 @@ describe('Empirical Challenger — PageActions Clamping & Overflow Routing', () 
     const menu = document.querySelector('[role="menu"]')
     expect(menu).not.toBeNull()
     expect(menu?.textContent).toContain('Sec 3')
-    expect(menu?.querySelector('#custom-overflow-pane')?.textContent).toBe('Advanced Settings')
+    // A custom overflow node owns its own popup, so it sits beside the trigger, not inside the menu.
+    expect(menu?.querySelector('#custom-overflow-pane')).toBeNull()
+    expect(container.querySelector('#custom-overflow-pane')?.textContent).toBe('Advanced Settings')
   })
 
   it('handles null, undefined, and boolean items interspersed in secondary actions', async () => {

@@ -219,7 +219,7 @@ export function ItemCardSheet({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Icon name="user" size={14} />
-                  <span>Who Has It Now (W91)</span>
+                  <span>Who Has It Now</span>
                 </div>
                 {item.custody && countdown && (
                   <div

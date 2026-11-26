@@ -124,7 +124,7 @@ export function TemporaryStockModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Add Temporary Stock from Partner"
-      subtitle={`Add borrowed or sub-rented gear for ${productName} for a limited period (B13).`}
+      subtitle={`Add borrowed or sub-rented gear for ${productName} for a limited period.`}
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         {errorMessage && (
@@ -291,7 +291,7 @@ export function TemporaryStockModal({
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div>
             <label htmlFor={costKindSelectId} style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-              Partner Charge Kind (B47)
+              Partner Charge Kind
             </label>
             <select
               id={costKindSelectId}

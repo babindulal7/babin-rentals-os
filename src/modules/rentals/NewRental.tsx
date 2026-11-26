@@ -853,6 +853,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     draftHasUnsavedChanges,
     draftData,
     setSavedDraftFingerprint,
+    onQuoteSaved: discardLocalDraft,
     kind,
     kindOther,
     confirmKey,

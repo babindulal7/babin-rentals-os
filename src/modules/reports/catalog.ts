@@ -131,44 +131,44 @@ export const PROJECTIONS: Readonly<Record<ProjectionKey, Projection>> = {
     columns: ['Period', 'Revenue', 'Share'],
     series: 'Revenue',
     formula: 'Σ ledger.revenue over the days in each bucket. Buckets are the period split ≤ 8 ways.',
-    source: 'data/pulse.ts — LEDGER, one row per day, via figuresFor(from, to)',
+    source: 'Pulse daily ledger, one row per day, for the period',
   },
   profit: {
     key: 'profit',
     columns: ['Period', 'Revenue', 'Expenses', 'Profit'],
     series: 'Profit',
     formula: 'Profit = Σ revenue − Σ expenses, per bucket. Accrual, not cash — cash is its own report.',
-    source: 'data/pulse.ts — LEDGER revenue and expenses, via figuresFor(from, to)',
+    source: 'Pulse daily ledger, revenue and expenses, for the period',
   },
   cash: {
     key: 'cash',
     columns: ['Period', 'Cash in', 'Cash out', 'Net'],
     series: 'Net cash',
     formula:
-      'Net = Σ cashIn − Σ cashOut, per bucket. Deposits are excluded from every line: they are client money held in trust (Law 5).',
-    source: 'data/pulse.ts — LEDGER cashIn / cashOut, via figuresFor(from, to)',
+      'Net = Σ cashIn − Σ cashOut, per bucket. Deposits are excluded from every line: they are client money held in trust.',
+    source: 'Pulse daily ledger, cash in and cash out, for the period',
   },
   utilization: {
     key: 'utilization',
     columns: ['Period', 'Utilization', 'Rental days', 'Capacity'],
     series: 'Utilization %',
     formula:
-      'Utilization = units on rent ÷ (fleet units × days in bucket). Bounded at 100% by construction — §5.3 of Reports.md.',
-    source: 'data/pulse.ts — LEDGER onRentTotal against FLEET_UNITS, via figuresFor(from, to)',
+      'Utilization = units on rent ÷ (fleet units × days in bucket). Bounded at 100% by construction.',
+    source: 'Pulse daily ledger, units on rent against fleet units, for the period',
   },
   equipment: {
     key: 'equipment',
     columns: ['Model', 'Revenue', 'Rental days', 'Utilization'],
     series: 'Revenue',
     formula: 'Per-model Σ revenue over the period; utilization is that model’s rental days ÷ its own units × days.',
-    source: 'data/pulse.ts — FLEET × LEDGER per-model allocation, via figuresFor(from, to).equipment',
+    source: 'Pulse daily ledger, fleet allocated per model, for the period',
   },
   expenses: {
     key: 'expenses',
     columns: ['Period', 'Expenses', 'Share'],
     series: 'Expenses',
     formula: 'Σ ledger.expenses over the days in each bucket.',
-    source: 'data/pulse.ts — LEDGER, one row per day, via figuresFor(from, to)',
+    source: 'Pulse daily ledger, one row per day, for the period',
   },
 } as const
 
@@ -219,7 +219,7 @@ export interface CatalogReport {
 const NO_LEDGER_DIMENSION =
   'The one figures source is a daily ledger of revenue, expenses, cash and units on rent. It carries no dimension for this question, so there is nothing to group.'
 const NEEDS_QUERY =
-  'The tables exist but lib/queries has no named set for this, so no figure here would be one the database could defend.'
+  'The tables exist, but no query has been written for this yet, so no figure here would be one the database could defend.'
 
 export const REPORTS: readonly CatalogReport[] = [
   /* ── 01 Overview · 4 ─────────────────────────────────────────────────── */
@@ -245,7 +245,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '02',
     route: null,
     projection: null,
-    needs: `${NEEDS_QUERY} Bookings exist (0003) but nothing aggregates them by period, branch or status.`,
+    needs: `${NEEDS_QUERY} Bookings exist but nothing aggregates them by period, branch or status.`,
   },
   {
     key: 'booking-analysis',
@@ -253,7 +253,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '02',
     route: null,
     projection: null,
-    needs: `${NEEDS_QUERY} Lead time, source and conversion are not columns on \`bookings\`.`,
+    needs: `${NEEDS_QUERY} Lead time, source and conversion are not recorded on bookings.`,
   },
   {
     key: 'rental-duration',
@@ -269,7 +269,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '02',
     route: '/reports/promotions',
     projection: null,
-    needs: 'The Promotions report is the built screen. `booking_discounts` carries the Law 10 approval fields; nothing aggregates them yet.',
+    needs: 'The Promotions report is the built screen. Booking discounts carry the approval fields; nothing aggregates them yet.',
   },
   {
     key: 'cancellations',
@@ -277,7 +277,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '02',
     route: null,
     projection: null,
-    needs: `${NEEDS_QUERY} Cancellation is a terminal transition (Law 3), so the rows are there; the fee-tier ruling that would price them is not (PLAN.md §4).`,
+    needs: `${NEEDS_QUERY} Cancellation is a terminal transition, so the rows are there; the fee-tier rule that would price them is not settled yet.`,
   },
 
   /* ── 03 Equipment · 5 ────────────────────────────────────────────────── */
@@ -298,8 +298,9 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '03',
     route: null,
     projection: null,
+    /* TODO(decision): asset lives and the salvage convention. data/addEquipment.ts:207 records that neither may be invented here. */
     needs:
-      'Lifecycle needs asset lives and a salvage convention, and `data/addEquipment.ts:207` records that none may be invented here — it is an open TODO(decision) for Babin’s accountant.',
+      'Lifecycle needs asset lives and a salvage convention. Neither may be invented here; both are still open for the accountant to decide.',
   },
 
   /* ── 04 Inventory · 4 ────────────────────────────────────────────────── */
@@ -361,8 +362,9 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '06',
     route: null,
     projection: null,
+    /* TODO(decision): PERIOD_BASIS — how ledger revenue is split across rental days is not ruled yet. */
     needs:
-      'Sales means invoiced, and the ledger’s revenue is recognised across rental days (`PERIOD_BASIS` — itself a TODO(decision)). Rendering one under the other’s name would be the same number twice with two meanings.',
+      'Sales means invoiced, and the ledger’s revenue is recognised across rental days (how that is split by period is still to be decided). Rendering one under the other’s name would be the same number twice with two meanings.',
   },
   /* Rulings §11.3 — the Payments tab IS this report. `projection` is null not
      because nothing is tracked but because this entry renders nothing itself:
@@ -376,7 +378,7 @@ export const REPORTS: readonly CatalogReport[] = [
     route: '/finance/payments',
     projection: null,
     financeTab: 'Payments',
-    needs: 'Finance ▸ Payments is this report — it is the built tab, with the reversal rows Law 4 requires and the filters over them.',
+    needs: 'Finance ▸ Payments is this report — it is the built tab, with the reversal rows that corrections are written as and the filters over them.',
   },
   {
     key: 'receivables',
@@ -388,7 +390,7 @@ export const REPORTS: readonly CatalogReport[] = [
        are kept in the sentence so a reader looking for "Outstanding" in group
        05 finds where it went rather than assuming it was cut. */
     needs:
-      'Outstanding and Receivables are the same figure — rulings §11.3 collapsed them here — and it has no ruled recompute for `invoices.outstanding_amount`, with reversals not flowing back into `paid_amount` (PLAN.md §4.17). A figure here is one the database cannot defend.',
+      'Outstanding and Receivables are the same figure, so they are shown together here. The outstanding amount on invoices has no decided recalculation yet, and reversals do not flow back into the paid amount. A figure here is one the database cannot defend.',
   },
   {
     key: 'payables',
@@ -398,7 +400,7 @@ export const REPORTS: readonly CatalogReport[] = [
     projection: null,
     /* The named case. `WIREFRAME_RULINGS_2026-08-12.md` §8 and §9.6 both. */
     needs:
-      'There is no supplier-invoice table anywhere in supabase/migrations — no bills, no supplier_invoices, no accounts_payable. Nothing in this system knows what Babin owes. The Working Capital report now withholds three derived figures for the same reason.',
+      'There is no supplier-invoice record anywhere in the system — no bills, no supplier invoices, no accounts payable. Nothing in this system knows what the business owes. The Working Capital report now withholds three derived figures for the same reason.',
   },
   /* Rulings §11.3 — as Payments above. The `expenses` projection stays in
      `PROJECTIONS` and is still what the template would draw if a report ever
@@ -419,7 +421,7 @@ export const REPORTS: readonly CatalogReport[] = [
     route: null,
     projection: null,
     needs:
-      'The VAT rate lives in Settings and must never be hardcoded (PLAN.md §5), and the IRD pool view has no statutory rates anywhere in this repo (Rulings §8).',
+      'The VAT rate lives in Settings and must never be hardcoded, and the IRD pool has no statutory rates anywhere in this system.',
   },
   /* `profit-and-loss-06` was here. Rulings §11.3 — Profit & Loss lives in 01
      only. It is not cut, it is not duplicated: search "profit" in the catalog
@@ -446,7 +448,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '08',
     route: null,
     projection: null,
-    needs: `${NEEDS_QUERY} Damage is a condition on returned quantity (workflow.ts:141), and the cases register that prices it is not aggregated.`,
+    needs: `${NEEDS_QUERY} Damage is a condition on returned quantity, and the cases register that prices it is not aggregated.`,
   },
   { key: 'repairs', name: 'Repairs', group: '08', route: null, projection: null, needs: NEEDS_QUERY },
   { key: 'maintenance', name: 'Maintenance', group: '08', route: null, projection: null, needs: NEEDS_QUERY },
@@ -467,7 +469,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '09',
     route: null,
     projection: null,
-    needs: 'The audit log records activity and is a Tools card (10_TOOLS.md §10.4); nothing aggregates it per person over a period.',
+    needs: 'The audit log records activity and has a Tools card; nothing aggregates it per person over a period.',
   },
   {
     key: 'shifts',
@@ -475,7 +477,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '09',
     route: null,
     projection: null,
-    needs: 'Timesheets are deferred, not cancelled (PLAN.md §4.12), so there is no shift record to report on.',
+    needs: 'Timesheets are deferred, not cancelled, so there is no shift record to report on.',
   },
 
   /* ── 10 Management · 4 ───────────────────────────────────────────────── */
@@ -495,7 +497,7 @@ export const REPORTS: readonly CatalogReport[] = [
     group: '10',
     route: null,
     projection: null,
-    needs: 'A buy/hold decision needs asset cost, life and salvage — the same three values `data/addEquipment.ts:207` records as unruled.',
+    needs: 'A buy/hold decision needs asset cost, life and salvage — the same three values that are still undecided.',
   },
 ] as const
 
@@ -547,7 +549,7 @@ export const PER_GROUP: Readonly<Record<GroupKey, number>> = {
 export const CATALOG_ERRORS: string[] = (() => {
   const errs: string[] = []
   if (REPORTS.length !== TOTAL_REPORTS) {
-    errs.push(`Rulings §11.3 leaves ${TOTAL_REPORTS} reports (§9.6's 45, deduplicated); the register holds ${REPORTS.length}.`)
+    errs.push(`The register should hold ${TOTAL_REPORTS} reports after deduplication; it holds ${REPORTS.length}.`)
   }
 
   for (const g of GROUPS) {
@@ -564,7 +566,7 @@ export const CATALOG_ERRORS: string[] = (() => {
        how the two Profit & Loss entries and the Outstanding/Receivables pair
        shipped in the first place, so the register now refuses one. */
     if (named.has(r.name)) {
-      errs.push(`Two reports are both named "${r.name}" — rulings §11.3 gives each report exactly one home.`)
+      errs.push(`Two reports are both named "${r.name}" — each report must have exactly one home.`)
     }
     named.add(r.name)
     /* The rule the whole file exists for: a report that can draw nothing must

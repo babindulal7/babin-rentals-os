@@ -242,12 +242,19 @@ function SupplierDirectoryTable({
       </div>
 
       <Card padding="none" style={{ overflow: 'hidden' }}>
-        {rows.length === 0 ? (
+        {rows.length === 0 && search.trim() !== '' ? (
           <EmptyState
             title="No suppliers match"
             description="Adjust your search to find a sub-rental partner."
             actionLabel="Clear search"
             onAction={() => onSearchChange('')}
+          />
+        ) : rows.length === 0 ? (
+          /* No search is active and no counterparty exists: the same no-records copy as the Transactions tab. */
+          <EmptyState
+            kind="nothing-yet"
+            title="No sub-rentals recorded yet"
+            description="Cross-hire borrowings and lendings with external suppliers will appear here."
           />
         ) : (
           <DataTableShell ariaLabel="Sub-rental suppliers">

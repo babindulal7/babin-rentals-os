@@ -1,6 +1,6 @@
 import { supabase } from '../supabase'
 import { parseMoney, type Paisa } from '../money'
-import { BS_MONTHS, formatAdMonth, toBs } from '../bs'
+import { BS_MONTHS, BS_MONTH_DAYS, formatAdMonth, toAd, toBs, type BsDate } from '../bs'
 import { embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 export type { ReportFilterOptions } from './reportSupport'
@@ -66,7 +66,8 @@ export interface SalesReportData {
 }
 
 export interface VatMonthlyRow {
-  month: string
+  /** The AD months the BS filing month runs across: "July 2026 – August 2026". Derived from the BS table. */
+  monthAd: string
   bsMonth: string
   taxableSales: Paisa
   vatAmount: Paisa
@@ -133,10 +134,21 @@ const money = (v: number | string | null | undefined): Paisa => {
 const PAGE_SIZE = 500
 const MAX_ROWS = 50_000
 
-function bsMonthOf(isoDate: string): { key: string; label: string } | null {
+/** The AD months a BS month runs across, from the BS table. Same derivation as bsMonthAdSpan in crewTdsReport.ts. */
+function bsMonthAdSpan(bs: BsDate): string {
+  const days = BS_MONTH_DAYS[bs.year]?.[bs.month - 1]
+  const first = toAd({ year: bs.year, month: bs.month, day: 1 })
+  const last = days === undefined ? null : toAd({ year: bs.year, month: bs.month, day: days })
+  if (!first || !last) return 'Unknown'
+  const from = formatAdMonth(first)
+  const to = formatAdMonth(last)
+  return from === to ? from : `${from} – ${to}`
+}
+
+function bsMonthOf(isoDate: string): { key: string; label: string; bs: BsDate } | null {
   const bs = toBs(new Date(`${isoDate.slice(0, 10)}T12:00:00Z`))
   if (!bs) return null
-  return { key: `${bs.year}-${String(bs.month).padStart(2, '0')}`, label: `${BS_MONTHS[bs.month - 1] ?? ''} ${bs.year}` }
+  return { key: `${bs.year}-${String(bs.month).padStart(2, '0')}`, label: `${BS_MONTHS[bs.month - 1] ?? ''} ${bs.year}`, bs }
 }
 
 export async function getSalesVatReport(options?: ReportFilterOptions): Promise<{ sales: SalesReportData; vat: VatTaxReportData }> {
@@ -234,7 +246,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       if (bm) {
         const row =
           monthMap.get(bm.key) ??
-          ({ month: formatAdMonth(new Date(`${r.issue_date.slice(0, 10)}T12:00:00Z`)), bsMonth: bm.label, taxableSales: 0 as Paisa, vatAmount: 0 as Paisa, exemptSales: 0 as Paisa, nonVatSales: 0 as Paisa, grossSales: 0 as Paisa, invoicedTotal: 0, collectedTotal: 0 } as VatMonthlyRow & {
+          ({ monthAd: bsMonthAdSpan(bm.bs), bsMonth: bm.label, taxableSales: 0 as Paisa, vatAmount: 0 as Paisa, exemptSales: 0 as Paisa, nonVatSales: 0 as Paisa, grossSales: 0 as Paisa, invoicedTotal: 0, collectedTotal: 0 } as VatMonthlyRow & {
             invoicedTotal: number
             collectedTotal: number
           })

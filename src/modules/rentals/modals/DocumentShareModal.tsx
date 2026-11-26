@@ -478,7 +478,7 @@ export function DocumentShareModal({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 'var(--t-ui, 13px)', color: 'var(--primary, #2563eb)' }}>
               <Icon name="zap" size={16} />
-              <span>One-Tap Staff Send (W20)</span>
+              <span>One-Tap Staff Send</span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--t-meta, 12px)', color: 'var(--text2)', lineHeight: 1.4 }}>
               Dispatches confirmation via email first from <strong>no-reply@babinrentals.com</strong>, and prepares WhatsApp chat.

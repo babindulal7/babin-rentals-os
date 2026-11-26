@@ -72,7 +72,7 @@ describe('Payment Link Components (T7-15)', () => {
       expect(container.textContent).toContain('Amount Due (Server Authoritative)')
       expect(container.textContent).toContain('15,000')
       expect(container.textContent).toContain('Expires in 48h')
-      expect(container.textContent).toContain('Deposit Policy (O-3, B38)')
+      expect(container.textContent).toContain('Deposit Policy:')
       expect(container.textContent).toContain('WhatsApp')
       expect(container.textContent).toContain('Email Draft')
       expect(container.textContent).toContain('Copy')

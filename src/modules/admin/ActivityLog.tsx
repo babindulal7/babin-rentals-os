@@ -1,4 +1,4 @@
-import { formatAd } from '../../lib/bs'
+import { formatAd, formatAdDateTime, kathmanduCivil } from '../../lib/bs'
 import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import Icon from '../../components/ui/Icon'
@@ -76,7 +76,7 @@ export default function ActivityLog() {
     () =>
       timeline.filter((r) => who === ALL || r.user === who)
         .filter((r) => mod === ALL || r.module === mod)
-        .filter((r) => day === ALL || r.timestamp.slice(0, 10) === day),
+        .filter((r) => day === ALL || kathmanduDay(r.timestamp) === day),
     [timeline, who, mod, day],
   )
 
@@ -84,7 +84,7 @@ export default function ActivityLog() {
   const groups = useMemo(() => {
     const byDay = new Map<string, ActivityRow[]>()
     for (const r of rows) {
-      const key = r.timestamp.slice(0, 10)
+      const key = kathmanduDay(r.timestamp)
       const bucket = byDay.get(key)
       if (bucket) bucket.push(r)
       else byDay.set(key, [r])
@@ -101,7 +101,7 @@ export default function ActivityLog() {
 
   const userOptions = useMemo(() => [...new Set(timeline.map((r) => r.user))].sort((a, b) => a.localeCompare(b)), [timeline])
   const moduleOptions = useMemo(() => ACTIVITY_MODULES.filter((m) => timeline.some((r) => r.module === m)), [timeline])
-  const dayOptions = useMemo(() => [...new Set(timeline.map((r) => r.timestamp.slice(0, 10)))].sort((a, b) => b.localeCompare(a)), [timeline])
+  const dayOptions = useMemo(() => [...new Set(timeline.map((r) => kathmanduDay(r.timestamp)))].sort((a, b) => b.localeCompare(a)), [timeline])
 
   const kpis: Kpi[] = [
     { label: t('admin.activity.kpi.entries'), value: String(metrics.totalActivities), icon: 'activity', accent: 'primary', note: t('admin.activity.kpi.entriesNote') },
@@ -325,9 +325,16 @@ function Filter({
   )
 }
 
-/** Law 7 — stored AD/UTC, rendered here. */
+/** Law 7 — the stored AD/UTC instant as its Kathmandu calendar date (`YYYY-MM-DD`), so a row sits under the day it happened in Nepal. */
+function kathmanduDay(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10)
+  return new Date(kathmanduCivil(d)).toISOString().slice(0, 10)
+}
+
+/** Law 7 — stored AD/UTC, rendered in Kathmandu: the clock half of `formatAdDateTime`, the stamp the audit log uses. */
 function hhmm(iso: string): string {
-  return new Date(iso).toISOString().slice(11, 16)
+  return formatAdDateTime(iso).split(', ').slice(1).join(', ') || '—'
 }
 
 const selectStyle: CSSProperties = {

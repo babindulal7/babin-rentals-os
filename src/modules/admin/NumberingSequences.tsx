@@ -445,7 +445,7 @@ export default function NumberingSequences() {
       <PageHeader
         icon="queues"
         title="Numbering Sequences"
-        description="The live registry next_document_number() mints from — one counter per document kind, read directly from the database."
+        description="The live registry the database mints numbers from — one counter per document kind, read directly from the database."
         actions={
           <>
             <Unavailable reason="Creating a sequence needs the confirmation and audit path — not available in this build.">
@@ -494,15 +494,15 @@ export default function NumberingSequences() {
         skeletonRows={6}
         emptyTitle="No sequences in the registry"
         emptyMessage={
-          'The live database seeds this table (migrations 0012, 0055, 0056 — ten sequences). ' +
-          'An empty read means this session’s data source serves none: the mock corpus does not carry number_sequences.'
+          'The live database seeds this table with ten sequences. ' +
+          'An empty read means this session’s data source serves none: the mock data has no sequences.'
         }
       >
         <Card
           title="Sequence Registry"
           action={
             <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-              Next numbers are computed read-only — only next_document_number() mints.
+              Next numbers are computed read-only — only the database mints a number.
             </span>
           }
           bodyStyle={{ padding: 0 }}
@@ -557,7 +557,7 @@ export default function NumberingSequences() {
                         <td
                           className="identifier admin-td settings-mono"
                           style={{ ...td, fontWeight: 700 }}
-                          title="Computed from the stored counter via the next_document_number() convention — reading this consumes nothing."
+                          title="Computed from the stored counter, using the database’s own formatting — reading this consumes nothing."
                         >
                           {previewNextNumber(r)}
                         </td>
@@ -665,7 +665,7 @@ export default function NumberingSequences() {
               )}
 
               <p style={{ margin: '9px 0 0', ...panelNote }}>
-                Computed from the stored counter using next_document_number()&rsquo;s own formatting rules (0055). The RPC has no
+                Computed from the stored counter, using the database&rsquo;s own formatting rules. The database has no
                 dry-run — calling it consumes a number — so nothing on this page invokes it, and a concurrent mint elsewhere can
                 outdate this preview without this page ever advancing a counter.
               </p>

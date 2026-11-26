@@ -934,8 +934,8 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
       if (entry.qcSkipped === true) {
         if ((entry.qcSkipReason ?? '').trim() === '') {
           throw new Error(
-            `Reset: target ${targetId} declares a skipped QC with no reason. ` +
-              'CHECK cleaning_queue_entries_qc_is_a_second_pair_of_eyes (0003:887) rejects that row.',
+            `Reset: target ${targetId} is marked as a skipped check with no reason. ` +
+              'Add a reason, or have a second person check the item.',
           )
         }
       } else if (
@@ -945,9 +945,9 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
       ) {
         if (entry.qcSelfChecked !== true) {
           throw new Error(
-            `Reset: target ${targetId} was checked by the person who cleaned it. A self-approved check is ` +
-              'not a check (0003:887) — unless you are alone on shift (W43, L7), either a second person ' +
-              'checks it, or record it as a skipped QC with a reason. Nothing was written.',
+            `Reset: target ${targetId} was checked by the person who cleaned it. A self-approved check does not count ` +
+              'unless you are alone on shift. Either a second person ' +
+              'checks it, or record it as a skipped check with a reason. Nothing was written.',
           )
         }
       }

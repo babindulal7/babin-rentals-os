@@ -33,6 +33,21 @@ const td = {
   borderBottom: '1px solid var(--border)',
 }
 
+/* Staff-facing names for the records an audit event points at. An unlisted record reads "Record". */
+const TARGET_LABELS = new Map<string, string>([
+  ['bookings', 'Booking'],
+  ['operation_sessions', 'Handover or return'],
+  ['cleaning_queue_entries', 'Cleaning job'],
+  ['auth.sessions', 'Sign-in'],
+  ['invoices', 'Invoice'],
+  ['products', 'Product'],
+  ['purchase_requests', 'Purchase request'],
+  ['stock_transfers', 'Stock transfer'],
+  ['client_collectors', 'Collector'],
+  ['client_id_documents', 'Client ID document'],
+  ['collateral_documents', 'Collateral document'],
+])
+
 export default function ActivityReports() {
   const viewport = useViewport()
   const [activeTab, setActiveTab] = useState<ActivityTab>('overview')
@@ -410,6 +425,7 @@ export default function ActivityReports() {
                   <th style={th}>Operations</th>
                   <th style={th}>Inventory</th>
                   <th style={th}>Finance</th>
+                  <th style={th}>Other</th>
                   <th style={th}>Last Active</th>
                 </tr>
               </thead>
@@ -453,6 +469,9 @@ export default function ActivityReports() {
                     <td style={td} className="figure">
                       {s.actionsBreakdown['Finance'] ?? 0}
                     </td>
+                    <td style={td} className="figure">
+                      {s.otherActions}
+                    </td>
                     <td className="figure" style={{ ...td, color: 'var(--text2)' }}>
                       {s.lastActive ? formatAdDateTime(s.lastActive) : '—'}
                     </td>
@@ -483,7 +502,7 @@ export default function ActivityReports() {
               color: 'var(--text2)',
             }}
           >
-            Immutable event history from PostgreSQL audit_events with actor attribution and integrity checks.
+            Immutable event history with actor attribution and integrity checks.
           </p>
 
           <DataTableShell ariaLabel="Audit Trail Event Stream">
@@ -577,15 +596,15 @@ export default function ActivityReports() {
                     <td style={td}>
                       {e.tableName ? (
                         <span style={{ fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums', fontSize: 'var(--t-meta)' }}>
-                          {e.tableName}
-                          {e.recordId ? `:${e.recordId.slice(0, 8)}` : ''}
+                          {TARGET_LABELS.get(e.tableName) ?? 'Record'}
+                          {e.recordId ? ` ${e.recordId.slice(0, 8)}` : ''}
                         </span>
                       ) : (
                         '—'
                       )}
                     </td>
                     <td className="figure" style={{ ...td, color: 'var(--text2)' }}>
-                      {e.ipAddress ?? '127.0.0.1'}
+                      {e.ipAddress || '—'}
                     </td>
                   </tr>
                 ))}

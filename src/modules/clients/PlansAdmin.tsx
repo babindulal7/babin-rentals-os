@@ -271,7 +271,7 @@ export default function PlansAdmin() {
                         {!canViewMoney ? (
                           <span className="select-none">—</span>
                         ) : p.annualFee != null && p.annualFee > 0 ? (
-                          `Rs ${formatMoney(rupees(p.annualFee))}`
+                          formatMoney(rupees(p.annualFee))
                         ) : (
                           <span style={{ color: 'var(--text2)', fontStyle: 'italic' }}>Custom / Free</span>
                         )}
@@ -306,7 +306,7 @@ export default function PlansAdmin() {
                         {!canViewMoney ? (
                           <span className="select-none">—</span>
                         ) : p.defaultCreditLimit != null && p.defaultCreditLimit > 0 ? (
-                          `Rs ${formatMoney(rupees(p.defaultCreditLimit))}`
+                          formatMoney(rupees(p.defaultCreditLimit))
                         ) : (
                           <span style={{ color: 'var(--text2)' }}>Rs 0</span>
                         )}

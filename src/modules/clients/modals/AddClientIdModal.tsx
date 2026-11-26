@@ -125,7 +125,7 @@ export function AddClientIdModal({
         if (!submitting) onClose()
       }}
       title="Record Client ID on File"
-      subtitle={`Client: ${clientName} (W50, W51)`}
+      subtitle={`Client: ${clientName}`}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)' }}>
           <Button variant="secondary" onClick={onClose} disabled={submitting}>
@@ -143,8 +143,8 @@ export function AddClientIdModal({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
-          A client needs one government ID on file before their first rental (Ruling W50).
-          It is stored once and reused across all subsequent rentals (Ruling W51).
+          A client needs one government ID on file before their first rental.
+          It is stored once and reused across all subsequent rentals.
         </p>
 
         {error && (
@@ -210,7 +210,7 @@ export function AddClientIdModal({
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>
             <Icon name="check" size={14} style={{ color: 'var(--success-text)' }} />
-            <span>Citizenship cards in Nepal do not expire — no expiry required (Ruling W51).</span>
+            <span>Citizenship cards in Nepal do not expire — no expiry required.</span>
           </div>
         )}
 

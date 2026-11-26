@@ -191,7 +191,7 @@ describe('DeliveryWorkspace (T4-01)', () => {
 
     // Modal is opened
     expect(container.textContent).toContain('Reschedule Dispatch')
-    expect(container.textContent).toContain('Ruling D8')
+    expect(container.textContent).toContain('Rule:')
     expect(container.textContent).toContain('Rescheduling changes the dispatch departure time only. Booking rental dates and billing remain strictly unchanged.')
 
     // Fill in date, time, and confirm

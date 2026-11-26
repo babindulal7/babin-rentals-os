@@ -11,7 +11,7 @@
  */
 
 import { type Paisa } from '../money'
-import { toBs, kathmanduCivil, BS_MONTHS, formatAdMonth } from '../bs'
+import { toAd, toBs, kathmanduCivil, BS_MONTHS, BS_MONTH_DAYS, formatAdMonth, type BsDate } from '../bs'
 import { getCrewPayoutTdsPercent } from '../settingsStore'
 import { listCrewAssignments } from './crew'
 import type { ReportFilterOptions } from './reportSupport'
@@ -65,6 +65,17 @@ export interface CrewTdsReportData {
   metrics: CrewTdsReportMetrics
   monthlySchedule: CrewTdsMonthlyRow[]
   payouts: CrewTdsItem[]
+}
+
+/** The AD months a BS month runs across, from the BS table: "July 2026 – August 2026". */
+function bsMonthAdSpan(bs: BsDate): string {
+  const days = BS_MONTH_DAYS[bs.year]?.[bs.month - 1]
+  const first = toAd({ year: bs.year, month: bs.month, day: 1 })
+  const last = days === undefined ? null : toAd({ year: bs.year, month: bs.month, day: days })
+  if (!first || !last) return 'Unknown'
+  const from = formatAdMonth(first)
+  const to = formatAdMonth(last)
+  return from === to ? from : `${from} – ${to}`
 }
 
 export async function getCrewTdsReport(
@@ -176,13 +187,23 @@ export async function getCrewTdsReport(
       }
     }
 
-    // Determine month keys
+    // Each payout is bucketed by the Bikram Sambat month its own start date falls in:
+    // the schedule is aggregated per BS fiscal month, and one BS month spans two AD months.
     const d = new Date(a.startDateAd)
     const validDate = !Number.isNaN(d.getTime())
-    const monthKey = validDate ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` : 'unknown'
-    const monthAd = validDate ? formatAdMonth(d) : 'Unknown'
     const bs = validDate ? toBs(d) : null
-    const monthBs = bs ? `${BS_MONTHS[bs.month - 1] ?? ''} ${bs.year}` : 'BS unavailable'
+    let monthKey = 'unknown'
+    let monthAd = 'Unknown'
+    let monthBs = 'BS unavailable'
+    if (bs) {
+      monthKey = `${bs.year}-${String(bs.month).padStart(2, '0')}`
+      monthAd = bsMonthAdSpan(bs)
+      monthBs = `${BS_MONTHS[bs.month - 1] ?? ''} ${bs.year}`
+    } else if (validDate) {
+      // Outside the BS table: keep the AD month so the payout is not merged into another month.
+      monthKey = `ad-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      monthAd = formatAdMonth(d)
+    }
 
     if (!monthlyMap.has(monthKey)) {
       monthlyMap.set(monthKey, {

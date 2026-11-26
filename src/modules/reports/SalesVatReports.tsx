@@ -39,10 +39,10 @@ const td = {
   borderBottom: '1px solid var(--border)',
 }
 
-export default function SalesVatReports() {
+export default function SalesVatReports({ defaultTab = 'sales' }: { defaultTab?: FinanceReportTab } = {}) {
   const money = useCanViewMoney()
   const viewport = useViewport()
-  const [activeTab, setActiveTab] = useState<FinanceReportTab>('sales')
+  const [activeTab, setActiveTab] = useState<FinanceReportTab>(defaultTab)
   const [filters, setFilters] = useState<ReportFilters>({})
   /* Phase 6 — the read used to return seed figures on failure and on an empty
      period (and could only ever return them on live: it selected columns the
@@ -158,7 +158,7 @@ export default function SalesVatReports() {
         ]) ?? []),
         [],
         ['Sales Invoices Register'],
-        ['Invoice No', 'Booking No', 'Client', 'PAN', 'Issue Date', 'Due Date', 'Subtotal', '13% VAT', 'Grand Total', 'Paid', 'Status'],
+        ['Invoice No', 'Booking No', 'Client', 'PAN', 'Issue Date', 'Due Date', 'Subtotal', 'Discount', '13% VAT', 'Grand Total', 'Paid', 'Status'],
         ...(data?.sales.invoices.map((inv): ReportCsvRow => [
           inv.invoiceNo,
           inv.bookingNo,
@@ -167,6 +167,7 @@ export default function SalesVatReports() {
           dateOrDash(inv.issueDate),
           dateOrDash(inv.dueDate),
           formatMoney(inv.subtotal),
+          inv.discountAmount !== undefined ? formatMoney(inv.discountAmount) : '—',
           formatMoney(inv.taxAmount),
           formatMoney(inv.grandTotal),
           formatMoney(inv.paidAmount),
@@ -183,10 +184,10 @@ export default function SalesVatReports() {
         ['Effective VAT Rate', `${data?.vat.metrics.effectiveVatRate ?? 0}%`],
         [],
         ['Monthly IRD Filing Schedule (Bikram Sambat Fiscal Periods)'],
-        ['Month (AD)', 'BS Month', 'Taxable Sales', '13% Output VAT', 'Exempt Sales', 'Gross Sales'],
+        ['Tax Period (BS)', 'Month (AD)', 'Taxable Sales', '13% Output VAT', 'Exempt Sales', 'Gross Sales'],
         ...(data?.vat.monthlySchedule.map((ms): ReportCsvRow => [
-          ms.month,
           ms.bsMonth,
+          ms.monthAd,
           formatMoney(ms.taxableSales),
           formatMoney(ms.vatAmount),
           formatMoney(ms.exemptSales),
@@ -200,7 +201,7 @@ export default function SalesVatReports() {
           dateOrDash(tr.issueDate),
           tr.clientName,
           tr.clientPan || 'Unregistered',
-          formatMoney(tr.subtotal),
+          tr.taxableAmount !== undefined ? formatMoney(tr.taxableAmount) : '—',
           formatMoney(tr.taxAmount),
           formatMoney(tr.grandTotal),
         ]) ?? []),
@@ -403,6 +404,7 @@ export default function SalesVatReports() {
                     <th style={th}>PAN</th>
                     <th style={th}>Issue Date</th>
                     <th style={{ ...th, textAlign: 'right' }}>Subtotal</th>
+                    <th style={{ ...th, textAlign: 'right' }}>Discount</th>
                     <th style={{ ...th, textAlign: 'right' }}>13% VAT</th>
                     <th style={{ ...th, textAlign: 'right' }}>Grand Total</th>
                     <th style={th}>Status</th>
@@ -417,6 +419,9 @@ export default function SalesVatReports() {
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{inv.clientPan || '—'}</td>
                       <td style={td}>{dateOrDash(inv.issueDate)}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{formatMoney(inv.subtotal)}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>
+                        {inv.discountAmount !== undefined ? formatMoney(inv.discountAmount) : '—'}
+                      </td>
                       <td style={{ ...td, textAlign: 'right', color: 'var(--text2)' }}>{formatMoney(inv.taxAmount)}</td>
                       <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{formatMoney(inv.grandTotal)}</td>
                       <td style={td}>
@@ -471,8 +476,8 @@ export default function SalesVatReports() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={th}>Tax Period (AD)</th>
-                    <th style={th}>Bikram Sambat Month</th>
+                    <th style={th}>Tax Period (BS)</th>
+                    <th style={th}>Month (AD)</th>
                     <th style={{ ...th, textAlign: 'right' }}>Taxable Sales (Rs)</th>
                     <th style={{ ...th, textAlign: 'right' }}>13% Output VAT (Rs)</th>
                     <th style={{ ...th, textAlign: 'right' }}>Exempt Sales</th>
@@ -482,9 +487,9 @@ export default function SalesVatReports() {
                 <tbody>
                   {data?.vat.monthlySchedule.length === 0 && <NoMatchRow colSpan={6} noun="tax periods" />}
                   {data?.vat.monthlySchedule.map((ms) => (
-                    <tr key={ms.month}>
-                      <td style={td}>{ms.month}</td>
+                    <tr key={ms.bsMonth}>
                       <td style={{ ...td, fontWeight: 600 }}>{ms.bsMonth}</td>
+                      <td style={td}>{ms.monthAd}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{formatMoney(ms.taxableSales)}</td>
                       <td style={{ ...td, textAlign: 'right', fontWeight: 600, color: 'var(--status-success-text)' }}>
                         {formatMoney(ms.vatAmount)}
@@ -528,7 +533,9 @@ export default function SalesVatReports() {
                       <td style={td}>{dateOrDash(tr.issueDate)}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{tr.clientName}</td>
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{tr.clientPan || 'Unregistered'}</td>
-                      <td style={{ ...td, textAlign: 'right' }}>{formatMoney(tr.subtotal)}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>
+                        {tr.taxableAmount !== undefined ? formatMoney(tr.taxableAmount) : '—'}
+                      </td>
                       <td style={{ ...td, textAlign: 'right', fontWeight: 600, color: 'var(--status-success-text)' }}>
                         {formatMoney(tr.taxAmount)}
                       </td>

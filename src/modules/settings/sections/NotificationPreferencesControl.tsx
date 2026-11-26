@@ -274,7 +274,7 @@ export function NotificationPreferencesControl() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-body)', fontWeight: 600 }}>
             <Icon name="bell" size={16} />
-            <span>Phone &amp; iPad Pop-ups (W62)</span>
+            <span>Phone &amp; iPad Pop-ups</span>
             <span
               style={{
                 padding: '2px 8px',

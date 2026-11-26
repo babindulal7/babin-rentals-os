@@ -40,19 +40,25 @@ function equipmentCsv(summary: EquipmentPerformanceSummary | null): ReportCsvRow
   ]
 }
 
-function PerformerTable({ label, rows }: { label: string; rows: EquipmentPerformanceRow[] }) {
+/* The caption counts the rows the table draws, so a short list is never captioned as a top five. */
+const productCount = (n: number) => `${n} ${n === 1 ? 'product' : 'products'}`
+
+/* The table sorts ascending by its first column, so the lowest-per-unit list leads with Per Unit. */
+function PerformerTable({ label, caption, rows, leadWithPerUnit = false }: { label: string; caption: (count: string) => string; rows: EquipmentPerformanceRow[]; leadWithPerUnit?: boolean }) {
+  const productColumns = [
+    { id: 'product', header: 'Product', cell: (row: EquipmentPerformanceRow) => <Link to={`/inventory/${row.productId}`}>{row.name}</Link>, sortValue: (row: EquipmentPerformanceRow) => row.name },
+    { id: 'category', header: 'Category', cell: (row: EquipmentPerformanceRow) => row.category, sortValue: (row: EquipmentPerformanceRow) => row.category },
+    { id: 'bookings', header: 'Bookings', align: 'right' as const, cell: (row: EquipmentPerformanceRow) => row.bookings, sortValue: (row: EquipmentPerformanceRow) => row.bookings },
+    { id: 'units', header: 'Units', align: 'right' as const, cell: (row: EquipmentPerformanceRow) => row.units, sortValue: (row: EquipmentPerformanceRow) => row.units },
+    { id: 'revenue', header: 'Revenue', align: 'right' as const, cell: (row: EquipmentPerformanceRow) => formatMoney(row.revenue), sortValue: (row: EquipmentPerformanceRow) => row.revenue },
+  ]
+  const perUnitColumn = { id: 'perUnit', header: 'Per Unit', align: 'right' as const, cell: perUnit, sortValue: (row: EquipmentPerformanceRow) => row.revenuePerUnit }
   return <section aria-label={label} style={cardStyle}>
-    <h3 style={{ margin: 0, fontSize: 'var(--t-body)', paddingBottom: 12 }}>{label}</h3>
+    <h3 style={{ margin: 0, fontSize: 'var(--t-body)', paddingBottom: 4 }}>{label}</h3>
+    <p style={{ margin: '0 0 12px', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{caption(productCount(rows.length))}</p>
     <ReportDataTable<EquipmentPerformanceRow>
       ariaLabel={label} rows={rows} getRowId={row => row.productId}
-      columns={[
-        { id: 'product', header: 'Product', cell: row => <Link to={`/inventory/${row.productId}`}>{row.name}</Link>, sortValue: row => row.name },
-        { id: 'category', header: 'Category', cell: row => row.category, sortValue: row => row.category },
-        { id: 'bookings', header: 'Bookings', align: 'right', cell: row => row.bookings, sortValue: row => row.bookings },
-        { id: 'units', header: 'Units', align: 'right', cell: row => row.units, sortValue: row => row.units },
-        { id: 'revenue', header: 'Revenue', align: 'right', cell: row => formatMoney(row.revenue), sortValue: row => row.revenue },
-        { id: 'perUnit', header: 'Per Unit', align: 'right', cell: perUnit, sortValue: row => row.revenuePerUnit },
-      ]}
+      columns={leadWithPerUnit ? [perUnitColumn, ...productColumns] : [...productColumns, perUnitColumn]}
     />
   </section>
 }
@@ -226,8 +232,13 @@ export default function EquipmentPerformance() {
               </ReportChartCard>
             )}
 
-            <PerformerTable label="Top Performing Equipment" rows={summary.topPerformers} />
-            <PerformerTable label="Lowest Revenue per Unit" rows={summary.worstPerformers} />
+            <PerformerTable label="Top Performing Equipment" caption={(count) => `Top ${count} by revenue.`} rows={summary.topPerformers} />
+            <PerformerTable
+              label="Lowest Revenue per Unit"
+              caption={(count) => `Lowest ${count} by revenue per unit, lowest first.`}
+              rows={summary.worstPerformers}
+              leadWithPerUnit
+            />
           </>
         )}
       </PageBody>

@@ -467,7 +467,7 @@ function nextDocumentNumber(key: string): string {
 function createBooking(payload: Record<string, unknown>): { data: Row | null; error: PgError | null } {
   const clientUuid = payload['client_uuid'] as string | undefined
   if (!clientUuid) {
-    return { data: null, error: { code: '23502', message: 'create_booking: client_uuid is required (Law 8)', details: '', hint: '' } }
+    return { data: null, error: { code: '23502', message: 'create_booking: client_uuid is required', details: '', hint: '' } }
   }
   const actor = payload['created_by'] as string | undefined
   if (!actor) {
@@ -592,7 +592,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
       return { data: null, error: { code: '23502', message: 'create_booking: every line needs its own client_uuid (one per ROW, not per action)', details: '', hint: '' } }
     }
     if (line['days'] === undefined || line['days'] === null) {
-      return { data: null, error: { code: '23502', message: `create_booking: line ${String(line['client_uuid'])} has no days; Law 9 requires it stated, not defaulted`, details: '', hint: '' } }
+      return { data: null, error: { code: '23502', message: `create_booking: line ${String(line['client_uuid'])} has no days; days must be stated, not defaulted`, details: '', hint: '' } }
     }
     const units = Array.isArray(line['units']) ? (line['units'] as Array<Record<string, unknown>>) : []
     const qty = Number(line['qty'] ?? 1)
@@ -609,7 +609,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     }
     for (const unit of units) {
       if (!unit['client_uuid']) {
-        return { data: null, error: { code: '23502', message: 'create_booking: every unit needs its own client_uuid (Law 8, one per ROW)', details: '', hint: '' } }
+        return { data: null, error: { code: '23502', message: 'create_booking: every unit needs its own client_uuid (one per row)', details: '', hint: '' } }
       }
       if (!unit['asset_id']) {
         return { data: null, error: { code: '23502', message: `create_booking: a unit entry on line ${String(line['client_uuid'])} names no asset_id`, details: '', hint: '' } }
@@ -756,7 +756,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
   const builtDiscounts: Row[] = []
   for (const d of discounts) {
     if (!d['client_uuid']) {
-      return { data: null, error: { code: '23502', message: 'create_booking: every discount needs its own client_uuid (Law 8, one per ROW)', details: '', hint: '' } }
+      return { data: null, error: { code: '23502', message: 'create_booking: every discount needs its own client_uuid (one per row)', details: '', hint: '' } }
     }
     const pct = Number(d['percent'])
     if (!Number.isFinite(pct) || pct < 0 || pct > 25) {
@@ -791,7 +791,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
   const builtCrew: Row[] = []
   for (const c of crew) {
     if (!c['client_uuid']) {
-      return { data: null, error: { code: '23502', message: 'create_booking: every crew row needs its own client_uuid (Law 8, one per ROW)', details: '', hint: '' } }
+      return { data: null, error: { code: '23502', message: 'create_booking: every crew row needs its own client_uuid (one per row)', details: '', hint: '' } }
     }
     if (typeof c['name'] !== 'string' || c['name'].trim() === '') {
       return { data: null, error: { code: '23514', message: 'new row for relation "booking_crew_lines" violates check constraint "booking_crew_lines_name_present"', details: '', hint: '' } }
@@ -829,7 +829,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
   let builtTransport: Row | null = null
   if (transport !== null) {
     if (!transport['client_uuid']) {
-      return { data: null, error: { code: '23502', message: 'create_booking: the transport row needs its own client_uuid (Law 8)', details: '', hint: '' } }
+      return { data: null, error: { code: '23502', message: 'create_booking: the transport row needs its own client_uuid', details: '', hint: '' } }
     }
     if (Number(transport['delivery_charge'] ?? 0) < 0 || Number(transport['fuel_charge'] ?? 0) < 0) {
       return { data: null, error: { code: '23514', message: 'new row for relation "booking_transport" violates check constraint "booking_transport_charges_non_negative"', details: '', hint: '' } }
@@ -952,7 +952,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
       data: null,
       error: pgErr(
         '42501',
-        `create_invoice: this session (${role ?? 'unidentified'}) may not raise an invoice. R-05 gives that to ` +
+        `create_invoice: this session (${role ?? 'unidentified'}) may not raise an invoice. That right belongs to ` +
           'Owner, Admin, Manager and Accounts. Nothing was created.',
       ),
     }
@@ -962,13 +962,13 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
       data: null,
       error: pgErr(
         '42501',
-        'create_invoice: this session cannot read money (Law 6), so the invoice it raised would bill nothing. ' +
+        'create_invoice: this session cannot read money, so the invoice it raised would bill nothing. ' +
           'Nothing was created.',
       ),
     }
   }
   if (!clientUuid) {
-    return { data: null, error: pgErr('23502', 'create_invoice: client_uuid is required (Law 8 — every write carries one)') }
+    return { data: null, error: pgErr('23502', 'create_invoice: client_uuid is required (every write carries one)') }
   }
   if (!actor) {
     return { data: null, error: pgErr('23502', 'create_invoice: created_by is required; there is no system actor') }
@@ -1035,7 +1035,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
       error: pgErr(
         'P0001',
         `create_invoice: booking ${String(resolvedNo)} was cancelled on ${String(booking['cancelled_at']).slice(0, 10)}. ` +
-          'Whether a cancellation carries a fee is an open ruling (PLAN.md §4.16), so nothing was created.',
+          'Whether a cancellation carries a fee is still an open decision, so nothing was created.',
       ),
     }
   }
@@ -1374,7 +1374,7 @@ export const mockSupabase = {
       const bookingId = args?.['p_booking_id']
       const rawTags = (args?.['p_tags'] as string[]) ?? []
       if (!clientUuid) {
-        return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+        return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency') })
       }
       const booking = store['bookings']?.find(b => b['id'] === bookingId)
       if (!booking) {
@@ -1382,7 +1382,7 @@ export const mockSupabase = {
       }
       // Idempotency check via audit_events
       const auditRows = store['audit_events'] ??= []
-      const existingAudit = auditRows.find(a => a['client_uuid'] === clientUuid && a['record_id'] === bookingId && a['reason'] === 'Booking tags updated (T3-25)')
+      const existingAudit = auditRows.find(a => a['client_uuid'] === clientUuid && a['record_id'] === bookingId && a['reason'] === 'Booking tags updated')
       if (existingAudit) {
         return Promise.resolve({
           data: {
@@ -1422,7 +1422,7 @@ export const mockSupabase = {
         old_values: { tags: oldTags },
         new_values: { tags: cleaned },
         diff: { tags: cleaned },
-        reason: 'Booking tags updated (T3-25)',
+        reason: 'Booking tags updated',
         created_at: new Date().toISOString(),
       }
       hooks.insert('audit_events', [auditEvent])
@@ -2225,11 +2225,11 @@ export const mockSupabase = {
         const user = (store['users'] ?? []).find(u => u['id'] === actor)
         const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
         if (role && !['Owner', 'Admin'].includes(role)) {
-          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can edit message and document texts (B20)') })
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can edit message and document texts') })
         }
         const clientUuid = args?.['p_client_uuid'] as string
         if (!clientUuid) {
-          return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+          return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency') })
         }
         read('message_templates')
         const templates = store['message_templates'] ?? []
@@ -2285,7 +2285,7 @@ export const mockSupabase = {
         const user = (store['users'] ?? []).find(u => u['id'] === actor)
         const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
         if (role && !['Owner', 'Admin'].includes(role)) {
-          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can restore message and document texts (B20)') })
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can restore message and document texts') })
         }
         const clientUuid = args?.['p_client_uuid'] as string
         const templateKey = args?.['p_template_key'] as string

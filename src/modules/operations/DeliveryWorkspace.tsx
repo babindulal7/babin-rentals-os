@@ -921,7 +921,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                       size="sm"
                                       style={{ width: '100%' }}
                                       onClick={() => setRiderModalTarget(d)}
-                                      title="Generate one-time rider link (T4-08/W49)"
+                                      title="Generate one-time rider link"
                                     >
                                       <Icon name="external_link" size={13} /> Rider Link
                                     </Button>
@@ -1466,7 +1466,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                   variant="secondary"
                                   size="sm"
                                   onClick={() => setRiderModalTarget(d)}
-                                  title="Generate one-time rider link (T4-08/W49)"
+                                  title="Generate one-time rider link"
                                 >
                                   <Icon name="external_link" size={13} /> Rider
                                 </Button>
@@ -1865,7 +1865,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                       border: '1px solid var(--border)',
                     }}
                   >
-                    ℹ <strong>Ruling D8:</strong> Rescheduling changes the dispatch departure time only. Booking rental dates and billing remain strictly unchanged.
+                    ℹ <strong>Rule:</strong> Rescheduling changes the dispatch departure time only. Booking rental dates and billing remain strictly unchanged.
                   </div>
                 </div>
 

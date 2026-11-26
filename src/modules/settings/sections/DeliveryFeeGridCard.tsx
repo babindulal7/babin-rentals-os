@@ -96,7 +96,7 @@ export function DeliveryFeeGridCard() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <p style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)', lineHeight: 1.5, margin: 0 }}>
           One amount for each zone and vehicle. A blank cell is not set, so no fee is charged for it. A quoted zone is
-          priced per trip and takes no amounts (R-9.18, R-9.20).
+          priced per trip and takes no amounts.
         </p>
         {loadError ? (
           <div role="alert">Could not read delivery fees: {loadError}</div>

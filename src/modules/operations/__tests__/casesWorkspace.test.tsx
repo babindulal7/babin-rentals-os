@@ -213,29 +213,48 @@ describe('CasesWorkspace — RS-10, the id in the URL is read', () => {
 })
 
 describe('CasesWorkspace — empty state', () => {
-  it('renders standard empty state when database returns no cases', async () => {
+  it('with no filter and no records, shows the no-records copy and does not ask for filters', async () => {
     mockCasesData.current = []
     await mount('/inventory/cases')
+    expect(text()).toContain('No incident cases yet')
+    expect(text()).toContain('Nothing has been added here.')
+    expect(text()).not.toContain('Adjust your filters')
+    expect(text()).not.toContain('No cases found')
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(0)
+  })
+
+  it('with a search active and no matches, keeps the filter copy', async () => {
+    mockCasesData.current = []
+    await mount('/inventory/cases?q=nothing-matches')
     expect(text()).toContain('No cases found')
     expect(text()).toContain('Adjust your filters or search query to find incident cases')
+    expect(text()).not.toContain('No incident cases yet')
     expect(container.querySelectorAll('tbody tr')).toHaveLength(0)
+  })
+
+  it('with a status chip active and no matches, keeps the filter copy', async () => {
+    mockCasesData.current = []
+    await mount('/inventory/cases?status=open')
+    expect(text()).toContain('No cases found')
+    expect(text()).toContain('Adjust your filters or search query to find incident cases')
+    expect(text()).not.toContain('No incident cases yet')
   })
 
   /* From main's d7ca3bc, ported 8 Oct 2026: loading and a failed read
      outrank the empty state. Before, both rendered "No cases found". */
-  it('shows the skeleton, not "No cases found", while the read is in flight', async () => {
+  it('shows the skeleton, not the no-records copy, while the read is in flight', async () => {
     mockCasesData.current = 'pending'
     await mount('/inventory/cases')
     expect(text()).toContain('Loading cases')
-    expect(text()).not.toContain('No cases found')
+    expect(text()).not.toContain('No incident cases yet')
   })
 
-  it('shows one error with Retry, not "No cases found", when the read fails', async () => {
+  it('shows one error with Retry, not the no-records copy, when the read fails', async () => {
     mockCasesData.current = 'fail'
     await mount('/inventory/cases')
     expect(text()).toContain('Could not load cases')
     expect(text()).toContain('JWT expired')
-    expect(text()).not.toContain('No cases found')
+    expect(text()).not.toContain('No incident cases yet')
     expect([...container.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Retry')).toBe(true)
   })
 })

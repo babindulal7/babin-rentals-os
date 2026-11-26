@@ -1,6 +1,6 @@
 import { rupees, roundHalfUp, toRupees, formatMoney } from '../lib/money'
 import type { Paisa } from '../lib/money'
-import { getBusinessToday, toBs, formatBs, formatAd, isWeekend } from '../lib/bs'
+import { getBusinessToday, toBs, toAd, fiscalYear, formatBs, formatBsMonth, formatAd, isWeekend } from '../lib/bs'
 import { UTILIZATION_PCT, REVENUE_TODAY_PAISA, COUNTS } from './today'
 import { PARENTS } from './inventory'
 
@@ -567,9 +567,28 @@ const fiscalYearStart: Date | null = (() => {
   return null
 })()
 
-const OUT_OF_TABLE =
-  'The BS table covers Shrawan 2083 only (lib/bs.ts), so this range cannot be resolved without inventing a Nepali date.'
+/* Reasons a preset cannot be offered. Staff read these, so they name no file, table or ticket. */
+const OUT_OF_TABLE = 'The Nepali calendar in this build does not cover this range.'
+const QUARTER_UNDEFINED = 'Quarter periods are not defined for the Nepali calendar in this build.'
 const OUT_OF_LEDGER = `Outside the seed ledger, which covers ${LEDGER_COVERAGE}.`
+
+/*
+ * Last fiscal year, read from the BS table the same way as `fiscalYearStart`
+ * (17 Jul 2025 to 16 Jul 2026 in AD). It is computed, but the seed ledger starts
+ * 1 May 2026, so `opt()` keeps it unavailable with the ledger's reason rather
+ * than showing a range the ledger cannot answer.
+ */
+const lastFiscalYear = fiscalYearStart ? fiscalYear(addDays(fiscalYearStart, -1)) : null
+
+/*
+ * The BS month TODAY falls in. Its name and BS year come from `toBs`, and its
+ * first day in AD from `toAd` (which reads the month-length table). Nothing here
+ * names a month, so the preset follows the clock.
+ */
+const currentBsDay = toBs(TODAY)
+const currentBsMonthStart = currentBsDay
+  ? toAd({ year: currentBsDay.year, month: currentBsDay.month, day: 1 })
+  : null
 
 function opt(key: string, label: string, from: Date, to: Date): PeriodOption {
   const ok = figuresFor(from, to) !== null
@@ -596,30 +615,34 @@ export const PERIODS: PeriodOption[] = [
   opt('last-30', 'Last 30 days', addDays(TODAY, -29), TODAY),
   opt('this-month', 'This month', monthStart, TODAY),
   opt('last-month', 'Last month', lastMonthStart, lastMonthEnd),
+  // TODO(decision): are quarters BS (Shrawan–Ashadh) or AD? Both stay unavailable until ruled.
   {
     key: 'this-quarter',
     label: 'This quarter',
     range: null,
-    why: `A quarter of the Shrawan–Ashadh fiscal year needs BS month lengths. ${OUT_OF_TABLE} TODO(decision): are quarters BS or AD?`,
+    why: QUARTER_UNDEFINED,
   },
   {
     key: 'last-quarter',
     label: 'Last quarter',
     range: null,
-    why: `A quarter of the Shrawan–Ashadh fiscal year needs BS month lengths. ${OUT_OF_TABLE} TODO(decision): are quarters BS or AD?`,
+    why: QUARTER_UNDEFINED,
   },
   fiscalYearStart
     ? opt('this-fy', 'This fiscal year (2083/84)', fiscalYearStart, TODAY)
     : { key: 'this-fy', label: 'This fiscal year (2083/84)', range: null, why: OUT_OF_TABLE },
-  {
-    key: 'last-fy',
-    label: 'Last fiscal year (2082/83)',
-    range: null,
-    why: `1 Shrawan 2082 is outside the table. ${OUT_OF_TABLE}`,
-  },
-  fiscalYearStart
-    ? opt('bs-shrawan', 'BS month · Shrawan 2083 to date', fiscalYearStart, TODAY)
-    : { key: 'bs-shrawan', label: 'BS month · Shrawan 2083 to date', range: null, why: OUT_OF_TABLE },
+  lastFiscalYear
+    ? opt('last-fy', 'Last fiscal year (2082/83)', lastFiscalYear.startAd, lastFiscalYear.endAd)
+    : { key: 'last-fy', label: 'Last fiscal year (2082/83)', range: null, why: OUT_OF_TABLE },
+  // The current BS month, to date. Its label is computed from the clock, not typed.
+  currentBsDay && currentBsMonthStart
+    ? opt(
+        'bs-month',
+        `BS month · ${formatBsMonth(currentBsDay.month)} ${currentBsDay.year} to date`,
+        currentBsMonthStart,
+        TODAY,
+      )
+    : { key: 'bs-month', label: 'BS month to date', range: null, why: OUT_OF_TABLE },
 ]
 
 export const DEFAULT_PERIOD = 'this-month'
@@ -659,7 +682,7 @@ export function rangeLabel(from: Date, to: Date): RangeLabel {
   return {
     bs: null,
     ad,
-    bsNote: `BS unavailable for ${missing} — lib/bs.ts covers Shrawan 2083 (16 Jul – 16 Aug 2026) and returns nothing outside it.`,
+    bsNote: `BS unavailable for ${missing}: the Nepali calendar in this build does not cover that date.`,
   }
 }
 
@@ -697,7 +720,7 @@ export interface ReportDefinition {
  * leaving each reader to assume. Every revenue figure here changes if Babin
  * answers differently.
  */
-export const PERIOD_BASIS = 'Spread across rental days — TODO(decision), Reports §5.2'
+export const PERIOD_BASIS = 'Spread across rental days'
 
 export const DEFINITIONS: Record<ChartView, ReportDefinition> = {
   revenue: {
@@ -716,14 +739,14 @@ export const DEFINITIONS: Record<ChartView, ReportDefinition> = {
     formula: 'Cash in = collections + deposits · Cash out = supplier and payroll settlements + capital purchases',
     source: 'Financial Engine · Payments',
     basis: 'Movement date — not the invoice date',
-    excludes: 'Nothing. Cash flow is not profit: deposits and capital purchases appear here and never in profit (Finance §5, Reports §6.1)',
+    excludes: 'Nothing. Cash flow is not profit: deposits and capital purchases appear here and never in profit.',
   },
   profit: {
     key: 'profit',
     title: 'Expense vs profit',
     shows: 'Revenue, expenses and the accrual profit between them.',
     formula: 'Profit = revenue − expenses, in the period',
-    source: 'Financial Engine · Expenses v2.2',
+    source: 'Financial Engine · Expenses',
     basis: PERIOD_BASIS,
     excludes: 'Deposits (a liability), capital purchases (balance sheet), VAT',
   },
@@ -732,7 +755,7 @@ export const DEFINITIONS: Record<ChartView, ReportDefinition> = {
     title: 'Equipment utilization',
     shows: 'Share of the rentable fleet that was on rent.',
     formula: 'Σ unit-days on rent ÷ (units owned × days in period)',
-    source: 'Inventory v3.0 §8',
+    source: 'Inventory',
     basis: 'Rental days inside the period',
     excludes: 'Units written off, units in maintenance beyond the fleet count',
   },
@@ -764,7 +787,7 @@ export const RECONCILIATION: ReconciliationCheck[] = [
   {
     card: 'Equipment utilization',
     figure: 'Equipment utilization, this month',
-    engine: 'Inventory v3.0 §8',
+    engine: 'Inventory',
     pulse: `${CURRENT_MONTH_FIGURES?.utilization ?? 0}%`,
     source: `${UTILIZATION_PCT}%`,
     ok: (CURRENT_MONTH_FIGURES?.utilization ?? -1) === UTILIZATION_PCT,
@@ -797,15 +820,15 @@ export const RECONCILIATION: ReconciliationCheck[] = [
 export const LEDGER_ASSERTION_ERRORS: string[] = (() => {
   const errs: string[] = []
   const whole = figuresFor(LEDGER_FROM, LEDGER_TO)
-  if (!whole) return ['The seed ledger produced no days at all — see data/pulse.ts.']
+  if (!whole) return ['The seed ledger produced no days at all.']
   for (const row of whole.equipment) {
     if (row.rentalDays > row.capacity)
-      errs.push(`${row.name}: ${row.rentalDays} rental days inside a ${row.capacity} unit-day ceiling (Reports §5.3).`)
-    if (row.utilization > 100) errs.push(`${row.name}: utilization ${row.utilization}% exceeds 100% (Reports §5.3).`)
+      errs.push(`${row.name}: ${row.rentalDays} rental days inside a ${row.capacity} unit-day ceiling.`)
+    if (row.utilization > 100) errs.push(`${row.name}: utilization ${row.utilization}% exceeds 100%.`)
   }
-  if (whole.utilization > 100) errs.push(`Fleet utilization ${whole.utilization}% exceeds 100% (Reports §5.3).`)
+  if (whole.utilization > 100) errs.push(`Fleet utilization ${whole.utilization}% exceeds 100%.`)
   if (LEDGER.some((d) => utc(d.ad) > utc(TODAY)))
-    errs.push('The ledger carries a day after today — §3 forbids actuals in a future period.')
+    errs.push('The ledger carries a day after today. Actuals cannot be dated in the future.')
   return errs
 })()
 
@@ -822,16 +845,16 @@ export const FLEET_RECONCILIATION_ERRORS: string[] = (() => {
     if (!RECONCILED_MODELS.has(model.name)) continue
     const row = PARENTS.find((p) => p.name === model.name)
     if (!row) {
-      errs.push(`${model.name}: marked reconciled but no longer found in inventory.ts's PARENTS.`)
+      errs.push(`${model.name}: marked reconciled but no longer found in the equipment register.`)
       continue
     }
     const owned = Number(row.stock.match(/\d+/)?.[0])
     if (!Number.isFinite(owned)) {
-      errs.push(`${model.name}: inventory.ts's stock string "${row.stock}" could not be parsed.`)
+      errs.push(`${model.name}: the equipment register's stock count "${row.stock}" could not be parsed.`)
       continue
     }
     if (owned !== model.units) {
-      errs.push(`${model.name}: FLEET says ${model.units} owned units, inventory.ts says ${owned} (§2.2).`)
+      errs.push(`${model.name}: this page counts ${model.units} owned units, the equipment register counts ${owned}.`)
     }
   }
   return errs

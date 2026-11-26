@@ -175,8 +175,13 @@ export function ActionsOverflowMenu({
     enabled[next]?.focus()
   }
 
+  const hasMenuItems = actions.length > 0 || (overflowItems?.length ?? 0) > 0
+  // With no menu items there is nothing for the trigger to open, so a custom
+  // launcher stands alone rather than behind an empty popover.
+  if (!hasMenuItems) return customOverflowNode ? <>{customOverflowNode}</> : null
+
   return (
-    <span ref={ref} style={{ position: 'relative', display: 'inline-flex', ...style }}>
+    <span ref={ref} style={{ position: 'relative', display: 'inline-flex', gap: 'var(--sp-sm)', ...style }}>
       <button
         ref={triggerRef}
         type="button"
@@ -336,13 +341,15 @@ export function ActionsOverflowMenu({
               {it.label}
             </button>
           ))}
-
-          {customOverflowNode && (
-            <div role="none" onClick={() => closeMenu(false)}>
-              {customOverflowNode}
-            </div>
-          )}
         </div>, document.body
+      )}
+
+      {/* A launcher that owns its own popup stays beside this trigger. Inside the
+          popover, its popup unmounted with the popover before it could open. */}
+      {customOverflowNode && (
+        <span role="none" style={{ display: 'inline-flex' }} onClick={() => closeMenu(false)}>
+          {customOverflowNode}
+        </span>
       )}
     </span>
   )

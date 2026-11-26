@@ -634,17 +634,17 @@ export type FilterSupport =
 
 /** Needs `return_at` compared with *now* while the period already owns the range. */
 const NEEDS_SECOND_RANGE =
-  'Needs a second date range on bookings.return_at; ListFilters carries one and the period chips own it.'
+  'Needs a second date range on the return date. The list supports one, and the period chips already use it.'
 
 /** Two embeds away: bookings → booking_lines → booking_line_units. */
-const NEEDS_UNIT_EMBED = (column: string) =>
-  `Lives on booking_line_units.${column}, two embeds from bookings; applyListFilters cannot scope a filter to an embedded table.`
+const NEEDS_UNIT_EMBED = () =>
+  'This is recorded on each unit in a booking, and this list cannot filter on units yet.'
 
 const CATEGORY_REASON =
   /* Equipment category is inventory_categories.name, reached bookings → booking_lines → products.category_id (0004:89). No embed-scoped filter in ListFilters. */ "Filtering pickups by equipment category is not available yet."
 
 const CLIENT_TYPE_REASON =
-  'Client type is clients.type_parent / clients.org_subtype (0005:42-43). Filtering it needs clients!inner(…) plus a referencedTable-scoped filter, which ListFilters does not express.'
+  'Client type is recorded on the client, but this list cannot filter on a related client field yet.'
 
 export const FILTER_SUPPORT: Readonly<Record<string, FilterSupport>> = {
   /* Pickup group — "Booked" and "Packed" are stage names, so they are live. */
@@ -652,7 +652,7 @@ export const FILTER_SUPPORT: Readonly<Record<string, FilterSupport>> = {
   VIP: {
     kind: 'unavailable',
     reason:
-      'No VIP column. clients carries segments[] and tags[] (0005:66,70) but no VIP member, and the booking row carries only client_id.',
+      'There is no VIP field. Clients carry segments and tags but no VIP member, and the booking row carries only a client link.',
   },
 
   /* Return group. */
@@ -668,10 +668,10 @@ export const FILTER_SUPPORT: Readonly<Record<string, FilterSupport>> = {
   },
   'Payment Pending': {
     kind: 'unavailable',
-    reason: 'payments (0006:176) is not joined by listBookings, and a payment total is the Financial Engine’s to compute.',
+    reason: 'Payments are not loaded with the booking list yet, and a payment total is the Financial Engine’s to compute.',
   },
-  Damage: { kind: 'unavailable', reason: NEEDS_UNIT_EMBED('damaged') },
-  Missing: { kind: 'unavailable', reason: NEEDS_UNIT_EMBED('missing_reason') },
+  Damage: { kind: 'unavailable', reason: NEEDS_UNIT_EMBED() },
+  Missing: { kind: 'unavailable', reason: NEEDS_UNIT_EMBED() },
 
   /* Equipment category ×10 and Client type ×7. */
   ...Object.fromEntries(

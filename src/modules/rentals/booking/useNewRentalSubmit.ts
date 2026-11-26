@@ -71,6 +71,8 @@ export interface UseNewRentalSubmitOptions {
   draftHasUnsavedChanges: boolean
   draftData: RentalDraftData
   setSavedDraftFingerprint: (fp: string | null) => void
+  /** Runs once a quote is saved, so the device-local draft of this form is cleared (lifecycle-1-4). */
+  onQuoteSaved?: (() => void) | undefined
   kind: string
   kindOther: string
 
@@ -173,6 +175,7 @@ export function useNewRentalSubmit({
   kindOther,
   confirmKey,
   draftBookingKey,
+  onQuoteSaved,
 }: UseNewRentalSubmitOptions) {
   const createdQuote = useRef<{ id: string; no: string; stage?: string } | null>(null)
   const discountKeys = useRef<string[]>([])
@@ -575,6 +578,10 @@ export function useNewRentalSubmit({
         transportKey.current = null
         outsourcedKey.current = null
         setSaveState('saved')
+        // The quote holds these entries now, so the form is no longer unsaved. Its
+        // device-local draft must not be offered back as a duplicate (lifecycle-1-4).
+        if (!draftId) setSavedDraftFingerprint(stableJson(draftData))
+        onQuoteSaved?.()
         const label = quote.no.startsWith('BK-') || quote.no.startsWith('Rental ') ? quote.no : `Rental ${quote.no}`
         showSuccessToast?.('Quote saved', `${label} is saved as a Quote`)
         setQuoteSaved({ bookingId: quote.id, bookingNo: quote.no })
@@ -604,6 +611,7 @@ export function useNewRentalSubmit({
     setSavedDraftFingerprint,
     showSuccessToast,
     createQuoteFromForm,
+    onQuoteSaved,
   ])
 
   return {

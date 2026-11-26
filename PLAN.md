@@ -217,6 +217,28 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-25 (D-UX-03) | Testing bay: saved in the database or a local note? How is custody shown? | Local note only; no custody change | UX-P23 |
 | O-26 (D-UX-04) | QC templates per category, handling of client media and settings resets, quick-shelve eligibility. | No templates; current Reset checklist | UX-P26 |
 | O-27 (D-UX-05) | Should the future-availability rule of 24 Oct change? | **Do not change** | UX-P26 |
+| AUD-1 | Warranty figure: recovered over premium, or the app's net ROI? | Current behaviour kept; label says "% of premium recovered" | Warranty tracker |
+| AUD-2 | Which public business phone number is correct, and should every public page read one setting? | Current behaviour kept (numbers still differ) | /rider, /pay/link, /unsubscribe, settlement |
+| AUD-3 | Retention period for sign-in and authentication records (1 year, 90 days or 7 years?) | Current behaviour kept | Audit and activity log screens |
+| AUD-4 | Link Problem Reports from Settings or the sidebar, or keep it URL-only? | URL-only | Problem Reports |
+| AUD-5 | Seed figures shown as live: hide, label as sample, or wire to live data? | Current behaviour kept; System Summary statuses read Not tracked yet | Audit, backup, branch alerts, Today money |
+| AUD-6 | Spare-capacity insight: rank by free slots, or change the words? | Current behaviour kept | Warehouse insight |
+| AUD-7 | Handover Fulfillment Method: booking basis, or completed handover sessions? | Booking basis, shown only when completed handovers exist | Operations report |
+| AUD-8 | Money tiles: whole rupees or paise throughout? | Current behaviour kept | Sales and VAT tiles |
+| AUD-9 | Pulse: are BS quarters Nepali or AD, and which revenue basis? | Quarter presets stay unavailable | Pulse periods |
+| AUD-10 | Storage levels: is the fourth level a bin or a case, and how many levels? | Zone, rack and shelf stay free text | Warehouse settings |
+| AUD-11 | Referral codes: build issuing and storage, or hide the button until built? | Current behaviour kept | Client referral tab |
+| AUD-12 | Last rental date: approve a view change so past-only pickups show? | Current behaviour kept | Client directory |
+| AUD-13 | Delivery Note, Packing List, Return Report and Inspection Report mapped to Rental: intended? | Current mapping kept | Operations and Inventory reports |
+| AUD-14 | Taxable turnover counts standard VAT only; the register lists all invoices. | Current behaviour kept; see O-7 | VAT register |
+| AUD-15 | Maintenance overdue: confirm the date rule as the one definition. | Date rule | Maintenance tab |
+| AUD-16 | Packing late pickup: confirm the Booked or Packed past-pickup rule. | As built | Packing report |
+| AUD-17 | Boot fallback: keep 25 seconds, or add a mount signal for an earlier paint? | 25 seconds | Public boot screen |
+| AUD-18 | Developer invariant messages: can any reach a staff screen? | Unchanged; excluded from copy gate | Booking and Today errors |
+| AUD-19 | Booking launcher: add a visible label to the icon-only trigger? | Icon with accessible name | BookingDetail top bar |
+| AUD-20 | Tools decision cards: keep them visible to staff, or move to the docs? | Visible, unchanged | Settings Tools |
+| AUD-21 | Which date format should every admin screen use? | Current formats kept | Admin screens |
+| AUD-22 | Are the two Access Member tier names intended? | Unchanged | Membership tiers |
 
 ### §4.3 How a new decision gets in
 

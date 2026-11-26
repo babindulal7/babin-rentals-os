@@ -15,8 +15,17 @@ export interface StaffActivitySummary {
   employeeCode: string
   totalActions: number
   actionsBreakdown: Record<string, number>
+  /** Actions outside the four domain categories (sign-ins and the rest), so the domain columns and this add up to `totalActions`. */
+  otherActions: number
   lastActive: string | null
   recentAction: string | null
+}
+
+/** The domain categories the operator breakdown draws one column each for. */
+const DOMAIN_CATEGORIES = ['Rentals', 'Operations', 'Inventory', 'Finance'] as const
+
+function otherActionsOf(totalActions: number, byCategory: Record<string, number>): number {
+  return totalActions - DOMAIN_CATEGORIES.reduce((acc, domain) => acc + (byCategory[domain] ?? 0), 0)
 }
 
 export interface ActivityReportEvent {
@@ -258,6 +267,7 @@ export async function getActivityReport(
       employeeCode: u.employee_code || '—',
       totalActions: stats?.total ?? 0,
       actionsBreakdown: stats?.byCategory ?? {},
+      otherActions: otherActionsOf(stats?.total ?? 0, stats?.byCategory ?? {}),
       lastActive: stats?.lastActive ?? null,
       recentAction: stats?.recentAction ?? null,
     })

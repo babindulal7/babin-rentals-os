@@ -65,7 +65,8 @@ export const FINANCIAL_SECTIONS: Section[] = [
     fields: [
       {
         label: 'VAT rate',
-        note: /* Applied after discount, per Foundation §2.1. */ "Applied after discount, per",
+        // Spec citation (Foundation §2.1) kept here, out of the staff copy.
+        note: 'Applied after discount.',
         settingKey: 'vatRatePercent',
         readBy: 'New Rental, the Pricing Calculator and Create Invoice',
       },
@@ -89,7 +90,7 @@ export const FINANCIAL_SECTIONS: Section[] = [
       },
       {
         label: 'TDS on crew payouts',
-        note: 'Withheld on crew payouts per accountant instructions (O-5 / D25). Blank when not configured.',
+        note: 'Withheld on crew payouts per accountant instructions. Blank when not configured.',
         settingKey: 'crewPayoutTdsPercent',
         readBy: 'Crew Assist’s payout ledger and monthly TDS reports',
       },
@@ -117,7 +118,7 @@ export const FINANCIAL_SECTIONS: Section[] = [
         label: 'Number grouping',
         note: 'Lakh and crore, not thousands.',
         value: 'Lakh / crore grouping',
-        readOnlyWhy: '`lib/money.ts` groups this way and nothing else. Changing it is a code change, not a setting.',
+        readOnlyWhy: 'Money groups this way and nothing else. Changing it is a code change, not a setting.',
       },
       {
         label: 'Additional currencies',
@@ -176,8 +177,9 @@ export const FINANCIAL_SECTIONS: Section[] = [
       },
       {
         label: 'Allow overbooking',
-        note: 'This device only — replaced by a per-product switch in T2-23. Off by default. When on here, a booked/maintenance chip in Add Item opens an override (sub-rent preferred); no shared or server-side policy is changed.',
-        readOnlyWhy: 'This device only — replaced by the switch on each product (T2-23)',
+        // Replaced by the per-product switch: implementing task T2-23.
+        note: 'This device only — replaced by a per-product switch. Off by default. When on here, a booked/maintenance chip in Add Item opens an override (sub-rent preferred); no shared or server-side policy is changed.',
+        readOnlyWhy: 'This device only — replaced by the switch on each product',
       },
     ],
   },

@@ -311,7 +311,7 @@ export function TwoStepAuthControl() {
               Are you sure you want to reset two-step verification for <strong>{resetModalUser.full_name}</strong> ({resetModalUser.primary_role})?
             </p>
             <p style={{ margin: 0, fontSize: 'var(--t-caption)', color: 'var(--text-muted)' }}>
-              This will remove their enrolled authenticator factor. The action is audited (AD2). They must enrol a new authenticator upon their next sign-in.
+              This will remove their enrolled authenticator factor. The action is audited. They must enrol a new authenticator upon their next sign-in.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-xs)', marginTop: 'var(--sp-sm)' }}>
               <Button variant="secondary" onClick={() => setResetModalUser(null)} disabled={actionLoading}>

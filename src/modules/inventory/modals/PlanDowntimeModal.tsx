@@ -218,7 +218,7 @@ export function PlanDowntimeModal({
 
         <div>
           <label style={{ display: 'block', fontSize: 'var(--t-meta, 13px)', fontWeight: 600, marginBottom: 6 }}>
-            Downtime Reason (B10)
+            Downtime Reason
           </label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {DOWNTIME_REASONS.map((r) => {

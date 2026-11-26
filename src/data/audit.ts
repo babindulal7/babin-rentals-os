@@ -1,5 +1,6 @@
 import type { Kpi } from '../components/ui/Page'
 import type { Slice } from '../components/ui/Charts'
+import { formatMoney, rupees } from '../lib/money'
 
 /** Audit Settings seed data — transcribed from render `13590713`. */
 
@@ -53,7 +54,7 @@ export const RETENTION = [
 ]
 
 export const AUDIT_RULES = [
-  { name: 'High Value Booking', module: 'Rentals', condition: 'Amount > NPR 100,000', level: 'Detailed', at: 'May 21, 2025 08:21 AM' },
+  { name: 'High Value Booking', module: 'Rentals', condition: `Amount > ${formatMoney(rupees(100000))}`, level: 'Detailed', at: 'May 21, 2025 08:21 AM' },
   { name: 'Permission Change', module: 'Administration', condition: 'Any permission change', level: 'Detailed', at: 'May 18, 2025 07:45 PM' },
   { name: 'Price Change', module: 'Inventory', condition: 'Price modified', level: 'Detailed', at: 'May 18, 2025 06:20 PM' },
   { name: 'Payment Adjustment', module: 'Finance', condition: 'Any manual adjustment', level: 'Detailed', at: 'May 17, 2025 11:05 AM' },

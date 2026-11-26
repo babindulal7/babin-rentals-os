@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { listDocuments, mapDbRowToDocRow, type DocumentRowDb } from '../documents'
+import { categoriesFor, listDocuments, mapDbRowToDocRow, type DocumentRowDb } from '../documents'
 import { supabase } from '../../supabase'
 
 vi.mock('../../supabase', () => {
@@ -62,6 +62,31 @@ describe('documents queries', () => {
     expect(doc.category).toBe('Finance')
     expect(doc.finance).toBe(true)
     expect(doc.status).toBe('Issued')
+  })
+
+  it('mapDbRowToDocRow puts Template documents in Templates, so the category count matches the list', () => {
+    const row: DocumentRowDb = {
+      id: 'tpl-uuid-1',
+      client_uuid: 'client-uuid-0',
+      document_no: 'RA-TPL-V4',
+      document_type: 'Template',
+      booking_id: null,
+      client_id: null,
+      lifecycle_status: 'Issued',
+      file_size_bytes: null,
+      generated_by: null,
+      signed_at: null,
+      signed_by_name: null,
+      created_at: '2026-08-03T10:00:00Z',
+    }
+
+    const doc = mapDbRowToDocRow(row)
+    expect(doc.category).toBe('Templates')
+    expect(doc.finance).toBeUndefined()
+
+    const counts = categoriesFor(true, [doc])
+    expect(counts.find((c) => c.key === 'Templates')?.count).toBe(1)
+    expect(counts.find((c) => c.key === 'Rental')?.count).toBe(0)
   })
 
   it('listDocuments returns database rows when present', async () => {

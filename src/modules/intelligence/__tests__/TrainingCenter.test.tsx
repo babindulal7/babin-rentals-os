@@ -9,6 +9,8 @@ import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import TrainingCenter from '../TrainingCenter'
+import { SYNTHETIC_GOLDEN_CASES } from '../../../lib/intelligence/goldenCases'
+import { REAL_PILOT_GOLDEN_CASES } from '../../../lib/intelligence/realGoldenCases'
 import * as authModule from '../../../lib/auth'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
@@ -94,6 +96,23 @@ describe('TrainingCenter Component (TQC-01)', () => {
     expect(container.textContent).toContain('ID-001')
     expect(container.textContent).toContain('Near-duplicate model code detected (FX3 vs FX30 boundary)')
     expect(container.textContent).toContain('CMP-002')
+  })
+
+  it('states the library count from the list it shows, not a typed number', async () => {
+    await act(async () => {
+      root.render(
+        createElement(MemoryRouter, null, createElement(TrainingCenter))
+      )
+    })
+
+    const total = SYNTHETIC_GOLDEN_CASES.length + REAL_PILOT_GOLDEN_CASES.length
+    const libraryTab = container.querySelector('#tab-library') as HTMLButtonElement
+    await act(async () => {
+      libraryTab.click()
+    })
+
+    expect(container.textContent).toContain(`Curated collection of ${total} golden assertions`)
+    expect(container.textContent).toContain(`All Cases (${total})`)
   })
 
   it('navigates to Golden Test Library tab and filters cases', async () => {

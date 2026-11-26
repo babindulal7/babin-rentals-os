@@ -404,13 +404,13 @@ describe('pricing honesty (D22 gate parity)', () => {
   it('shows the working from the recorded membership fee, and never prices a withheld fee as zero', async () => {
     await mount()
     await choose('Academy')
-    expect(text()).toContain('Credit for unused days (Ruling D22)')
+    expect(text()).toContain('Credit for unused days')
     expect(text()).toContain('Current plan fee:')
     expect(text()).toContain('12,000')
     await choose('Elite')
     // The custom fee is not negotiated here, so there is no price to show —
     // and certainly not a made-up zero.
-    expect(text()).not.toContain('Credit for unused days (Ruling D22)')
+    expect(text()).not.toContain('Credit for unused days')
     expect(text()).not.toMatch(/Rs\s?0\b/)
     expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
     expect(text()).toContain('Negotiated fee (NPR)')
@@ -443,7 +443,7 @@ describe('pricing honesty (D22 gate parity)', () => {
     await mount()
     await choose('Academy')
     expect(text()).toContain('never recorded')
-    expect(text()).not.toContain('Credit for unused days (Ruling D22)')
+    expect(text()).not.toContain('Credit for unused days')
     expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
     await click('Apply Tier Change')
     expect(state.calls).toHaveLength(0)
@@ -454,7 +454,7 @@ describe('pricing honesty (D22 gate parity)', () => {
     await mount()
     await choose('Academy')
     expect(text()).toContain('Reading the current membership')
-    expect(text()).not.toContain('Credit for unused days (Ruling D22)')
+    expect(text()).not.toContain('Credit for unused days')
     expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
   })
 

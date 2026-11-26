@@ -154,11 +154,11 @@ export function ResolveAtRiskModal({
         >
           <Icon name="alert_triangle" size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
           <div>
-            <strong>Booking flagged At Risk (B39, B42):</strong> Equipment clash on{' '}
+            <strong>Booking flagged At Risk:</strong> Equipment clash on{' '}
             <strong>{atRisk.product_name || 'gear'}</strong>{' '}
             {atRisk.clashing_booking_no ? `(Booking #${atRisk.clashing_booking_no})` : ''}.
             <div style={{ fontSize: 'var(--t-fine, 12px)', color: 'var(--muted)', marginTop: 2 }}>
-              An at-risk booking cannot reach Pack until covered or resolved. Choose an O-2 resolution path below.
+              An at-risk booking cannot reach Pack until covered or resolved. Choose a resolution path below.
             </div>
           </div>
         </div>
@@ -166,7 +166,7 @@ export function ResolveAtRiskModal({
         {/* O-2 Resolution Choice */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
-            Resolution Step (O-2 / B39)
+            Resolution Step
           </label>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
@@ -206,7 +206,7 @@ export function ResolveAtRiskModal({
                 2. Sub-rent from Partner
               </div>
               <div style={{ fontSize: 'var(--t-fine, 12px)', color: 'var(--muted)', marginTop: 2 }}>
-                Cover from external partner (T3-13)
+                Cover from external partner
               </div>
             </button>
 

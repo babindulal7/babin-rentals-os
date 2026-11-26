@@ -215,6 +215,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useSharedGlossary(user?.id ?? null, user?.role ?? 'Client')
   /* Latest signed-in id for `logout`, which has no dependency on render state (G6 Logout audit row). */
   const userIdRef = useRef<string | null>(null)
+  /* The leaving person's role for the Logout row, mirrored in the same render as `userIdRef`. */
+  const userRoleRef = useRef<Role | null>(null)
   const [loading, setLoading] = useState(true)
   const [isLocked, setLocked] = useState(false)
   const [isPasswordRecovery, setPasswordRecovery] = useState(false)
@@ -513,8 +515,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof supabase.auth.resetPasswordForEmail !== 'function') {
       return {
         error:
-          'Password reset needs the live Supabase project, and this build is running on the mock data ' +
-          'source (VITE_DATA_SOURCE=mock). Mock sign-in accepts any password, so there is nothing to reset.',
+          'Password reset is not available in this preview. Preview sign-in accepts any password, so ' +
+          'there is nothing to reset.',
       }
     }
 
@@ -539,8 +541,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (typeof supabase.auth.updateUser !== 'function') {
       return {
         error:
-          'Setting a password needs the live Supabase project, and this build is running on the mock data ' +
-          'source (VITE_DATA_SOURCE=mock).',
+          'Setting a password is not available in this preview.',
       }
     }
 
@@ -569,8 +570,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (IS_MOCK) {
       return {
         error:
-          'Setting a PIN needs the live Supabase project, and this build is running on the mock data ' +
-          'source (VITE_DATA_SOURCE=mock). The mock store has no staff_auth_pins table to write to.',
+          'Setting a PIN is not available in this preview. The preview has nowhere to save a PIN.',
       }
     }
 
@@ -600,8 +600,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ok: false,
         reason: 'unavailable',
         message:
-          'PIN unlock needs the live Supabase project, and this build is running on the mock data ' +
-          'source (VITE_DATA_SOURCE=mock). Sign in with your password.',
+          'PIN unlock is not available in this preview. Sign in with your password.',
       }
     }
 
@@ -680,7 +679,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const revokeOwnStaffPin = useCallback(async () => {
     if (IS_MOCK) {
-      return { error: 'Removing a PIN needs the live Supabase project (VITE_DATA_SOURCE=mock).' }
+      return { error: 'Removing a PIN is not available in this preview.' }
     }
     try {
       const { error } = await supabase.rpc('revoke_own_staff_pin')
@@ -704,13 +703,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const logout = useCallback(() => {
     const leavingId = userIdRef.current
+    const leavingRole = userRoleRef.current
     hydrateUserLanguage(null)
     setUser(null)
     setLocked(false)
     setPasswordRecovery(false)
     setHasPin(false)
-    /* G6: the Logout row is written while the session is still valid, then the sign-out follows (bounded). */
-    void recordLogout(leavingId).finally(() => void supabase.auth.signOut())
+    /* G6: the Logout row is written while the session is still valid, then the sign-out follows (bounded).
+       The leaving role is passed, so the row is not held behind a staff-row read that could outlast the bound. */
+    void recordLogout(leavingId, leavingRole).finally(() => void supabase.auth.signOut())
     /*
      * Law 6 — the identity is leaving the device, so its rows must leave with
      * it. Workbox keys its two PostgREST caches on URL alone, so without this an
@@ -979,6 +980,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /* G1: shared settings load once a staff session exists — before that, RLS would return nothing. */
   const signedInId = user?.id ?? null
   userIdRef.current = signedInId
+  userRoleRef.current = user?.role ?? null
   useEffect(() => {
     if (signedInId) void hydrateSharedSettings()
   }, [signedInId])

@@ -48,6 +48,8 @@ export default function OperationsReports() {
   const filtered = hasReportFilters(filters)
   const load = useLoad(() => getOperationsReport(reportFilterOptions(filters)), { key: JSON.stringify(filters) })
   const data = load.data
+  // Completed handover sessions in the period (Total Dispatches). The method split is drawn only when there is one.
+  const completedHandovers = data?.metrics.totalPickups ?? 0
   const nothing =
     data !== null && data.deliveryMethods.length === 0 && data.pickups.length === 0 && data.returns.length === 0
 
@@ -214,7 +216,7 @@ export default function OperationsReports() {
         [],
         ['Delivery Methods Breakdown'],
         ['Method', 'Count', 'Share %'],
-        ...(data?.deliveryMethods.map((dm): ReportCsvRow => [dm.method, dm.count, `${dm.percent}%`]) ?? []),
+        ...(completedHandovers > 0 ? (data?.deliveryMethods.map((dm): ReportCsvRow => [dm.method, dm.count, `${dm.percent}%`]) ?? []) : []),
         [],
         ['Handover Sessions Log'],
         ['Booking No', 'Client', 'Pickup Time', 'Delivery Method', 'Receiver', 'ID Verified', 'Status'],
@@ -276,7 +278,7 @@ export default function OperationsReports() {
         ['Packing Fulfillment Rate', rate(data?.metrics.packingFulfillmentRate ?? null)],
         [],
         ['Packing Jobs List'],
-        ['Booking No', 'Client', 'Project', 'Pickup Scheduled', 'Item Count', 'State'],
+        ['Booking No', 'Client', 'Project', 'Pickup Scheduled', 'Item Count', 'State', 'Late Pickup'],
         ...(data?.packingJobs.map((p): ReportCsvRow => [
           p.bookingNo,
           p.clientName,
@@ -284,6 +286,7 @@ export default function OperationsReports() {
           p.pickupScheduled,
           p.itemCount,
           p.state,
+          p.latePickup ? 'Yes' : 'No',
         ]) ?? []),
       ]
     }
@@ -387,7 +390,7 @@ export default function OperationsReports() {
               gap: 'var(--sp-md)',
             }}
           >
-            {/* Delivery Methods Chart */}
+            {/* Delivery Methods Chart. TODO(decision): this split counts bookings by delivery type. Whether it should count completed handover sessions is not ruled (see operationReports.ts). */}
             <div style={cardStyle}>
               <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
                 Handover Fulfillment Method
@@ -395,11 +398,13 @@ export default function OperationsReports() {
               <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
                 Client collection vs Babin vehicle delivery logistics.
               </p>
-              {deliverySlices.length > 0 && (
+              {completedHandovers > 0 && deliverySlices.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', alignItems: 'center' }}>
                   <Donut slices={deliverySlices} size={180} />
                   <Legend slices={deliverySlices} />
                 </div>
+              ) : (
+                <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', margin: 0 }}>No completed handovers to show.</p>
               )}
             </div>
 
@@ -743,7 +748,25 @@ export default function OperationsReports() {
                       </td>
                       <td style={td}>{pj.clientName}</td>
                       <td style={td}>{pj.project}</td>
-                      <td style={td}>{formatAdDateTime(pj.pickupScheduled)}</td>
+                      <td style={td}>
+                        {formatAdDateTime(pj.pickupScheduled)}
+                        {pj.latePickup && (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              marginLeft: 8,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--r-sm)',
+                              fontSize: 'var(--t-meta)',
+                              fontWeight: 600,
+                              background: 'var(--status-danger-bg)',
+                              color: 'var(--status-danger-text)',
+                            }}
+                          >
+                            Late pickup
+                          </span>
+                        )}
+                      </td>
                       <td style={td}>{pj.itemCount} items</td>
                       <td style={td}>
                         <span

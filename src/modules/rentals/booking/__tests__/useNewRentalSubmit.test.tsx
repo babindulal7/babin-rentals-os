@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useNewRentalSubmit, type UseNewRentalSubmitOptions } from '../useNewRentalSubmit'
+import { stableJson } from '../newRentalUtils'
 import { createRental } from '../../../../actions/rentals/createRental'
 import { confirmRental } from '../../../../actions/rentals/confirmRental'
 import { convertDraft } from '../../../../actions/rentals/saveDraft'
@@ -692,6 +693,109 @@ describe('useNewRentalSubmit', () => {
       expect(createRental).toHaveBeenCalledTimes(1)
       const payload = vi.mocked(createRental).mock.calls[0]?.[0]
       expect(payload?.project).toBe('[Priority] Documentary Kathmandu')
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      host.remove()
+    }
+  })
+
+  it('save as quote runs onQuoteSaved and records the saved form as the baseline (lifecycle-1-4)', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+
+    const onQuoteSaved = vi.fn()
+    const setSavedDraftFingerprint = vi.fn()
+    const draftData = { project: 'Feature Film A' } as any
+    const quoteClient = {
+      dbId: 'client-db-1',
+      id: 'CL-001',
+      name: 'Test Client',
+      phone: '9841000000',
+      email: 'test@example.com',
+      company: 'Test Co',
+      address: 'Kathmandu',
+      pan: '123456789',
+      creditLimitPaisa: 0 as Paisa,
+      active_rentals_count: 0,
+      risk_tier: 'Low',
+      health_score: 95,
+      flags: [],
+      notes: '',
+      has_signed_agreement: true,
+      requires_deposit: false,
+      is_flagged: false,
+    } as unknown as ClientRecord
+    const pricing = {
+      securityDeposit: { requiredPaisa: 0 },
+      discounts: { discountPaisa: 0, appliedPercent: 0 },
+    } as unknown as PricingPipelineResult
+    let submitHook!: ReturnType<typeof useNewRentalSubmit>
+
+    function TestComponent() {
+      submitHook = useNewRentalSubmit({
+        confirmBlocked: false,
+        saveState: 'saved',
+        setSaveState: vi.fn(),
+        dispatchContext: () => ({ userId: 'user-1', role: 'Coordinator' }),
+        setActionError: vi.fn(),
+        setConfirmedSuccess: vi.fn(),
+        showSuccessToast: vi.fn(),
+        client: quoteClient,
+        lines: [],
+        equipmentLines: [],
+        project: 'Feature Film A',
+        pickupAt: new Date('2026-11-01T09:00:00Z'),
+        returnAt: new Date('2026-11-03T18:00:00Z'),
+        deliveryType: 'Client Pickup',
+        pricing,
+        manualDiscountReason: '',
+        manualDiscountAuthorizedBy: '',
+        womenDopEligible: false,
+        crew: [],
+        clientPickup: true,
+        deliveryChargePaisa: 0 as any,
+        fuelChargePaisa: 0 as any,
+        returnPickupType: 'Client Return',
+        returnPickupAddress: '',
+        returnPickupTime: '18:00',
+        returnPickupChargePaisa: 0,
+        returnTransportPaisa: 0,
+        vehicle: '',
+        numberPlate: '',
+        driverContact: '',
+        pickupLocation: '',
+        returnLocation: '',
+        specialInstructions: '',
+        days: 2,
+        draftId: null,
+        draftBookingNo: null,
+        draftHasUnsavedChanges: true,
+        draftData,
+        setSavedDraftFingerprint,
+        kind: 'Feature Film',
+        kindOther: '',
+        confirmKey: { current: null },
+        draftBookingKey: { current: null },
+        onQuoteSaved,
+      })
+      return null
+    }
+
+    try {
+      await act(async () => {
+        root.render(<TestComponent />)
+      })
+      await act(async () => {
+        submitHook.saveAsQuote()
+      })
+
+      expect(createRental).toHaveBeenCalledTimes(1)
+      expect(confirmRental).not.toHaveBeenCalled()
+      expect(onQuoteSaved).toHaveBeenCalledTimes(1)
+      expect(setSavedDraftFingerprint).toHaveBeenCalledWith(stableJson(draftData))
     } finally {
       await act(async () => {
         root.unmount()
