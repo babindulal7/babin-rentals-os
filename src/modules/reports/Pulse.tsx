@@ -132,6 +132,8 @@ const td = { height: 'var(--row-min-h)', padding: '10px', fontSize: 'var(--t-met
 /* Law 15 — hit area over paint, number from `--tap`. One consumer: the range
    Select above the pulse table. */
 const selStyle = {
+  minWidth: 0,
+  maxWidth: '100%',
   minHeight: 'var(--tap)',
   padding: '0 8px',
   borderRadius: 'var(--r-input)',
@@ -519,6 +521,8 @@ function DemoPulse({ states }: { states: PulseStates }) {
           border: '1px solid var(--border)',
           background: 'var(--card2)',
           minWidth: 0,
+          maxWidth: '100%',
+          overflowWrap: 'anywhere',
         }}
       >
         <Icon name="calendar" size={14} style={{ color: 'var(--muted)', flexShrink: 0 }} />

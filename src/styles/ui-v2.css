@@ -14,7 +14,7 @@
    Do NOT add token definitions here. Add component rules that READ tokens.
    Status/financial semantics remain in lib/status.ts — never in CSS. */
 
-.card, .surface-card {
+.card, .surface-card, .report-kpi-card {
   background: var(--surface-content);
   color: var(--text);
   box-shadow: var(--elevation-surface);
@@ -25,11 +25,25 @@
   transition: background-color var(--dur-theme) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 
+/* Component rules formerly repeated in Luma and Rhea. Tokens stay in theme.css. */
+.tableCard { padding: 0; overflow: hidden; border-radius: var(--r-card); }
+.tableHead { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-md); padding: var(--section-padding); border-bottom: var(--surface-outline); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-sm); min-width: 0; }
+.control, .ui-input {
+  background: var(--input-bg); color: var(--text); border: 1px solid var(--input-border);
+  border-radius: var(--r-input); min-height: var(--tap); max-width: 100%; min-width: 0;
+  padding: 8px 12px; font: inherit; font-size: var(--t-ui);
+}
+.control:focus-visible, .ui-input:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
+.tag { display: inline-flex; align-items: center; background: var(--card2); color: var(--text2); border-radius: var(--r-chip); padding: 4px 8px; font-size: var(--t-th); font-weight: 600; }
+.metric { margin-top: var(--sp-xs); font: 700 var(--t-kpi) var(--font-id); font-variant-numeric: tabular-nums; }
+
 .card--bordered, .surface-card--bordered {
   border-color: var(--border);
 }
 .surface-card__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-md);
@@ -39,7 +53,7 @@
   border-radius: var(--r-card) var(--r-card) 0 0;
 }
 .surface-card__heading { min-width: 0; }
-.surface-card__action { display: flex; align-items: center; gap: var(--sp-sm); flex-shrink: 0; }
+.surface-card__action { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-sm); min-width: 0; max-width: 100%; }
 .surface-card__footer {
   padding: var(--section-padding);
   background: var(--surface-inset);
@@ -782,3 +796,9 @@ input[type='search']::-webkit-search-results-decoration {
 [data-slot='input-group']:focus-within { outline: 2px solid var(--input-focus); outline-offset: -2px; }
 [data-slot='input-group'][data-invalid]:focus-within { outline-color: var(--danger); }
 
+
+/* The selected view stays reachable by keyboard and visible in the scrolling
+ * strip; a thin scrollbar makes overflow discoverable without extra controls. */
+.segmented-control { overscroll-behavior-inline: contain; scrollbar-color: var(--border) transparent; }
+.segmented-control > [role='tab'] { flex-shrink: 0; }
+.segmented-control > [role='tab']:focus-visible { outline: 2px solid var(--input-focus); outline-offset: -2px; }

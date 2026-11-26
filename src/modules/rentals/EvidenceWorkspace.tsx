@@ -470,7 +470,7 @@ export default function EvidenceWorkspace() {
                   {floor.clientName ? ` · ${floor.clientName}` : ''}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: 'var(--sp-sm)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-sm)' }}>
                 <Link
                   to={`/rentals/${id}/packing`}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, padding: '0 12px', borderRadius: 'var(--r-btn)', border: '1px solid var(--btn-secondary-border)', background: 'var(--btn-secondary-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, textDecoration: 'none' }}
@@ -957,7 +957,7 @@ export default function EvidenceWorkspace() {
                       {/* §10 — there is no hard delete here and never was; the
                           soft delete it describes is not built either, which is
                           what the fourth control below now says. */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginTop: 11 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: phone ? 'minmax(0,1fr)' : 'repeat(2,minmax(0,1fr))', gap: 7, marginTop: 11 }}>
                         {/* The full-size twin of the card-level `Change` MiniBtn, and
                             dead for the identical reason — see MATCH_EDIT_UNAVAILABLE. */}
                         <Unavailable reason={MATCH_EDIT_UNAVAILABLE.change} style={{ display: 'block' }}>

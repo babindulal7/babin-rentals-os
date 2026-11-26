@@ -444,6 +444,7 @@ export default function Today() {
   useDomainEvent(EVENT_TYPES.RENTAL_CLOSED, refetchMovement)
   useDomainEvent(EVENT_TYPES.RENTAL_CONFIRMED, refetchMovement)
   useDomainEvent(EVENT_TYPES.RENTAL_CANCELLED, refetchMovement)
+  useDomainEvent(EVENT_TYPES.RENTAL_RESCHEDULED, refetchMovement)
 
   const isDispatchToday = pickupDateFilter.kind === 'quick' && pickupDateFilter.period === 'Today'
   const isReturnToday = returnDateFilter.kind === 'quick' && returnDateFilter.period === 'Today'

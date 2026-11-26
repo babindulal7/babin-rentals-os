@@ -101,18 +101,18 @@
 :root,
 :root[data-theme='light'] {
   /* ---- §3.1 core elevation ladder ---- */
-  --bg0: #e2e8f0;
-  --bg: #eaeff5;
-  --bgglow: #e4eaf2;
+  --bg0: #e4e4e7;
+  --bg: #f4f4f5;
+  --bgglow: #fafafa;
   --surface: #ffffff;
-  --surface-2: #edf3fa;
+  --surface-2: #f4f4f5;
   --card: #ffffff;
-  --card2: #faf8f4;
-  --inset: #f1f5f9;
-  --inset2: #e2e8f0;
-  --border: #8b9bb2;
-  --border2: #a2b0c4;
-  --divider: #9aa9bc;
+  --card2: #f4f4f5;
+  --inset: #f4f4f5;
+  --inset2: #e4e4e7;
+  --border: #71717a;
+  --border2: #52525b;
+  --divider: #a1a1aa;
 
   /* Universal 9-tier translucent alpha border scale (Light mode: slate-based) */
   --w02: rgba(15, 23, 42, 0.02);
@@ -127,8 +127,8 @@
   --w40: rgba(15, 23, 42, 0.40);
 
   /* Shared cool canvas, matched to the Pickup & Return dashboard. */
-  --bg-gradient-1: #eaeff5;
-  --bg-gradient-2: #e4eaf2;
+  --bg-gradient-1: #f4f4f5;
+  --bg-gradient-2: #e4e4e7;
   --bg-radial-mesh: none;
   --surface-card: var(--surface);
   --surface-card-hover: var(--surface-2);
@@ -137,8 +137,8 @@
   --bezel-outer-ring: 0 0 0 1px rgba(16, 32, 59, 0.06);
   --bezel-outer-bg: rgba(16, 32, 59, 0.025);
 
-  --text: #0f172a;
-  --text2: #334155;
+  --text: #09090b;
+  --text2: #27272a;
   /*
    * v4.1 shipped #6d7076 here with the comment "measured 4.97:1 on white" —
    * which was true, and was the whole problem. `--muted` is not painted on
@@ -161,7 +161,7 @@
    * 6.39:1 on white and 5.18:1 on the darkest inset #e2e8f0; text2 #334155
    * 10.35:1; input border #7c8ba1 3.46:1; cards carry a soft shadow.
    */
-  --muted: #526075;
+  --muted: #52525b;
   --disabled: #9b9ea4;
 
   --primary: #2456d6;
@@ -202,23 +202,23 @@
   --dim: #dddcd6;
   --on-dim: #5a5d63;
 
-  --ext-fg: #1e49b8;
-  --ext-line: #2456d6;
-  --ext-bg: rgba(36, 86, 214, 0.1);
-  --gold: #2456d6;
+  --ext-fg: #7f620a;
+  --ext-line: #92700f;
+  --ext-bg: transparent;
+  --gold: #92700f;
   --brand-mark: #2456d6;
 
-  --app: #e9eef5;
+  --app: #f4f4f5;
   --sidebar: #ffffff;
   --card: #ffffff;
-  --card2: #edf3fa;
+  --card2: #f4f4f5;
   --modal: #ffffff;
   --dropdown: #ffffff;
 
-  --hover-card: #eef4fb;
-  --hover-sidebar: #eef4fb;
+  --hover-card: #f4f4f5;
+  --hover-sidebar: #f4f4f5;
   --hover-button: #1e49b8;
-  --hover-row: #eef4fb;
+  --hover-row: #f4f4f5;
   --active-row: color-mix(in srgb, var(--primary) 10%, var(--card));
 
   --btn-primary-bg: #2456d6;
@@ -233,14 +233,14 @@
   --nav-icon: #6d7076;
 
   --input-bg: #ffffff;
-  --input-border: #7c8ba1;
-  --input-placeholder: #5f6e83;
+  --input-border: #71717a;
+  --input-placeholder: #52525b;
   --input-focus: #2456d6;
 
-  --th-bg: #edf3fa;
+  --th-bg: #f4f4f5;
   --tr-bg: #ffffff;
-  --tr-hover: #eef4fb;
-  --tr-alt: #f5f7fb;
+  --tr-hover: #f4f4f5;
+  --tr-alt: #fafafa;
 
   /* DESIGN_DIRECTION_SPEC v4.2 §6 Shadow Scale — tinted to match background hue */
   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.07), 0 0 0 1px rgba(15, 23, 42, 0.03);
@@ -265,7 +265,7 @@
   --danger-soft: #fdf6f6;
   --scrim: rgba(15, 23, 42, 0.45);
 
-  --chart-grid: #dbe5f0;
+  --chart-grid: #e4e4e7;
   --cat-1: #0072b2;
   --cat-2: #c87a00;
   --cat-3: #009e73;
@@ -278,18 +278,18 @@
 
 :root[data-theme='dark'] {
   /* ---- §3.1 5-Tier Obsidian Dark Elevation Ladder ---- */
-  --bg0: #020509;
-  --bg: #04080d;
-  --bgglow: #0a1826;
-  --surface: #0f1b2a;
-  --surface-2: #13233a;
-  --card: #0f1b2a;
-  --card2: #13233a;
-  --inset: #081522;
-  --inset2: #0b1b2c;
-  --sidebar: #050b12;
-  --modal: #0d1a29;
-  --dropdown: #0d1a29;
+  --bg0: #000000;
+  --bg: #09090b;
+  --bgglow: #0f0f11;
+  --surface: #18181b;
+  --surface-2: #27272a;
+  --card: #18181b;
+  --card2: #27272a;
+  --inset: #09090b;
+  --inset2: #18181b;
+  --sidebar: #09090b;
+  --modal: #18181b;
+  --dropdown: #18181b;
 
   /* Universal 9-tier translucent alpha border scale (Dark mode: pure white) */
   --w02: rgba(255, 255, 255, 0.02);
@@ -308,19 +308,19 @@
   --divider: rgba(255, 255, 255, 0.20);
 
   /* Obsidian Spatial Gradients & Glows */
-  --bg-gradient-1: #04080d;
-  --bg-gradient-2: #020509;
-  --bg-radial-mesh: radial-gradient(ellipse 80% 50% at 50% -20%, #0a1826 0%, #050b12 100%);
-  --surface-card: linear-gradient(180deg, var(--card2) 0%, var(--card) 100%);
-  --surface-card-hover: var(--card2);
+  --bg-gradient-1: #09090b;
+  --bg-gradient-2: #000000;
+  --bg-radial-mesh: none;
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--surface-2);
   --glass-tint: 0.88;
   --specular-rim: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
   --bezel-outer-ring: 0 0 0 1px var(--w12);
   --bezel-outer-bg: rgba(255, 255, 255, 0.02);
 
-  --text: #f1f5f9;
-  --text2: #b8c4d3;
-  --muted: #9eaabb;
+  --text: #fafafa;
+  --text2: #e4e4e7;
+  --muted: #a1a1aa;
   --disabled: #475569;
 
   --primary: #386af7;      /* WCAG AA 4.59:1 with white on-primary */
@@ -354,21 +354,21 @@
   --dim: #24262c;          /* DIM — finished / inactive. 4.61:1 with on-dim */
   --on-dim: #8b8e96;
 
-  --ext-fg: #85b2ff;
-  --ext-line: #386af7;
-  --ext-bg: rgba(56, 106, 247, 0.14);
-  --gold: #386af7;
+  --ext-fg: #e6c25c;
+  --ext-line: #d8a93a;
+  --ext-bg: transparent;
+  --gold: #d8a93a;
   --brand-mark: #85b2ff;
 
-  --app: #04080d;
-  --sidebar: #050b12;
-  --card: #0f1b2a;
-  --card2: #13233a;
-  --modal: #0d1a29;
-  --dropdown: #0d1a29;
+  --app: #09090b;
+  --sidebar: #09090b;
+  --card: #18181b;
+  --card2: #27272a;
+  --modal: #18181b;
+  --dropdown: #18181b;
 
-  --hover-card: #0f1e30;
-  --hover-sidebar: #0d1a29;
+  --hover-card: #27272a;
+  --hover-sidebar: #27272a;
   --hover-button: #2f5ce0;
   --hover-row: rgba(255, 255, 255, 0.055);
   --active-row: color-mix(in srgb, var(--primary) 15%, var(--card));
@@ -391,15 +391,15 @@
   --nav-active-bg: #102b48;
   --nav-icon: #94a3b8;
 
-  --input-bg: #081522;
+  --input-bg: #18181b;
   --input-border: rgba(255, 255, 255, 0.44);
-  --input-placeholder: #64748b;
+  --input-placeholder: #a1a1aa;
   --input-focus: #386af7;
 
-  --th-bg: #081522;
-  --tr-bg: #0b1622;
+  --th-bg: #18181b;
+  --tr-bg: #141416;
   --tr-hover: rgba(255, 255, 255, 0.035);
-  --tr-alt: #081522;
+  --tr-alt: #101012;
 
   --shadow-xs: 0 1px 2px 0 rgba(2, 6, 11, 0.35);
   --shadow-sm: 0 1px 3px 0 rgba(2, 6, 11, 0.4), 0 1px 2px -1px rgba(2, 6, 11, 0.3);
@@ -423,7 +423,7 @@
   --danger-soft: #1a1315;
   --scrim: rgba(0, 0, 0, 0.65);
 
-  --chart-grid: #263849;
+  --chart-grid: #3f3f46;
   --cat-1: #3b82d6;
   --cat-2: #b87a1e;
   --cat-3: #249e76;
@@ -545,16 +545,30 @@
   /* radius */
   /* Operational UI: restrained corners, with round badges reserved for counts. */
   --r-btn: 8px;
-  --r-card: 10px;
+  --r-card: 12px;
   --r-input: 8px;
   --r-modal: 12px;
+  /* RULING 2026-10-26: shared component aliases live here, not in global presets. */
+  --radius: var(--r-card);
+  --radius-sm: var(--r-xs);
+  --radius-md: var(--r-btn);
+  --radius-lg: var(--r-card);
+  --radius-xl: var(--r-modal);
+  --radius-2xl: calc(var(--r-modal) * 1.5);
+  --radius-3xl: calc(var(--r-modal) * 2);
+  --radius-4xl: calc(var(--r-modal) * 2.5);
+  --chart-1: var(--cat-1);
+  --chart-2: var(--cat-2);
+  --chart-3: var(--cat-3);
+  --chart-4: var(--cat-4);
+  --chart-5: var(--cat-5);
   --r-chip: 6px;    /* status blocks */
   --r-badge: 999px; /* numeric count badges ONLY */
 
   /* §3.3 / §7.3 - the law is the HIT AREA, not the paint. */
   --tap: 44px;
   --row-min-h: 56px;
-  --icon-stroke: 1.5;
+  --icon-stroke: 2;
   --icon-stroke-fill: 2.0;
 
   /* ══ §4 status blocks — ALL SOLID ═══════════════════════════════════════
@@ -864,12 +878,12 @@ body,
 
 :root {
   --font-display: 'Outfit', system-ui, sans-serif;
-  --font-body: 'Outfit', system-ui, sans-serif;
-  --font-mono: 'Outfit', system-ui, sans-serif;
-  --font-id: 'Outfit', system-ui, sans-serif;
-  --font-num: 'Outfit', system-ui, sans-serif;
-  --font-ne-display: 'Outfit', system-ui, sans-serif;
-  --font-ne-body: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
+  --font-id: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
+  --font-num: 'JetBrains Mono Variable', 'JetBrains Mono', monospace;
+  --font-ne-display: 'Asar', 'Hind', serif;
+  --font-ne-body: 'Hind', 'Source Sans 3', sans-serif;
 
   /*
     §4.3.6 — **fluid, not fixed.** Every value is `rem`, so the whole scale
@@ -1145,7 +1159,7 @@ h3,
 
 /*
   §4.3.4 — identifiers & numbers: serials, booking IDs, QR payloads, PAN.
-  Outfit with tabular figures gives a clean, modern look while aligning numbers perfectly.
+  Self-hosted JetBrains Mono separates similar glyphs and aligns numeric columns.
 */
 .identifier,
 .serial,
@@ -1158,7 +1172,6 @@ h3,
   §4.3.1 — figures, money, counts, percentages, and times.
 */
 .figure,
-td,
 .money {
   font-family: var(--font-num, var(--font-id));
   font-variant-numeric: tabular-nums;

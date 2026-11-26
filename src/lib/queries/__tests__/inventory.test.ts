@@ -731,6 +731,12 @@ async function mapOneUnit(raw: unknown, opts: Parameters<typeof listUnits>[1] = 
 }
 
 describe('listUnits — the per-serial expansion', () => {
+  it('reads the observed database revision without inventing a replacement', async () => {
+    const observed = '2026-10-26T10:00:00.123456+00:00'
+    expect((await mapOneUnit({ ...RAW_UNIT, updated_at: observed })).revision).toBe(observed)
+    expect(db.state.columns.split(',').map(column => column.trim())).toContain('updated_at')
+  })
+
   it('reads product_units_v, never the base table', async () => {
     await listUnits(RAW.id)
     expect(db.state.table).toBe('product_units_v')
@@ -799,6 +805,7 @@ describe('listUnits — the per-serial expansion', () => {
       insuranceExpiresAd: '2026-12-31',
       retiredAtAd: null,
       retirementReason: null,
+      revision: null,
       purchasePrice: null,
       replacementValue: null,
     })

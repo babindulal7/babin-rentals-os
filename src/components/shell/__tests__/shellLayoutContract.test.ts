@@ -4,6 +4,7 @@ import {
   ZONE3_SLOT_SEQUENCE,
   resolveSearchOwner,
   resolvePhoneSearchKind,
+  resolveShellNavigation,
 } from '../shellLayoutContract'
 
 describe('shellLayoutContract', () => {
@@ -128,5 +129,21 @@ describe('shellLayoutContract', () => {
         })
       ).toBe('trigger')
     })
+  })
+})
+
+
+describe('Cadra navigation ownership', () => {
+  it.each(['tablet', 'phone'] as const)('uses one bottom bar at %s', viewport => {
+    expect(resolveShellNavigation(viewport, '?tab=overview', false)).toBe('bottom')
+  })
+  it('uses the dock on desktop and ignores preview settings in production', () => {
+    expect(resolveShellNavigation('desktop', '?shellPreview=classic', false)).toBe('dock')
+    expect(resolveShellNavigation('desktop', '', true)).toBe('dock')
+  })
+  it('keeps the classic comparison local without changing other query state', () => {
+    expect(resolveShellNavigation('desktop', '?tab=stock&shellPreview=classic', true)).toBe('sidebar')
+    expect(resolveShellNavigation('tablet', '?shellPreview=classic', true)).toBe('sidebar')
+    expect(resolveShellNavigation('phone', '?shellPreview=classic', true)).toBe('bottom')
   })
 })

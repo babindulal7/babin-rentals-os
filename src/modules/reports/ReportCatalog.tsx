@@ -301,7 +301,7 @@ export function ReportCatalog({
           />
         </div>
 
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
+        <label className="report-period-field" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
           Period
           <select
             value={periodKey}

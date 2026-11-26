@@ -49,8 +49,7 @@ import '@fontsource-variable/jetbrains-mono/wght.css'
  * Replaces the capsule-era index.css.
  */
 import './styles/theme.css'
-// Local-only black/light preset adaptation. All business and status rules stay unchanged.
-import './styles/preset-black-light.css'
+// RULING 2026-10-26: theme.css owns the neutral palette; retained presets are inactive.
 import './styles/ui-v2.css'
 /*
  * v4.1 §7.7 — the shared responsive layer. AFTER theme.css so its layout
@@ -59,10 +58,7 @@ import './styles/ui-v2.css'
  */
 import './styles/responsive.css'
 import './styles/shadcn-preset-pilot.css'
-// Luma Full UI layer (b1aJD8RZg)
-import './styles/shadcn-luma-ui.css'
-// Rhea UI layer (b2Dd1dt6u)
-import './styles/shadcn-rhea-ui.css'
+// Luma/Rhea global files are retained for rollback; shared components are owned by ui-v2.css.
 import { REFERENCE_CASE_ERROR } from './lib/money'
 import { startAuditLogging } from './events/auditLogger'
 import { installGlobalErrorHandlers } from './lib/monitoring'

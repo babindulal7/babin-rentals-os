@@ -278,6 +278,8 @@ export function buildStore(options?: BuildStoreOptions): Store {
         rack: null, shelf: null, bin: null, container_id: null,
         retired_at: null,
         created_at: iso(new Date('2026-02-01T04:15:00Z')),
+        // A fixture starts at its creation revision, just as a newly inserted DB row does.
+        updated_at: iso(new Date('2026-02-01T04:15:00Z')),
       })
     }
   }
@@ -763,6 +765,7 @@ export const VIEW_OF: Record<string, string> = {
   clients_v: 'clients',
   products_v: 'products',
   product_units_v: 'product_units',
+  bundles_v: 'bundles',
   booking_lines_v: 'booking_lines',
   membership_plans_v: 'membership_plans',
   /*

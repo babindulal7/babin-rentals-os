@@ -45,7 +45,7 @@ export function toggleScanner(): void {
   window.dispatchEvent(new CustomEvent(SCANNER_TOGGLE_EVENT))
 }
 
-export default function ScannerFab() {
+export default function ScannerFab({ hideTrigger = false }: { hideTrigger?: boolean }) {
   /*
    * AUD-014 (Ruled): On phone viewports (<768px), the floating circular FAB button
    * is hidden (`!phone`) so the user has exactly one scan entry point: the centre
@@ -84,7 +84,8 @@ export default function ScannerFab() {
   const refocusFab = useCallback(() => {
     const active = document.activeElement as Element | null
     if (!active || active === document.body || panel.current?.contains(active)) {
-      fabRef.current?.focus()
+      const trigger = fabRef.current ?? document.querySelector<HTMLElement>('[data-scanner][aria-label="Scan equipment"]')
+      trigger?.focus()
     }
   }, [])
   useEffect(() => {
@@ -323,7 +324,7 @@ export default function ScannerFab() {
           : {
               position: 'fixed',
               right: 20,
-              bottom: 'var(--scanner-bottom, 20px)',
+              bottom: hideTrigger ? 'calc(78px + env(safe-area-inset-bottom, 0px))' : 'var(--scanner-bottom, 20px)',
               zIndex: 60,
             }
       }
@@ -543,7 +544,7 @@ export default function ScannerFab() {
         </div>
       )}
 
-      {!phone && open && (
+      {!phone && !hideTrigger && (
         <button
           ref={fabRef}
           type="button"

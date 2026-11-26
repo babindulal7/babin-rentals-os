@@ -225,6 +225,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
      * every role including Owner for three days. Twenty-four more of the same
      * trap were sitting unsprung.
      */
+    // RULING 2026-10-26: narrower than the legacy booking-desk five.
+    case 'rental.reschedule':
+      return rbac.canRescheduleRental(ctx.role, online);
     case 'rental.create':
     case 'rental.draft':
     case 'rental.cancel':

@@ -18,6 +18,7 @@ export interface DigitalSignature {
 
 export interface SignOnGlassModalProps {
   isOpen: boolean
+  purpose?: 'custody' | 'schedule'
   onClose: () => void
   role: 'receiver' | 'warehouse' | 'returning'
   defaultName: string
@@ -32,6 +33,7 @@ export interface SignOnGlassModalProps {
 
 export function SignOnGlassModal({
   isOpen,
+  purpose = 'custody',
   onClose,
   role,
   defaultName,
@@ -60,11 +62,12 @@ export function SignOnGlassModal({
       setSignerName(defaultName || (role === 'receiver' || role === 'returning' ? (clientName ?? '') : 'Warehouse Staff'))
       setHasDrawn(false)
       setCanvasError(null)
-      setAgreedToTerms(true)
+      setAgreedToTerms(purpose !== 'schedule')
+      if(purpose==='schedule')setMode('draw')
       setVerifiedGovId(false)
       setDepositAcknowledged(!isDepositPending)
     }
-  }, [isOpen, defaultName, role, clientName, isDepositPending])
+  }, [isOpen, defaultName, role, clientName, isDepositPending, purpose])
 
   // Setup canvas high-DPI resolution
   useEffect(() => {
@@ -173,13 +176,13 @@ export function SignOnGlassModal({
       return
     }
 
-    if (mode === 'draw' && !hasDrawn) {
+    if ((mode === 'draw' || purpose === 'schedule') && !hasDrawn) {
       setCanvasError('Please sign your signature on the glass canvas before submitting.')
       return
     }
 
     if (!agreedToTerms) {
-      setCanvasError('You must agree to the equipment condition and legal attestation.')
+      setCanvasError(purpose === 'schedule' ? 'Review and acknowledge the schedule amendment before signing.' : 'You must agree to the equipment condition and legal attestation.')
       return
     }
 
@@ -249,9 +252,9 @@ export function SignOnGlassModal({
       isOpen={isOpen}
       onClose={onClose}
       size="lg"
-      title={`Digital Sign-on-Glass · ${roleLabel}`}
+      title={purpose === 'schedule' ? 'Sign the schedule amendment' : `Digital Sign-on-Glass · ${roleLabel}`}
       subtitle={
-        role === 'returning'
+        purpose === 'schedule' ? 'Rental dates only. No equipment custody changes.' : role === 'returning'
           ? `Equipment Return & Condition Sign-off for Booking ${bookingNo}`
           : `Equipment Handover Agreement for Booking ${bookingNo}${deliveryType ? ` (${deliveryType})` : ''}`
       }
@@ -267,7 +270,7 @@ export function SignOnGlassModal({
               </Button>
             )}
             <Button icon="checklist" variant="primary" onClick={handleAcceptSignature}>
-              {role === 'returning' ? 'Accept & Sign Return' : 'Accept & Sign Handover'}
+              {purpose === 'schedule' ? 'Sign Schedule Amendment' : role === 'returning' ? 'Accept & Sign Return' : 'Accept & Sign Handover'}
             </Button>
           </div>
         </div>
@@ -288,9 +291,9 @@ export function SignOnGlassModal({
         >
           <Icon name="file" size={18} style={{ color: 'var(--primary, #38bdf8)', marginTop: 2, flexShrink: 0 }} />
           <div style={{ fontSize: 'var(--t-meta, 12px)', color: 'var(--text2)', lineHeight: 1.5 }}>
-            <strong style={{ color: 'var(--text)' }}>Legal Custody & Condition Attestation:</strong>
+            <strong style={{ color: 'var(--text)' }}>{purpose === 'schedule' ? 'Schedule amendment acknowledgment:' : 'Legal Custody & Condition Attestation:'}</strong>
             <p style={{ margin: '4px 0 0', color: 'var(--text)' }}>
-              {role === 'receiver'
+              {purpose === 'schedule' ? 'I agree to the proposed rental dates shown with the original agreement. Rental duration, prices and all other terms remain unchanged. This signature does not confirm pickup or transfer equipment custody.' : role === 'receiver'
                 ? `I hereby confirm receipt of the listed camera packages, flight cases, and optical gear for booking ${bookingNo} in verified operating condition with clean optical elements and intact seals. I accept legal custody and operational responsibility under Babin Rentals terms until verified return.`
                 : role === 'returning'
                 ? `I hereby confirm return of the listed equipment for booking ${bookingNo}. I acknowledge the condition assessed at the counter and any recorded damage, optical discrepancies, or missing items under Babin Rentals return policies.`
@@ -347,7 +350,7 @@ export function SignOnGlassModal({
               placeholder="Full name of person signing…"
               style={{
                 width: '100%',
-                height: 42,
+                minHeight: 44,
                 padding: '0 12px',
                 borderRadius: 'var(--r-input, 6px)',
                 border: '1px solid var(--border)',
@@ -364,7 +367,7 @@ export function SignOnGlassModal({
             </label>
             <div
               style={{
-                height: 42,
+                minHeight: 44,
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0 12px',
@@ -376,7 +379,7 @@ export function SignOnGlassModal({
                 fontWeight: 600,
               }}
             >
-              {role === 'receiver' ? 'Authorized Client Receiver' : 'Babin Rentals Dispatch Officer'}
+              {purpose === 'schedule' ? 'Authorized client representative' : role === 'receiver' ? 'Authorized Client Receiver' : 'Babin Rentals Dispatch Officer'}
             </div>
           </div>
         </div>
@@ -395,8 +398,8 @@ export function SignOnGlassModal({
             ariaLabel="Signature capture mode"
             size="sm"
             options={[
-              { id: 'draw', label: '✍️ Draw on Glass (Stylus / Touch)' },
-              { id: 'type', label: '⌨️ Type Legal Signature' },
+              { id: 'draw', label: 'Draw signature' },
+              ...(purpose === 'schedule' ? [] : [{ id: 'type' as const, label: 'Type Legal Signature' }]),
             ]}
             value={mode}
             onChange={(val) => setMode(val)}
@@ -471,7 +474,7 @@ export function SignOnGlassModal({
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 'var(--t-meta, 11px)', color: 'var(--muted)' }}>
-              <span>High-resolution vector stroke capture (Bézier smoothed)</span>
+              <span>{purpose==='schedule'?'Drawn signature image; retained after saving the amendment.':'High-resolution vector stroke capture (Bézier smoothed)'}</span>
               {hasDrawn && <span style={{ color: 'var(--success-text, #22c55e)', fontWeight: 600 }}>✓ Signature Captured</span>}
             </div>
           </div>
@@ -513,7 +516,7 @@ export function SignOnGlassModal({
         )}
 
         {/* Receiver Government ID Verification Checkbox */}
-        {role === 'receiver' && (
+        {role === 'receiver' && purpose !== 'schedule' && (
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 'var(--t-meta, 12px)', color: 'var(--text)' }}>
             <input
               type="checkbox"
@@ -539,9 +542,9 @@ export function SignOnGlassModal({
             style={{ width: 18, height: 18, marginTop: 2, accentColor: 'var(--primary, #2563eb)' }}
           />
           <div>
-            <strong>I acknowledge and accept this digital signature as a legally binding certification.</strong>
+            <strong>{purpose === 'schedule' ? 'I agree to the proposed schedule amendment.' : 'I acknowledge and accept this digital signature as a legally binding certification.'}</strong>
             <p style={{ margin: '2px 0 0', color: 'var(--text2)', fontSize: 11 }}>
-              Timestamp, IP telemetry, and sign-on-glass credentials are permanently associated with booking {bookingNo}.
+              {purpose === 'schedule' ? 'The signer name, drawn mark and recorded time will be retained with the amendment after it is saved.' : <>Timestamp, IP telemetry, and sign-on-glass credentials are permanently associated with booking {bookingNo}.</>}
             </p>
           </div>
         </label>

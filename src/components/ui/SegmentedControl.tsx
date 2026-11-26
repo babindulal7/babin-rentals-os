@@ -1,4 +1,4 @@
-import type { ReactNode, CSSProperties } from 'react'
+import { useEffect, useRef, type ReactNode, type CSSProperties } from 'react'
 import Icon, { type IconName } from './Icon'
 
 export interface SegmentOption<T extends string = string> {
@@ -46,9 +46,16 @@ export function SegmentedControl<T extends string = string>({
 }: SegmentedControlProps<T>) {
   // Law 15 — 44 is the floor at both sizes; `sm` tightens padding and type, never the hit area.
   const minHeight = 44
+  const strip = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    strip.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView?.({
+      block: 'nearest', inline: 'nearest', behavior: 'auto',
+    })
+  }, [value])
 
   return (
     <div
+      ref={strip}
       role="tablist"
       aria-label={ariaLabel}
       className={`segmented-control ${fullWidth ? 'segmented-control--full' : ''} ${className}`}
@@ -63,7 +70,7 @@ export function SegmentedControl<T extends string = string>({
         borderRadius: 'calc(var(--r-btn, 8px) + 2px)',
         overflowX: fullWidth ? undefined : 'auto',
         maxWidth: '100%',
-        scrollbarWidth: 'none',
+        scrollbarWidth: 'thin',
         ...style,
       }}
     >
@@ -97,7 +104,9 @@ export function SegmentedControl<T extends string = string>({
               if (!next) return
               event.preventDefault()
               const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
-              tabs?.[options.findIndex(option => option.id === next.id)]?.focus()
+              const target = tabs?.[options.findIndex(option => option.id === next.id)]
+              target?.focus()
+              target?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
               if (next.id !== value) onChange(next.id)
             }}
             style={{

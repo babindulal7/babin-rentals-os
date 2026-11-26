@@ -274,7 +274,28 @@ export async function listDocuments(filters?: ListFilters): Promise<ListQueryRes
       throw new Error(error.message)
     }
 
-    const mapped = ((data ?? []) as unknown as DocumentRowDb[]).map(mapDbRowToDocRow)
+    const sourceRows = (data ?? []) as unknown as DocumentRowDb[]
+    const mapped = sourceRows.map(mapDbRowToDocRow)
+    if(sourceRows.some(row=>row.document_type==='Rental Agreement')){
+      let versions:Map<string,string>|null=null
+      try {
+        const history=await supabase.rpc('rental_agreement_version_history')
+        if(!history.error && Array.isArray(history.data)){
+          versions=new Map<string,string>()
+          for(const value of history.data as unknown[]){
+            if(value && typeof value==='object' && 'previous_document' in value && 'replacement_no' in value
+              && typeof value.previous_document==='string' && typeof value.replacement_no==='string')versions.set(value.previous_document,value.replacement_no)
+          }
+        }
+      }catch{/* Older servers keep signed originals readable without inventing current-version status. */}
+      sourceRows.forEach((row,index)=>{
+        const document=mapped[index]
+        if(!document || row.document_type!=='Rental Agreement')return
+        const replacement=versions?.get(row.id)
+        if(replacement){document.recordState='Superseded by '+replacement;document.archived=true}
+        else if(!versions)document.recordState='Agreement version history unavailable'
+      })
+    }
     return {
       rows: mapped,
       total: count ?? mapped.length,

@@ -3,8 +3,9 @@ import lumaCss from '../../styles/shadcn-luma-ui.css?inline'
 import entry from '../../main.tsx?raw'
 
 describe('shadcn preset b1aJD8RZg (Luma + Zinc + Emerald) UI styling', () => {
-  it('loads after responsive.css in main.tsx', () => {
-    expect(entry).toMatch(/import '\.\/styles\/responsive\.css'[\s\S]*import '\.\/styles\/shadcn-luma-ui\.css'/)
+  it('retains the trial source without a competing global import', () => {
+    expect(entry).not.toContain("import './styles/shadcn-luma-ui.css'")
+    expect(entry).toContain("import './styles/ui-v2.css'")
   })
 
   it('preserves status tokens, roles and rental law without !important overrides', () => {

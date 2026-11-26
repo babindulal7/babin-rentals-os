@@ -46,7 +46,7 @@ vi.mock('../../../lib/queries/calendar', async (importOriginal) => {
           id: 'bk-501',
           kind: 'Reserved',
           label: 'BK-501',
-          bookingNo: 'BK-501',
+          bookingNo: 'BK-501', bookingId: '501', revision: '2026-07-01T00:00:00Z', stage: 'Booked', intervalStart: '2026-08-01T00:15:00Z', intervalEnd: '2026-08-02T00:15:00Z',
           sub: 'Kathmandu Docs',
           client: 'Kathmandu Docs',
           from: mockDay,
@@ -154,9 +154,9 @@ describe('Calendar Operational Day View & Shift Cadence (Phase 5)', () => {
       rescheduleBtn?.click()
     })
 
-    expect(container.textContent).toContain('Reschedule Booking BK-501')
-    expect(container.textContent).toContain('PROPOSED PICKUP (AD)')
-    expect(container.textContent).toContain('PROPOSED RETURN (AD)')
+    expect(container.textContent).toContain('Reschedule Rental BK-501')
+    expect(container.textContent).toContain('Proposed pickup date (AD)')
+    expect(container.textContent).toContain('Reason for the date change')
     expect(container.textContent).toContain('Confirm Date Adjustment')
   })
 })

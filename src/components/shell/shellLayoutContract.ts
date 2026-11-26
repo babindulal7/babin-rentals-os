@@ -14,6 +14,20 @@
  * 5. Role-blind money protection (Law 6).
  */
 
+export type ShellNavigation = 'sidebar' | 'dock' | 'bottom'
+
+/** A local comparison only; canonical routes and production navigation stay unchanged. */
+export function resolveShellNavigation(
+  viewport: 'desktop' | 'tablet' | 'phone',
+  search: string,
+  development: boolean,
+): ShellNavigation {
+  if (development && new URLSearchParams(search).get('shellPreview') === 'classic') {
+    return viewport === 'phone' ? 'bottom' : 'sidebar'
+  }
+  return viewport === 'desktop' ? 'dock' : 'bottom'
+}
+
 export const SHELL_DIMENSIONS = {
   headerHeight: 64, // var(--header-h)
   sidebarExpandedWidth: 256, // var(--app-sidebar-width)

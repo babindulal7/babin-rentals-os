@@ -303,7 +303,12 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
+.asset-hero-card h1 {
+  overflow-wrap: anywhere;
+}
+
 .asset-hero-thumb {
+  flex-shrink: 0;
   width: 72px;
   height: 72px;
   border-radius: 12px;
@@ -332,6 +337,8 @@
 }
 
 .asset-tab-strip {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   gap: 8px;
   border-bottom: 1px solid var(--border);

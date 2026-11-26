@@ -4,7 +4,6 @@ import Icon from '../ui/Icon'
 import { moreNav } from '../../data/nav'
 import { useAuth } from '../../lib/auth'
 import { usePwaInstall } from '../../lib/usePwaInstall'
-import { toggleScanner } from './ScannerFab'
 
 // Matches --dur in theme.css (the app's generic transition-duration token),
 // the same constant and the same reason as `components/ui/Modal.tsx`: the
@@ -136,7 +135,8 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
           position: 'relative',
           zIndex: 1,
           width: '100%',
-          maxHeight: '80vh',
+          maxWidth: 640,
+          maxHeight: '80dvh',
           display: 'flex',
           flexDirection: 'column',
           background: 'var(--card)',
@@ -184,33 +184,6 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
         </div>
 
         <nav aria-label="More" style={{ flex: 1, overflowY: 'auto', padding: '6px 8px 12px' }}>
-          <button
-            type="button"
-            data-scanner
-            onClick={() => {
-              onClose()
-              toggleScanner()
-            }}
-            className="tap press"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              minHeight: ROW_H,
-              width: '100%',
-              padding: '0 10px',
-              border: 'none',
-              borderRadius: 'var(--r-sm)',
-              background: 'transparent',
-              color: 'var(--text)',
-              font: 'inherit',
-              textAlign: 'left',
-              cursor: 'pointer',
-            }}
-          >
-            <Icon name="barcode" size={20} style={{ color: 'var(--primary-text)', flexShrink: 0 }} />
-            <span style={{ fontWeight: 600 }}>Scan equipment</span>
-          </button>
           {items.map((s) => (
             <Link
               key={s.to}

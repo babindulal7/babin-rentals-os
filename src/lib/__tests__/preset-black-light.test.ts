@@ -31,8 +31,9 @@ function contrast(a: string, b: string): number {
 }
 
 describe('shadcn b1avaxO6a black/light local adaptation', () => {
-  it('loads after canonical tokens, before component styles', () => {
-    expect(entry).toMatch(/import '\.\/styles\/theme\.css'[\s\S]*import '\.\/styles\/preset-black-light\.css'[\s\S]*import '\.\/styles\/ui-v2\.css'/)
+  it('retains the trial source without a competing active import', () => {
+    expect(entry).not.toContain("import './styles/preset-black-light.css'")
+    expect(entry.indexOf("import './styles/theme.css'")).toBeLessThan(entry.indexOf("import './styles/ui-v2.css'"))
   })
 
   it('preserves semantic, role, touch target, high contrast and glass contracts', () => {

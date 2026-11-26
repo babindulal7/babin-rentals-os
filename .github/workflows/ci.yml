@@ -90,6 +90,9 @@ jobs:
 
       # R-29: an entry that logs Did / Ruled / Verified and no Completion /
       # Remaining is logged as unfinished, and this is what says so. One grep.
+      - name: Unit edits and guarded Calendar agreement contracts (isolated PGlite)
+        run: npm run test:unit-edits && npm run test:calendar-planning && npm run test:agreement-versions
+
       - name: PROGRESS.md carries its Completion and Remaining blocks
         run: npm run lint:progress
 

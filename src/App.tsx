@@ -3,6 +3,8 @@ import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 're
 import type { ReactNode } from 'react'
 import { AUDIT_LOG_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
 import Sidebar from './components/shell/Sidebar'
+import DesktopDock from './components/shell/DesktopDock'
+import { resolveShellNavigation } from './components/shell/shellLayoutContract'
 import BottomBar, { BAR_BOX } from './components/shell/BottomBar'
 import HeaderBar from './components/shell/Header'
 import type { Crumb } from './components/shell/Header'
@@ -1058,6 +1060,13 @@ function Shell({
      rail. Law 13: branch on capability (viewport), not platform. */
   const viewport = useViewport()
   const phone = viewport === 'phone'
+  const navigation = resolveShellNavigation(viewport, query, import.meta.env.DEV)
+  // The dock/bottom bar consumes a shell row, so sticky Save/Confirm remains above it.
+  useLayoutEffect(() => {
+    if (navigation === 'sidebar') return
+    document.documentElement.style.setProperty('--shell-nav-w', '0px')
+    return () => { document.documentElement.style.removeProperty('--shell-nav-w') }
+  }, [navigation])
   const isFloor = FLOOR_ROUTE_SUFFIXES.some((s) => pathname.endsWith(s))
   const hasElevatedStickyBar = isFloor || pathname === '/rentals/new'
 
@@ -1107,6 +1116,7 @@ function Shell({
 
   return (
     <div
+      data-shell-navigation={navigation}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -1126,7 +1136,7 @@ function Shell({
       <SchemaGuardBanner />
 
       <div className="app-shell-layout" style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
-        {!phone && <Sidebar active={pathname + query} />}
+        {navigation === 'sidebar' && <Sidebar active={pathname + query} />}
         <div className="app-shell-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
           <WorkspaceContextConsumer search={search} crumbs={crumbs} />
           <div className="app-workspace" style={{ flex: 1, display: 'flex', minHeight: 0, position: 'relative', overflow: 'hidden' }}>
@@ -1137,8 +1147,14 @@ function Shell({
         </div>
       </div>
 
-      {phone && <BottomBar active={pathname + query} />}
-      <ScannerFab />
+      {navigation === 'dock' && <DesktopDock active={pathname + query} />}
+      {navigation === 'bottom' && (
+        <>
+          <div className="app-bottom-nav-space" style={{ height: BAR_BOX, flexShrink: 0 }} aria-hidden="true" />
+          <BottomBar active={pathname + query} />
+        </>
+      )}
+      <ScannerFab hideTrigger={navigation === 'bottom'} />
 
       {/* Screen Lock Overlay */}
       {isLocked && (
@@ -1204,7 +1220,7 @@ function WorkspaceContent({
           display: 'flex',
           flexDirection: 'column',
           padding: phone
-            ? `var(--page-padding) var(--page-padding) calc(${hasElevatedStickyBar ? '88px' : '24px'} + ${BAR_BOX})`
+            ? `var(--page-padding) var(--page-padding) ${hasElevatedStickyBar ? '88px' : '24px'}`
             : 'var(--page-padding)',
           overflowY: 'auto',
           overflowX: 'hidden',

@@ -123,8 +123,8 @@
     gap: 4px !important;
   }
   .app-global-header__breadcrumbs {
-    min-width: 120px !important;
-    flex: 1 1 120px !important;
+    min-width: 0 !important;
+    flex: 1 1 0 !important;
   }
   .app-global-header__action-slot--filters,
   .app-global-header__action-slot--more,
@@ -155,10 +155,88 @@
   }
 }
 
-/* RULING 2026-10-15 & Precision Cinema: the filter toggle sits in the left zone of the header; that zone always keeps room for it.
-   Maintain at least 120px on phone and 140px on tablet/desktop so module and booking titles are not crushed to Re... or 71... */
+/* Filters and back controls keep their own 44px targets. Phone title text can
+   shrink so the action, search and profile controls remain inside the header. */
 .app-global-header__breadcrumbs { min-width: 140px; }
 @media (max-width: 767px) {
-  .app-global-header__breadcrumbs { min-width: 120px; }
+  .app-global-header__breadcrumbs { min-width: 0; }
 }
 .app-global-header__breadcrumbs .workspace-page-actions { flex-shrink: 0; }
+
+/* RULING 2026-10-26: the dock occupies its own shell row. Sticky record and
+ * Operations footers end above it instead of needing page-specific offsets. */
+.app-desktop-dock-slot {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 8px 20px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.app-desktop-dock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--r-card) + 6px);
+  background: var(--sidebar);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(16px);
+}
+.app-desktop-dock__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 4px;
+  min-width: 64px;
+  min-height: 52px;
+  padding: 5px 10px;
+  border-radius: var(--r-btn);
+  text-decoration: none;
+  color: var(--text2);
+  font-size: var(--t-th);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.app-desktop-dock__link:hover { background: var(--hover-sidebar); color: var(--text); }
+.app-desktop-dock__link[aria-current='page'],
+.app-bottom-bar__slot[aria-current='page'],
+.app-bottom-bar__slot[aria-expanded='true'] {
+  background: var(--select-bg);
+  color: var(--select-fg);
+}
+.app-desktop-dock__link[aria-current='page'] { box-shadow: var(--shadow-xs); }
+.app-desktop-dock__link:focus-visible,
+.app-bottom-bar__slot:focus-visible,
+.header-profile-theme button:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+.app-bottom-bar__slot { background: transparent; border-radius: var(--r-btn); margin: 3px 4px; }
+.header-profile-theme { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.header-profile-theme button {
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn);
+  background: var(--card);
+  color: var(--text2);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--t-meta);
+}
+.header-profile-theme button[aria-pressed='true'] { background: var(--select-bg); color: var(--select-fg); }
+@media (prefers-reduced-transparency: reduce) {
+  .app-desktop-dock, .app-bottom-bar { background: var(--card) !important; backdrop-filter: none !important; }
+}
+@media (forced-colors: active) {
+  .app-desktop-dock__link[aria-current='page'], .app-bottom-bar__slot[aria-current='page'] { outline: 2px solid Highlight; outline-offset: -2px; }
+}

@@ -7,6 +7,7 @@
   flex-direction: column;
   gap: var(--sp-md, 16px);
   width: 100%;
+  min-width: 0;
 }
 
 /* ── Monospace Tabular Figures ──────────────────────────────────────────── */
@@ -19,6 +20,11 @@
 /* ── Segmented View Toggle ──────────────────────────────────────────────── */
 .report-view-toggle {
   display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+  scroll-padding-inline: 4px;
   align-items: center;
   gap: 4px;
   padding: 4px;
@@ -28,11 +34,16 @@
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
+.report-view-toggle > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .report-toggle-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 16px;
   border-radius: var(--r-btn, 8px);
   border: none;
@@ -67,10 +78,17 @@
 
 .report-search-shell {
   flex: 1;
-  min-width: 220px;
+  min-width: min(100%, 220px);
+}
+
+.report-period-field {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .report-period-select {
+  min-width: 0;
+  max-width: 100%;
   height: 44px;
   padding: 0 12px;
   border-radius: var(--r-btn, 8px);

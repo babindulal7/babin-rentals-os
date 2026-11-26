@@ -20,6 +20,7 @@ import { SCANNER_TOGGLE_EVENT } from '../ScannerFab'
 
 let viewport: Viewport = 'desktop'
 let collapsedPref = false
+const themeSetMode = vi.hoisted(() => vi.fn())
 
 let syncMockState = { status: 'synced', syncStatus: 'synced', pendingCount: 0, error: null as string | null, triggerSync: vi.fn() }
 
@@ -35,7 +36,7 @@ vi.mock('../../../lib/auth', () => ({
     logout: vi.fn(),
   }),
 }))
-vi.mock('../../../lib/theme', () => ({ useTheme: () => ({ theme: 'dark', glass: false, setMode: () => {}, choose: () => {} }) }))
+vi.mock('../../../lib/theme', () => ({ useTheme: () => ({ theme: 'dark', mode: 'dark', glass: false, setMode: themeSetMode, choose: () => {} }) }))
 vi.mock('../../../lib/syncContext', () => ({ useSync: () => syncMockState }))
 vi.mock('../../../lib/collapse', () => ({ useCollapsed: () => [collapsedPref, () => {}] }))
 
@@ -64,6 +65,7 @@ async function mount(node: React.ReactNode) {
 beforeEach(() => {
   viewport = 'desktop'
   collapsedPref = false
+  themeSetMode.mockClear()
   syncMockState = { status: 'synced', syncStatus: 'synced', pendingCount: 0, error: null, triggerSync: vi.fn() }
 })
 
@@ -204,6 +206,7 @@ describe('BottomBar — five fixed slots', () => {
     expect(document.body.style.overflow).toBe('hidden')
     /* Clients is in More despite the spec's list omitting it — TODO(decision). */
     expect(sheet?.textContent).toContain('Clients')
+    expect(sheet?.querySelector('[data-scanner]')).toBeNull()
 
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
@@ -348,6 +351,20 @@ describe('Header — R1 simplification & abnormal sync gating', () => {
     expect(dialog?.textContent).toContain('Babin Shrestha')
     expect(dialog?.textContent).toContain('Lock Session')
     expect(dialog?.textContent).toContain('Log Out')
+  })
+})
+
+describe('Appearance access without a sidebar', () => {
+  it.each<Viewport>(['desktop', 'tablet', 'phone'])('keeps all supported modes reachable in the %s profile', async size => {
+    viewport = size
+    await mount(<Header crumbs={[{ label: 'Today' }]} />)
+    await act(async () => container.querySelector<HTMLButtonElement>('[aria-label*="user profile"]')?.click())
+    const appearance = container.querySelector('[role="group"][aria-label="Appearance"]')
+    expect(appearance).not.toBeNull()
+    expect([...appearance!.querySelectorAll('button')].map(button => button.textContent)).toEqual(['Light', 'Dark', 'System', 'High contrast', 'Dark glass', 'Light glass'])
+    const contrast = [...appearance!.querySelectorAll('button')].find(button => button.textContent === 'High contrast')
+    await act(async () => contrast?.click())
+    expect(themeSetMode).toHaveBeenCalledWith('high-contrast')
   })
 })
 

@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { resourceConflicts } from '../calendarIntervals'
 import { getSetting } from '../settingsStore'
 import { dayStartMinutesFrom, operationalDayOf } from '../operationalDay'
 import { todaysOutgoing } from './bookings'
@@ -141,7 +142,7 @@ export const CALENDAR_BAR_KINDS: readonly BarKind[] = [...new Set<BarKind>(Objec
  * next reader checks the line, finds a different column, and stops trusting the
  * rest of the note. Re-check them against the file or cite by name only.
  */
-const CALENDAR_COLUMNS = 'id, booking_no, project, stage, pickup_at, return_at, cancelled_at, clients ( name )'
+const CALENDAR_COLUMNS = 'id, booking_no, project, stage, pickup_at, return_at, updated_at, cancelled_at, clients ( name )'
 
 /**
  * The ceiling on one window's read, stated here rather than inherited.
@@ -176,6 +177,7 @@ interface RawCalendarRow {
   /** `timestamptz not null` (0002:32). AD, UTC. */
   return_at: string
   cancelled_at: string | null
+  updated_at?: string
   clients: { name: string } | null
 }
 
@@ -251,6 +253,11 @@ function toBar(r: RawCalendarRow, startMinutes: number): Bar {
     // Keyed on the row's uuid, so the id is stable across refetches and unique
     // even if two bookings ever shared a number.
     id: `bk-${r.id}`,
+    bookingId: r.id,
+    ...(r.updated_at ? { revision: r.updated_at } : {}),
+    stage: r.stage,
+    intervalStart: r.pickup_at,
+    intervalEnd: r.return_at,
     kind,
     label: r.booking_no,
     sub: `${r.project ? `${clientName} · ${r.project}` : clientName}${r.stage === 'Quote' ? ' · not reserved' : ''}`,
@@ -425,76 +432,32 @@ export function buildResourceTimeline(
       // Only assign if bar carries an authoritative matching resourceId or unitId
       const matchesResource =
         b.resourceId === res.id ||
-        b.unitId === res.id ||
-        (Boolean(b.unitId) && Boolean(res.code) && b.unitId === res.code)
+        b.unitId === res.id
 
       if (!matchesResource) continue
 
-      const cloned: Bar = {
-        id: `${b.id}-${res.id}`,
-        kind: b.kind,
-        label: b.label,
-        from: b.from,
-        to: b.to,
-      }
-      if (b.bookingNo) cloned.bookingNo = b.bookingNo
-      if (b.draftId) cloned.draftId = b.draftId
-      if (b.sub) cloned.sub = b.sub
-      if (b.client) cloned.client = b.client
-      if (b.note) cloned.note = b.note
-      if (b.noteAt) cloned.noteAt = b.noteAt
-      if (b.dot) cloned.dot = b.dot
-      if (b.unitId) cloned.unitId = b.unitId
-      if (b.resourceId) cloned.resourceId = b.resourceId
+      const cloned: Bar = { ...b, id: `${b.id}-${res.id}` }
       assignedBars.push(cloned)
     }
 
     // Sort bars chronologically
     assignedBars.sort((a, b) => a.from.getTime() - b.from.getTime() || a.to.getTime() - b.to.getTime())
 
-    // 2. Double-Booking & Conflict Detection using strict half-open interval [from, to) bounds
-    const conflictBars: Bar[] = []
-    const conflictIndices = new Set<number>()
-
-    for (let i = 0; i < assignedBars.length; i++) {
-      const barA = assignedBars[i]
-      if (!barA || barA.kind === 'Completed' || barA.kind === 'Draft') continue
-
-      for (let j = i + 1; j < assignedBars.length; j++) {
-        const barB = assignedBars[j]
-        if (!barB || barB.kind === 'Completed' || barB.kind === 'Draft') continue
-
-        // Check date overlap in half-open intervals [A.from, A.to) and [B.from, B.to)
-        // Overlap exists iff A.from < B.to && B.from < A.to
-        const aStart = barA.from.getTime()
-        const aEnd = barA.to.getTime()
-        const bStart = barB.from.getTime()
-        const bEnd = barB.to.getTime()
-
-        if (aStart < bEnd && bStart < aEnd) {
-          conflictIndices.add(i)
-          conflictIndices.add(j)
-
-          const conflictFrom = new Date(Math.max(aStart, bStart))
-          const conflictTo = new Date(Math.min(aEnd, bEnd))
-
-          conflictBars.push({
-            id: `conflict-${res.id}-${barA.id}-${barB.id}`,
-            kind: 'Conflict',
-            label: 'CONFLICT',
-            sub: `Double Booking: ${barA.label} & ${barB.label}`,
-            from: conflictFrom,
-            to: conflictTo,
-            dot: 'danger',
-          })
-        }
-      }
-    }
-
-    // Flag all conflicting bars with dot: 'danger'
-    for (const idx of conflictIndices) {
-      const bar = assignedBars[idx]
-      if (bar) bar.dot = 'danger'
+    // RULING 2026-10-26: exact reservation intervals and quantity peak demand,
+    // never inclusive display dates or a sum of disjoint reservations.
+    const conflictBars: Bar[] = resourceConflicts(assignedBars, res.capacity ?? 1).map((conflict, index) => ({
+      id: `conflict-${res.id}-${index}`,
+      kind: 'Conflict',
+      label: 'CONFLICT',
+      sub: `${(res.capacity ?? 1) === 1 ? 'Double Booking' : 'Quantity capacity exceeded'}: ${conflict.labels.join(' & ')}`,
+      from: dayOf(conflict.start, dayStartMinutes()),
+      to: dayOf(conflict.end, dayStartMinutes()),
+      intervalStart: conflict.start,
+      intervalEnd: conflict.end,
+      dot: 'danger',
+    }))
+    for (const conflict of resourceConflicts(assignedBars, res.capacity ?? 1)) {
+      for (const bar of assignedBars) if (conflict.ids.includes(bar.id)) bar.dot = 'danger'
     }
 
     const finalBars = [...assignedBars, ...conflictBars].sort(
@@ -520,6 +483,7 @@ export function buildResourceTimeline(
       meta: laneMeta,
       icon: res.icon,
       bars: finalBars,
+      ...(res.capacity !== undefined ? { capacity: res.capacity } : {}),
     }
     if (res.code) row.code = res.code
     if (laneTone) row.metaTone = laneTone

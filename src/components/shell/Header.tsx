@@ -2,6 +2,7 @@ import { useRef, useState, useMemo, useEffect, isValidElement, lazy, Suspense, t
 import { useNavigate, Link } from 'react-router-dom'
 import Icon, { type IconName } from '../ui/Icon'
 import { useAuth } from '../../lib/auth'
+import { useTheme } from '../../lib/theme'
 import { useViewport } from '../../lib/device'
 import { useCompactHeader } from '../../lib/headerRoom'
 import { openCommandPalette } from './CommandPalette'
@@ -94,6 +95,7 @@ const iconBtn = {
  */
 export default function Header({ crumbs, actions }: HeaderProps) {
   const { user, logout, lockNow, hasPin } = useAuth()
+  const { theme, mode, setMode } = useTheme()
   const sync = useSync()
   const syncStatus = sync?.status ?? (sync as { syncStatus?: string } | undefined)?.syncStatus ?? 'synced'
   const pendingCount = sync?.pendingCount ?? 0
@@ -381,8 +383,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            minWidth: isPhone ? '120px' : isTablet ? '140px' : '180px',
-            // On phone, keep at least 120px so module names (Rentals, Today, Finance) and IDs do not truncate to Re... or 71...
+            minWidth: isPhone ? 0 : isTablet ? '140px' : '180px',
+            // Phone titles yield to the fixed 44px controls and retain their full label in the title attribute.
             // On desktop a module title (one crumb — "Inventory") does not shrink; the search beside it yields first.
             flex: isPhone ? '1 1 auto' : isTablet || displayCrumbs.length > 1 ? '0 1 auto' : '0 0 auto',
             maxWidth: isPhone ? undefined : 'min(520px, 45vw)',
@@ -464,7 +466,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           )}
 
           {/* Breadcrumb / Title Navigation */}
-          <nav aria-label="Breadcrumb" style={{ minWidth: 0, overflow: 'hidden' }}>
+          <nav aria-label="Breadcrumb" style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
             <ol style={{ display: 'flex', alignItems: 'center', gap: 7, margin: 0, padding: 0, listStyle: 'none', minWidth: 0 }}>
               {(isPhone && displayCrumbs.length > 1 ? [displayCrumbs[displayCrumbs.length - 1]!] : displayCrumbs).map((c, i, arr) => {
                 const last = i === arr.length - 1
@@ -1054,6 +1056,14 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>
                       {user?.role || ''} · Kathmandu HQ
                     </div>
+                  </div>
+                  <div className="header-profile-theme" role="group" aria-label="Appearance">
+                    {([
+                      ['light', 'Light'], ['dark', 'Dark'], ['system', 'System'],
+                      ['high-contrast', 'High contrast'], ['glass', 'Dark glass'], ['glass-light', 'Light glass'],
+                    ] as const).map(([value, label]) => (
+                      <button key={value} type="button" aria-pressed={mode === value || (!mode && theme === value)} onClick={() => setMode(value)}>{label}</button>
+                    ))}
                   </div>
                   {isPhone && (
                     <Button variant="secondary" icon="message" onClick={() => {

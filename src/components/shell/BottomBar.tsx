@@ -45,8 +45,8 @@ const SLOT_MIN = 44
  * > **Phone bar (5 slots):** Today · Rentals · **Scan ⦿** · Inventory · More.
  * > Nav items 1, 3, 5, 6, 9, 10, 11 live under **More**.
  *
- * Only ever mounted below 768 — `Shell` in `App.tsx` swaps this in for the
- * Sidebar.
+ * The Cadra shell mounts this below 1280; the local classic comparison keeps
+ * its original below-768 boundary. Both use this same navigation instance.
  *
  * ## Two things this file used to say that the updated spec reverses
  *
@@ -84,6 +84,7 @@ export default function BottomBar({ active }: { active: string }) {
     <>
       <nav
         aria-label="Main"
+        className="app-bottom-bar"
         style={{
           position: 'fixed',
           left: 0,
@@ -135,7 +136,6 @@ const slotStyle = {
   minHeight: SLOT_MIN,
   minWidth: SLOT_MIN,
   border: 'none',
-  background: 'transparent',
   textDecoration: 'none',
   cursor: 'pointer',
   fontFamily: 'inherit',
@@ -164,7 +164,7 @@ function Slot({
         data-scanner
         onClick={toggleScanner}
         aria-label="Scan equipment"
-        className="tap press"
+        className="app-bottom-bar__slot tap press"
         style={{ ...slotStyle, color: 'var(--text2)' }}
       >
         <span
@@ -194,9 +194,10 @@ function Slot({
       <button
         type="button"
         onClick={onMore}
+        className="app-bottom-bar__slot"
         aria-haspopup="dialog"
         aria-expanded={moreOpen}
-        style={{ ...slotStyle, color: moreOpen ? 'var(--nav-active-accent)' : 'var(--text2)' }}
+        style={{ ...slotStyle, color: moreOpen ? 'var(--select-fg)' : 'var(--text2)' }}
       >
         <Icon name="more_vert" size={20} fill={moreOpen} />
         <span style={{ ...labelStyle, fontWeight: moreOpen ? 700 : 500 }}>More</span>
@@ -210,8 +211,9 @@ function Slot({
   return (
     <Link
       to={section.to}
+      className="app-bottom-bar__slot"
       aria-current={on ? 'page' : undefined}
-      style={{ ...slotStyle, color: on ? 'var(--nav-active-accent)' : 'var(--text2)' }}
+      style={{ ...slotStyle, color: on ? 'var(--select-fg)' : 'var(--text2)' }}
     >
       <Icon name={section.icon} size={20} fill={on} />
       <span style={{ ...labelStyle, fontWeight: on ? 700 : 500 }}>{section.label}</span>

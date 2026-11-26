@@ -108,7 +108,7 @@ export const DEFAULT_VIEW: ViewName = 'Month'
 export const VIEWS_BY_WIDTH: Record<'desktop' | 'tablet' | 'phone', readonly ViewName[]> = {
   desktop: VIEWS,
   tablet: ['Month', 'Week', 'Day', 'Timeline'],
-  phone: ['Month', 'Day'],
+  phone: ['Month', 'Day', 'Timeline'],
 }
 
 /* ── layers ────────────────────────────────────────────────────────────── */
@@ -277,6 +277,14 @@ export const BAR_STYLE: Record<BarKind, BarSkin> = {
 export const BAR_KINDS = Object.keys(BAR_STYLE) as BarKind[]
 
 export interface Bar {
+  /** Exact UTC instants for reservation arithmetic; display days remain separate. */
+  intervalStart?: string
+  intervalEnd?: string
+  bookingId?: string
+  revision?: string
+  stage?: string
+  quantity?: number
+
   /** Stable key; also the selection key for the Selected Event panel. */
   id: string
   kind: BarKind
@@ -357,6 +365,8 @@ export interface LaneRow {
 }
 
 export interface ResourceRow extends LaneRow {
+  capacity?: number
+
   type: RowType
 }
 
@@ -532,6 +542,9 @@ const ARCHIVED_RENDER_ROWS: ResourceRow[] = [
 export { ARCHIVED_RENDER_ROWS }
 
 export interface ResourceDefinition {
+  capacity?: number
+  trackingMode?: string
+
   id: string
   name: string
   code?: string

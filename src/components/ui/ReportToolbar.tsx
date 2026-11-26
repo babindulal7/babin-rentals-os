@@ -379,6 +379,8 @@ function download(filename: string, text: string): void {
 // job elsewhere in the app.
 const controlStyle: CSSProperties = {
   minHeight: 44,
+  minWidth: 0,
+  maxWidth: '100%',
   padding: '0 8px',
   borderRadius: 'var(--r-input)',
   border: '1px solid var(--border)',
@@ -389,6 +391,8 @@ const controlStyle: CSSProperties = {
 }
 
 const barStyle: CSSProperties = {
+  minWidth: 0,
+  maxWidth: '100%',
   background: 'var(--card)',
   border: '1px solid var(--border)',
   borderRadius: 'var(--r-card)',
@@ -548,6 +552,8 @@ export function ReportToolbar({
               border: '1px solid var(--border)',
               background: 'var(--card2)',
               minWidth: 0,
+              maxWidth: '100%',
+              overflowWrap: 'anywhere',
             }}
           >
             <Icon name="calendar" size={14} style={{ color: 'var(--muted)', flexShrink: 0 }} />
@@ -631,7 +637,7 @@ export function ReportToolbar({
         </select>
       )}
 
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+      <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', minWidth: 0, maxWidth: '100%', alignItems: 'center', gap: 'var(--sp-sm)' }}>
         {csv && (
           <Button icon="download" onClick={exportCsv}>
             CSV

@@ -1,3 +1,6 @@
+import { updateUnitEditor } from './equipmentUnitEditor'
+import { calendarResourceWindow, rescheduleCalendarRental } from './calendarPlanning'
+import { agreementPlanningRpc } from './rescheduleAgreement'
 import { readEditor, saveEditor, saveSectionEditor, addUnitsEditor, retireUnitEditor, enrollMembershipEditor } from './recordEditor'
 import type { RecordKind } from '../recordEditor'
 /**
@@ -1191,6 +1194,42 @@ export const mockSupabase = {
     return createBuilder(table, hooks)
   },
   rpc(name: string, args?: Record<string, unknown>) {
+    if (['update_equipment_unit','calendar_resource_window','reschedule_rental','prepare_reschedule_agreement','ready_reschedule_agreement','cancel_reschedule_agreement','document_file_location','rental_agreement_version_history'].includes(name)) {
+      return (async () => {
+        try {
+          const actor=readSession()?.user.id
+          if(!actor) throw new Error('Sign in before planning or editing equipment.')
+          const baseline=structuredClone(store)
+          const staged=structuredClone(baseline)
+          const input=args??{}
+          const response=name==='update_equipment_unit' ? updateUnitEditor(staged,input,actor)
+            : name==='calendar_resource_window' ? calendarResourceWindow(staged,input,actor)
+            : name==='reschedule_rental' ? rescheduleCalendarRental(staged,input,actor)
+            : await agreementPlanningRpc(staged,name,input,actor)
+          const now=new Date().toISOString()
+          const changes: {table:string;row:Row;isNew:boolean}[]=[]
+          for(const [table,rows] of Object.entries(staged)) {
+            for(const row of rows) {
+              const before=baseline[table]?.find(item=>item['id']===row['id'])
+              if(before && JSON.stringify(before)===JSON.stringify(row))continue
+              const current=store[table]?.find(item=>item['id']===row['id'])
+              if(JSON.stringify(before)!==JSON.stringify(current))throw new Error('This local record changed while evidence was saving. Reload before retrying.')
+              changes.push({table,row,isNew:!before})
+            }
+          }
+          // Validate every conflict before applying any row. Unrelated writes
+          // made while a file download awaited are retained.
+          for(const {table,row,isNew}of changes){
+            if(isNew){(store[table]??=[]).push(row);overlay.inserts.push({table,row:withColumnDefaults(table,row,now)})}
+            else{const position=store[table]?.findIndex(item=>item['id']===row['id'])??-1
+              if(position>=0)store[table]![position]=row
+              overlay.updates.push({table,id:row['id'],patch:row})}
+          }
+          saveOverlay(overlay)
+          return {data:response,error:null}
+        } catch(error) {return {data:null,error:pgErr('P0001',error instanceof Error?error.message:String(error))}}
+      })()
+    }
     if (name === 'assert_operation_branch_grant') {
       const actor = readSession()?.user.id
       const user = store['users']?.find(row => row['id'] === actor)

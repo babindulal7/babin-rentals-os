@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import './Charts.css'
 
 /**
  * Chart kit — plain SVG, no charting dependency.
@@ -162,9 +163,9 @@ export function Donut({
 /** Legend rows — swatch + name + value + share. Text stays in text tokens. */
 export function Legend({ slices, showPercent = true, showValues = true }: { slices: Slice[]; showPercent?: boolean; showValues?: boolean }) {
   return (
-    <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5, flex: 1, minWidth: 0 }}>
+    <ul className="chart-legend" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5, flex: '1 1 180px', minWidth: 0 }}>
       {slices.map((s, i) => (
-        <li key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--t-meta)' }}>
+        <li key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, fontSize: 'var(--t-meta)' }}>
           <span
             aria-hidden
             style={{ width: 8, height: 8, borderRadius: 'var(--r-badge)', background: catColor(i), flexShrink: 0 }}
@@ -174,15 +175,12 @@ export function Legend({ slices, showPercent = true, showValues = true }: { slic
               color: 'var(--text2)',
               flex: 1,
               minWidth: 0,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              overflowWrap: 'anywhere',
             }}
           >
             {s.label}
           </span>
-          {/* flexShrink 0 on both figures — the label is the only part that may
-              be truncated. A compressed "(43.4%)" is worse than a shorter name. */}
+          {/* Keep figures intact while the complete label wraps within its column. */}
           {showValues && <span className="figure" style={{ color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
             {s.display}
           </span>}
@@ -228,8 +226,8 @@ export function LineChart({
   const y = (v: number) => h - ((v - min) / span) * h
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', gap: 'var(--sp-sm)' }}>
+    <div style={{ position: 'relative', minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 'var(--sp-sm)', minWidth: 0 }}>
         <div
           style={{
             display: 'flex',
@@ -255,7 +253,7 @@ export function LineChart({
           preserveAspectRatio="none"
           role="img"
           aria-label={`${seriesLabel} over time`}
-          style={{ width: '100%', height, overflow: 'visible' }}
+          style={{ width: '100%', minWidth: 0, flex: '1 1 0', height, overflow: 'visible' }}
           onMouseLeave={() => setHover(null)}
         >
           {yTicks.map((_, i) => (
@@ -330,7 +328,8 @@ export function LineChart({
 
       <div
         aria-hidden
-        style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: 'var(--sp-3xl)', marginTop: 6, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}
+        className="chart-date-labels"
+        style={{ gridTemplateColumns: `repeat(${labels.length || 1}, minmax(0, 1fr))`, paddingLeft: 'var(--sp-3xl)', marginTop: 6, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}
       >
         {labels.map((l) => (
           <span key={l} className="figure">
@@ -369,8 +368,8 @@ export function GroupedBars({
   const max = Math.max(...groups.flatMap((g) => g.values)) || 1
 
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 'var(--sp-sm)' }}>
+    <div style={{ minWidth: 0, maxWidth: '100%' }}>
+      <div style={{ display: 'flex', gap: 'var(--sp-sm)', minWidth: 0 }}>
         <div
           aria-hidden
           style={{
@@ -404,7 +403,7 @@ export function GroupedBars({
           }}
         >
           {groups.map((g, gi) => (
-            <div key={g.label} style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2, height: '100%' }}>
+            <div key={g.label} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'flex-end', gap: 2, height: '100%' }}>
               {g.values.map((v, si) => (
                 <div
                   key={si}
@@ -428,7 +427,11 @@ export function GroupedBars({
         </div>
       </div>
 
-      <div aria-hidden style={{ display: 'flex', gap: 'var(--sp-xs)', paddingLeft: 'var(--sp-3xl)', marginTop: 5 }}>
+      <div
+        aria-hidden
+        className="chart-date-labels"
+        style={{ gridTemplateColumns: `repeat(${groups.length || 1}, minmax(0, 1fr))`, gap: 'var(--sp-xs)', paddingLeft: 'var(--sp-3xl)', marginTop: 5 }}
+      >
         {groups.map((g) => (
           <span key={g.label} className="figure" style={{ flex: 1, textAlign: 'center', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
             {g.label}

@@ -1,6 +1,6 @@
 import { RecordForm } from '../../components/records/RecordForm'
 import { useSearchParams } from 'react-router-dom'
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, PageHeader, cardStyle } from '../../components/ui/Page'
@@ -8,6 +8,9 @@ import { DataTableShell } from '../../components/ui/DataTable'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'
 import { EditableRows } from '../../components/ui/EditableRows'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { useUnsavedRecord, UnsavedLeaveDialog } from '../../components/ui/RecordWorkspace'
+import { updateEquipmentUnit, prepareEquipmentUnitSave, equipmentUnitPatch, type EquipmentUnitSaveAttempt } from '../../actions/inventory/updateEquipmentUnit'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
@@ -22,7 +25,6 @@ import type { ListQueryResult } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import {
   getAssetDetail,
-  INVENTORY_STATES,
   UNIT_CONDITIONS,
   unitLocationOf,
   INV_STYLE,
@@ -95,17 +97,8 @@ const UNIT_FIELDS: FieldSpec[] = [
   /* `serial_no` is NULLABLE in the schema (0004:194): a unit can be tagged
      without a manufacturer serial, so emptying it is legal. */
   { key: 'serialNo' },
-  /* Status and location move together. A unit marked On Rent that still claims
-     a shelf, or moved to a bay while still Packed, is exactly the halfway
-     state per-field saving would otherwise persist. */
-  {
-    key: 'state',
-    group: 'placement',
-    validate: (v) =>
-      INVENTORY_STATES.includes(String(v) as (typeof INVENTORY_STATES)[number])
-        ? null
-        : `Status must be one of: ${INVENTORY_STATES.join(', ')}.`,
-  },
+  // RULING 2026-10-26: status remains exclusively owned by the custody engine.
+  { key: 'state', immutable: 'Status changes through Operations and maintenance workflows.' },
   { key: 'rack', group: 'placement' },
   { key: 'shelf', group: 'placement' },
   { key: 'bin', group: 'placement' },
@@ -138,90 +131,102 @@ interface UnitDraft {
  * draft for **one** record, and a table-wide instance would make the drafts of
  * two half-edited units share a namespace. One row, one hook, one draft.
  */
-function UnitEditor({ unit, money, onDone }: { unit: InventoryUnitRow; money: boolean; onDone: () => void }) {
+export function UnitEditor({ unit, money, onDone, onSaved, onReload }: {
+  unit: InventoryUnitRow
+  money: boolean
+  onDone: () => void
+  onSaved: () => void
+  onReload: () => void
+}) {
+  const { user } = useAuth()
   const [draft, setDraft] = useState<UnitDraft>(() => ({
-    assetTag: unit.assetTag,
-    serialNo: unit.serialNo ?? '',
-    state: unit.state,
-    rack: unit.rack ?? '',
-    shelf: unit.shelf ?? '',
-    bin: unit.bin ?? '',
-    condition: unit.condition,
+    assetTag: unit.assetTag, serialNo: unit.serialNo ?? '', state: unit.state,
+    rack: unit.rack ?? '', shelf: unit.shelf ?? '', bin: unit.bin ?? '', condition: unit.condition,
   }))
+  const revision = useRef(unit.revision)
+  const attempt = useRef<EquipmentUnitSaveAttempt | null>(null)
+  const saving = useRef(false)
+  const panel = useRef<HTMLDivElement | null>(null)
   const [leaveError, setLeaveError] = useState<string | null>(null)
-
+  const [stale, setStale] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [discard, setDiscard] = useState<'close' | 'reload' | null>(null)
   const record = useMemo(() => ({ ...draft }) as Record<string, unknown>, [draft])
-  const onSave = useCallback(async (patch: Record<string, unknown>) => {
-    /* There is no `updateUnit` action under `src/actions/` yet, so the edit
-       lands in this component and the panel says so below — never a success
-       toast for a write that did not happen. */
-    setDraft((d) => ({ ...d, ...patch }) as UnitDraft)
-  }, [])
-
+  const onSave = useCallback(async (values: Record<string, unknown>) => {
+    if (!user || !['Owner', 'Admin', 'Manager'].includes(user.role)) throw new Error('You cannot edit this unit.')
+    if (!revision.current) { setStale(true); throw new Error('Reload the latest unit before saving.') }
+    if (saving.current) throw new Error('Wait for the current unit save to finish.')
+    saving.current = true
+    try {
+      attempt.current = prepareEquipmentUnitSave({
+        id: unit.id, expectedRevision: revision.current, patch: equipmentUnitPatch(values),
+      }, attempt.current)
+      const result = await updateEquipmentUnit(attempt.current.input, {
+        userId: user.id, role: user.role, isOnline: typeof navigator === 'undefined' || navigator.onLine,
+      })
+      revision.current = result.revision
+      setDraft({ assetTag: result.assetTag, serialNo: result.serialNo ?? '', state: result.state,
+        rack: result.rack ?? '', shelf: result.shelf ?? '', bin: result.bin ?? '', condition: result.condition })
+      attempt.current = null
+      setSaved(true)
+      setStale(false)
+      setLeaveError(null)
+      onSaved()
+    } catch (error: unknown) {
+      if (error instanceof Error && /changed|revision|reload/i.test(error.message)) setStale(true)
+      throw error
+    } finally { saving.current = false }
+  }, [onSaved, unit.id, user])
   const edit = useEditMode({ record, fields: UNIT_FIELDS, onSave })
-
-  /* The panel only exists because someone pressed Edit on this row, so it opens
-     unlocked. `startEditing` is idempotent; the empty deps keep it to mount. */
+  useUnsavedRecord(edit.dirtyKeys.length > 0)
   const { startEditing } = edit
-  useEffect(() => {
-    startEditing()
-  }, [startEditing])
+  useEffect(() => { startEditing(); panel.current?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' }) }, [startEditing])
 
+  const close = () => {
+    if (saving.current) return
+    const outcome = edit.stopEditing()
+    if (!outcome.ok) {
+      setLeaveError('Unsaved changes remain. Save them or discard them before closing.')
+      setDiscard('close')
+      return
+    }
+    onDone()
+  }
   return (
-    <div style={{ ...cardStyle, padding: 14, display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+    <div ref={panel} style={{ ...cardStyle, padding: 14, display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-sm)' }}>
         <strong style={{ fontSize: 'var(--t-ui)' }}>Editing unit {unit.assetTag}</strong>
-        <Button
-          variant="ghost"
-          icon="close"
-          onClick={() => {
-            const outcome = edit.stopEditing()
-            if (!outcome.ok) {
-              setLeaveError(`Unsaved: ${outcome.unsaved.join(', ')}. Save or cancel each before closing.`)
-              return
-            }
-            setLeaveError(null)
-            onDone()
-          }}
-        >
-          Close
-        </Button>
+        <Button variant="ghost" icon="close" onClick={close} disabled={edit.savingKeys.length > 0}>Close</Button>
       </div>
-
-      {leaveError && (
-        <span role="alert" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-th)', color: 'var(--danger-text)' }}>
-          <Icon name="alert_triangle" size={12} />
-          {leaveError}
-        </span>
-      )}
-
-      <EditableRows
-        edit={edit}
-        rows={[
-          { key: 'assetTag', label: 'Asset tag', value: draft.assetTag },
-          { key: 'serialNo', label: 'Manufacturer serial', value: draft.serialNo || '—' },
-          { key: 'state', label: 'Status', value: draft.state },
-          { key: 'rack', label: 'Rack', value: draft.rack || '—' },
-          { key: 'shelf', label: 'Shelf', value: draft.shelf || '—' },
-          { key: 'bin', label: 'Bin', value: draft.bin || '—' },
-          { key: 'condition', label: 'Condition', value: draft.condition },
-          /* Law 6 — the replacement row is OMITTED for money-blind roles, not
-             disabled or masked. It used to render `formatMoney` unconditionally,
-             which was the one ungated rupee figure on this page. */
-          ...(money
-            ? [{
-                key: 'replacementValue',
-                label: 'Replacement value',
-                value: unit.replacementValue !== null ? formatMoney(unit.replacementValue) : 'Not on record',
-              }]
-            : []),
-        ]}
-      />
-
-      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 5, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-        <Icon name="info" size={11} style={{ flexShrink: 0, marginTop: 2 }} />
-        Editing this session only — there is no unit-update action yet, so nothing is persisted.
+      {leaveError && <span role="alert" style={{ color: 'var(--danger-text)' }}>{leaveError}</span>}
+      {!revision.current && <span role="alert">The unit revision is unavailable. Reload before saving.</span>}
+      <EditableRows edit={edit} rows={[
+        { key: 'assetTag', label: 'Asset tag', value: draft.assetTag },
+        { key: 'serialNo', label: 'Manufacturer serial', value: draft.serialNo || '—' },
+        { key: 'state', label: 'Status', value: draft.state },
+        { key: 'rack', label: 'Rack', value: draft.rack || '—' },
+        { key: 'shelf', label: 'Shelf', value: draft.shelf || '—' },
+        { key: 'bin', label: 'Bin', value: draft.bin || '—' },
+        { key: 'condition', label: 'Condition', value: draft.condition },
+        ...(money ? [{ key: 'replacementValue', label: 'Replacement value',
+          value: unit.replacementValue !== null ? formatMoney(unit.replacementValue) : 'Not on record' }] : []),
+      ]} />
+      <span role="status" style={{ color: 'var(--muted)', fontSize: 'var(--t-th)' }}>
+        {edit.savingKeys.length ? 'Saving unit…' : edit.dirtyKeys.length ? 'Unsaved changes' : saved ? 'Unit changes saved to inventory.' : 'Save each changed field. Shelf location saves as one group.'}
       </span>
+      {stale && <Button variant="secondary" onClick={() => setDiscard('reload')}>Reload latest record</Button>}
+      <UnsavedLeaveDialog />
+      <ConfirmDialog isOpen={discard !== null} onClose={() => setDiscard(null)}
+        title={discard === 'reload' ? 'Reload the latest unit?' : 'Discard unit changes?'}
+        description="Unsaved unit changes will be discarded. Confirmed saves are kept."
+        confirmLabel={discard === 'reload' ? 'Discard and reload' : 'Discard changes'}
+        cancelLabel="Keep editing" onConfirm={() => {
+          edit.cancelAll()
+          const reload = discard === 'reload'
+          setDiscard(null)
+          if (reload) onReload()
+          else onDone()
+        }} />
     </div>
   )
 }
@@ -369,8 +374,11 @@ function AssetDetailView() {
   const product = record?.product ?? null
   const units = useMemo(() => record?.units ?? [], [record])
 
+  const editingRecord = units.find(unit => unit.id === editingUnit) ?? null
   const filteredUnits = useMemo(() => {
     return units.filter((u) => {
+      // A confirmed identity save must not hide the editor holding unsaved sibling fields.
+      if (u.id === editingUnit) return true
       if (unitStateFilter !== 'ALL') {
         if (unitStateFilter === 'Active' && u.state === 'Retired') return false
         if (unitStateFilter !== 'Active' && u.state !== unitStateFilter) return false
@@ -387,7 +395,7 @@ function AssetDetailView() {
         (u.condition && u.condition.toLowerCase().includes(q))
       )
     })
-  }, [units, unitStateFilter, unitSearch])
+  }, [units, unitStateFilter, unitSearch, editingUnit])
 
   /* When the link carried a serial or tag, open on the unit it meant. */
   const matchedUnitId = record?.matchedUnitId ?? null
@@ -524,18 +532,18 @@ function AssetDetailView() {
         />
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1400, margin: '0 auto', paddingBottom: 60 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', minWidth: 0, maxWidth: 1400, margin: '0 auto', paddingBottom: 60 }}>
 
       {/* Hero Header Block */}
       <div className="asset-hero-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-lg)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-lg)', width: '100%', minWidth: 0 }}>
           {/* No image column is selected by the query, so the glyph always
               renders — a real gap, not a missing join. */}
           <div className="asset-hero-thumb">
             <Icon name="box" size={36} />
           </div>
 
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <h1 style={{ margin: 0, fontSize: 'var(--t-h1)', fontWeight: 700, color: 'var(--text)' }}>
                 {product.name}
@@ -626,6 +634,7 @@ function AssetDetailView() {
             <button
               key={t}
               type="button"
+              disabled={editingUnit !== null && t !== 'Units'}
               onClick={() => setActiveTab(t)}
               className={['asset-tab-btn', active ? 'is-active' : ''].filter(Boolean).join(' ')}
             >
@@ -664,6 +673,8 @@ function AssetDetailView() {
                         type="button"
                         onClick={() => setUnitStateFilter(chip.id)}
                         style={{
+                          minWidth: 44,
+                          minHeight: 44,
                           padding: '4px 10px',
                           borderRadius: 'var(--r-badge, 999px)',
                           fontSize: 'var(--t-th, 12px)',
@@ -701,6 +712,7 @@ function AssetDetailView() {
                   onChange={(e) => setUnitSearch(e.target.value)}
                   style={{
                     flex: 1,
+                    minWidth: 0,
                     maxWidth: 420,
                     padding: '8px 12px',
                     borderRadius: 'var(--r-btn, 8px)',
@@ -718,6 +730,10 @@ function AssetDetailView() {
               </div>
             </div>
           )}
+          {/* One editor instance survives table/card reflow and preserves sibling drafts. */}
+          {editingRecord && <UnitEditor key={editingRecord.id} unit={editingRecord} money={money}
+            onDone={() => setEditingUnit(null)} onSaved={detail.refetch}
+            onReload={() => { setEditingUnit(null); detail.refetch() }} />}
           {units.length === 0 ? (
             <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
               {serialised
@@ -748,9 +764,11 @@ function AssetDetailView() {
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Button variant="secondary" size="sm" onClick={() => setLabelUnit(u)}>Label</Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
-                      {editingUnit === u.id ? 'Close' : 'Edit'}
-                    </Button>
+                    {user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
+                      <Button variant="ghost" size="sm" disabled={editingUnit !== null || u.retiredAtAd !== null || u.state === 'Retired'} onClick={() => setEditingUnit(u.id)}>
+                        {editingUnit === u.id ? 'Editing' : 'Edit'}
+                      </Button>
+                    )}
                     {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
                       <Button
                         variant="danger"
@@ -762,7 +780,6 @@ function AssetDetailView() {
                       </Button>
                     )}
                   </div>
-                  {editingUnit === u.id && <UnitEditor unit={u} money={money} onDone={() => setEditingUnit(null)} />}
                 </article>
               ))}
             </div>
@@ -795,8 +812,8 @@ function AssetDetailView() {
                                 onClick={() => toggleUnit(u.id)}
                                 aria-label={expanded ? `Collapse ${u.assetTag}` : `Expand ${u.assetTag}`}
                                 style={{
-                                  width: 28,
-                                  height: 28,
+                                  width: 44,
+                                  height: 44,
                                   borderRadius: 6,
                                   border: '1px solid var(--border)',
                                   background: expanded ? 'var(--select-bg)' : 'var(--card2)',
@@ -843,9 +860,11 @@ function AssetDetailView() {
                             <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                               <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                                 <Button variant="ghost" onClick={() => setLabelUnit(u)}>Label</Button>
-                                <Button variant="ghost" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
-                                  {editingUnit === u.id ? 'Close' : 'Edit'}
-                                </Button>
+                                {user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
+                                  <Button variant="ghost" disabled={editingUnit !== null || u.retiredAtAd !== null || u.state === 'Retired'} onClick={() => setEditingUnit(u.id)}>
+                                    {editingUnit === u.id ? 'Editing' : 'Edit'}
+                                  </Button>
+                                )}
                                 {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
                                   <Button
                                     variant="danger"
@@ -859,15 +878,6 @@ function AssetDetailView() {
                               </div>
                             </td>
                           </tr>
-
-                          {editingUnit === u.id && (
-                            <tr key={`${u.id}-edit`} style={{ borderBottom: '1px solid var(--border)', background: 'var(--card2)' }}>
-                              <td />
-                              <td colSpan={8} style={{ padding: '8px 12px 14px' }}>
-                                <UnitEditor unit={u} money={money} onDone={() => setEditingUnit(null)} />
-                              </td>
-                            </tr>
-                          )}
 
                           {/* Expanded unit record — the real per-unit columns. The
                               previous build rendered four Sony FX3 accessories here

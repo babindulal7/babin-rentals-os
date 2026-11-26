@@ -556,7 +556,7 @@ export function BranchesPane({
           <KeyFigures kpis={kpis} />
 
           {/* Branch cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 'var(--sp-md)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 'var(--sp-md)', minWidth: 0 }}>
             {rows.map((b) => (
               <article key={b.id} style={{ ...cardStyle, padding: 14, display: 'flex', flexDirection: 'column', gap: 11, minWidth: 0 }}>
                 <div style={{ display: 'flex', gap: 'var(--sp-md)', alignItems: 'flex-start' }}>
@@ -609,6 +609,7 @@ export function BranchesPane({
                 </div>
 
                 <div
+                  className="app-settings-branch-stats"
                   style={{
                     display: 'grid',
                     gridTemplateColumns: money ? 'repeat(4, minmax(0,1fr))' : 'repeat(3, minmax(0,1fr))',
@@ -717,8 +718,8 @@ export function BranchesPane({
           <Card
             title="Branches & warehouses"
             action={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
-                <div style={{ width: 260 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
+                <div style={{ width: '100%', maxWidth: 260, minWidth: 0, flex: '1 1 220px' }}>
                   <SearchInput
                     value={query}
                     onChange={(val) => {
@@ -741,6 +742,8 @@ export function BranchesPane({
                   }}
                   aria-label="Filter by status"
                   style={{
+                    minWidth: 0,
+                    maxWidth: '100%',
                     minHeight: 44,
                     padding: '0 10px',
                     borderRadius: 'var(--r-input)',

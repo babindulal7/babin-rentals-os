@@ -8,6 +8,7 @@
   flex-direction: column;
   gap: var(--sp-lg);
   padding: var(--sp-lg);
+  min-width: 0;
   max-width: 1440px;
   margin: 0 auto;
   width: 100%;
@@ -22,19 +23,19 @@
 
 .notes-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--sp-md);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1279px) {
   .notes-metrics-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 767px) {
   .notes-metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -46,18 +47,30 @@
 
 .notes-layout-grid {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: minmax(0, 1fr) 380px;
   gap: var(--sp-lg);
   align-items: start;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1279px) {
   .notes-layout-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
+.notes-layout-grid > *,
+.notes-layout-grid form > div > div {
+  min-width: 0;
+}
+
+.notes-layout-grid select {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .note-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--r-card);

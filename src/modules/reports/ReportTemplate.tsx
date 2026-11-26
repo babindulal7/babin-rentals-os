@@ -241,7 +241,7 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
         {...(IS_MOCK ? { compare, onCompareChange: setCompare } : {})}
       >
         {IS_MOCK && <>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
+        <label className="report-period-field" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
           Period
           <select
             value={periodKey}

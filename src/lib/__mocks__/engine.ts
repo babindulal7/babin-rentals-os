@@ -85,6 +85,8 @@ const REL: Record<string, Rel> = {
      reports its booking uuid instead of its `B-…` number. */
   'bundles.inventory_categories': { kind: 'one', table: 'inventory_categories', fk: 'category_id' },
   'bundles.bundle_items': { kind: 'many', table: 'bundle_items', fk: 'bundle_id' },
+  'bundles_v.inventory_categories': { kind: 'one', table: 'inventory_categories', fk: 'category_id' },
+  'bundles_v.bundle_items': { kind: 'many', table: 'bundle_items', fk: 'bundle_id' },
   'booking_lines.bookings': { kind: 'one', table: 'bookings', fk: 'booking_id' },
   'inventory_reservations.bookings': { kind: 'one', table: 'bookings', fk: 'booking_id' },
   'product_units_v.products_v': { kind: 'one', table: 'products_v', fk: 'product_id' },

@@ -1,0 +1,23 @@
+/* A donut and its complete legend share a row only when both fit. */
+.chart-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Every time label remains visible within the plot width on narrow cards. */
+.chart-date-labels {
+  display: grid;
+  min-width: 0;
+  column-gap: 4px;
+  box-sizing: border-box;
+}
+
+.chart-date-labels > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-align: center;
+}

@@ -77,6 +77,22 @@ describe('SegmentedControl', () => {
     expect(document.activeElement?.id).toBe(`movements-tab-${next}`)
   })
 
+  it('scrolls a changed selected view into the visible strip', () => {
+    const scroll = vi.fn()
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView')
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: scroll })
+    try {
+      act(() => root.render(<SegmentedControl options={options} value="first" onChange={vi.fn()} />))
+      scroll.mockClear()
+      act(() => root.render(<SegmentedControl options={options} value="second" onChange={vi.fn()} />))
+      expect(scroll).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+      expect(host.querySelector('[role="tablist"]')?.getAttribute('style')).toContain('scrollbar-width: thin')
+    } finally {
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', descriptor)
+      else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+    }
+  })
+
   it('does not trigger onChange when a disabled or currently active tab is clicked', () => {
     const onChange = vi.fn()
     act(() => {

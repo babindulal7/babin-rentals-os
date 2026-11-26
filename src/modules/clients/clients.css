@@ -125,12 +125,14 @@
 /* ── Bento Grid Cards ───────────────────────────────────────────────────── */
 .client-grid-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: var(--space-4, 16px);
   padding: 16px;
+  min-width: 0;
 }
 
 .client-bento-card {
+  min-width: 0;
   border-radius: var(--r-card, 12px);
   border: 1px solid var(--border);
   background: var(--card);
@@ -152,6 +154,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .client-avatar-badge {
@@ -173,15 +176,25 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1 1 0;
 }
 
 .client-card-name {
+  min-width: 0;
+  max-width: 100%;
   font-size: var(--t-ui);
   font-weight: 700;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 479px) {
+  .client-grid-container {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 0;
+  }
 }
 
 .client-card-sub {

@@ -2,9 +2,10 @@
    Parses the real file so this measures what merged, not what was intended. */
 const fs=require('fs')
 const css=fs.readFileSync(require('path').join(__dirname,'..','src','styles','theme.css'),'utf8').replace(/\r\n/g,'\n')
-const palette=fs.readFileSync(require('path').join(__dirname,'..','src','styles','preset-black-light.css'),'utf8').replace(/\r\n/g,'\n')
+const paletteSource=fs.readFileSync(require('path').join(__dirname,'..','src','styles','preset-black-light.css'),'utf8').replace(/\r\n/g,'\n')
 const pilot=fs.readFileSync(require('path').join(__dirname,'..','src','styles','shadcn-preset-pilot.css'),'utf8').replace(/\r\n/g,'\n')
 const entry=fs.readFileSync(require('path').join(__dirname,'..','src','main.tsx'),'utf8')
+const palette=entry.includes("import './styles/preset-black-light.css'")?paletteSource:null
 const lumaPath=require('path').join(__dirname,'..','src','styles','shadcn-luma-ui.css')
 const luma=entry.includes("import './styles/shadcn-luma-ui.css'")&&fs.existsSync(lumaPath)?fs.readFileSync(lumaPath,'utf8'):null
 
@@ -43,11 +44,11 @@ function block(sel,source=css){
 /* v4.2 §2.1 flipped the default: bare :root now carries the LIGHT values and
    dark is the addressed theme. The selectors here mirror theme.css exactly —
    this gate parses the shipped file, so it must track the shipped shape. */
-const D={...block(":root[data-theme='dark'] {"),...block(":root[data-theme='dark']:not([data-style='glass']) {",palette)}
-const L={...block(":root,\n:root[data-theme='light'] {"),...block(":root[data-theme='light']:not([data-style='glass']) {",palette)}
+const D={...block(":root[data-theme='dark'] {"),...(palette?block(":root[data-theme='dark']:not([data-style='glass']) {",palette):{})}
+const L={...block(":root,\n:root[data-theme='light'] {"),...(palette?block(":root[data-theme='light']:not([data-style='glass']) {",palette):{})}
 const H=block(":root[data-theme='high-contrast'] {")
-const darkTokens={...declarations(css,":root[data-theme='dark'] {"),...declarations(palette,":root[data-theme='dark']:not([data-style='glass']) {")}
-const lightTokens={...declarations(css,":root,\n:root[data-theme='light'] {"),...declarations(palette,":root[data-theme='light']:not([data-style='glass']) {")}
+const darkTokens={...declarations(css,":root[data-theme='dark'] {"),...(palette?declarations(palette,":root[data-theme='dark']:not([data-style='glass']) {"):{})}
+const lightTokens={...declarations(css,":root,\n:root[data-theme='light'] {"),...(palette?declarations(palette,":root[data-theme='light']:not([data-style='glass']) {"):{})}
 const highTokens=declarations(css,":root[data-theme='high-contrast'] {")
 for(const [T,tokens] of [[D,darkTokens],[L,lightTokens]])for(const key of Object.keys(T)){
   if(tokens[key])T[key]=colour(tokens[key],tokens,T['--bg'])

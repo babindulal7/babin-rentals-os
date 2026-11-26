@@ -207,6 +207,15 @@ describe('createAction — fails closed', () => {
       'document.create',
       'subrental.create',
     ]
+    it('rental.reschedule admits only C+ online',async()=>{
+      for(const role of ['Owner','Admin','Manager','Coordinator'] as const){
+        await expect(probe('rental.reschedule',role,true).run()).resolves.toEqual({ok:true})
+        await expect(probe('rental.reschedule',role,false).run()).rejects.toBeInstanceOf(ActionOfflineError)
+      }
+      for(const role of ['Accounts','Warehouse','Technician','Driver','Client'] as const){
+        await expect(probe('rental.reschedule',role,true).run()).rejects.toBeInstanceOf(ActionPermissionError)
+      }
+    })
     const FLOOR = [
       'rental.pickup',
       'rental.return',

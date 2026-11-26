@@ -680,7 +680,7 @@ export default function BackupRestore() {
             </Card>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.55fr) minmax(0,1fr)', gap: 'var(--sp-md)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 'var(--sp-md)' }}>
             <Card
               title="Cloud Storage & Destinations"
               action={
@@ -717,7 +717,7 @@ export default function BackupRestore() {
                 </span>
               }
             >
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              <div className="chart-breakdown" style={{ gap: 14 }}>
                 <Donut slices={INTEGRITY} centreLabel="Verified" centreValue={INTEGRITY_TOTAL} size={116} />
                 <Legend slices={INTEGRITY} />
               </div>
@@ -725,7 +725,7 @@ export default function BackupRestore() {
           </div>
 
           <Card title="Backup Analytics (This Month)">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0,1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: 10 }}>
               {ANALYTICS.map((a, i) => (
                 <div key={a.label} style={{ minWidth: 0 }}>
                   <div
@@ -749,7 +749,7 @@ export default function BackupRestore() {
 
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>Cloud Usage</div>
-                <div style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'center', marginTop: 'var(--sp-xs)' }}>
+                <div className="chart-breakdown" style={{ gap: 'var(--sp-sm)', marginTop: 'var(--sp-xs)' }}>
                   <Donut slices={CLOUD_USAGE} size={62} />
                   <Legend slices={CLOUD_USAGE} showPercent={false} />
                 </div>

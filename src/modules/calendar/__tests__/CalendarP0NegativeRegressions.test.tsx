@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
+function changeField(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  const prototype = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
+  Object.getOwnPropertyDescriptor(prototype, 'value')?.set?.call(element, value)
+  element.dispatchEvent(new Event('input', { bubbles: true }))
+  element.dispatchEvent(new Event('change', { bubbles: true }))
+}
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import Calendar, { RescheduleModal } from '../Calendar'
@@ -67,7 +73,7 @@ vi.mock('../../../lib/queries/calendar', async (importOriginal) => {
           id: 'bk-901',
           kind: 'Reserved',
           label: 'BK-901',
-          bookingNo: 'BK-901',
+          bookingNo: 'BK-901', bookingId: '901', revision: '2026-07-01T00:00:00Z', stage: 'Booked', intervalStart: '2026-08-01T00:15:00Z', intervalEnd: '2026-08-03T00:15:00Z',
           sub: 'Kathmandu Docs',
           client: 'Kathmandu Docs',
           from: mockDates.baseDay,
@@ -246,7 +252,7 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
     container.remove()
   })
 
-  it('no success without persistent command (button disabled and fails closed)', () => {
+  it('no success without verified rental identity and revision (fails closed)', () => {
     const testBar: Bar = {
       id: 'bk-test-1',
       kind: 'Reserved',
@@ -293,7 +299,7 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
       id: 'bk-test-2',
       kind: 'Reserved',
       label: 'BK-TEST-2',
-      bookingNo: 'BK-TEST-2',
+      bookingNo: 'BK-TEST-2', bookingId: 'test-2', revision: '2026-07-01T00:00:00Z', stage: 'Booked', intervalStart: '2026-08-01T00:15:00Z', intervalEnd: '2026-08-03T00:15:00Z',
       from: mockDates.baseDay,
       to: mockDates.addDays(mockDates.baseDay, 2),
     }
@@ -319,6 +325,7 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
     const confirmBtn = Array.from(container.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Confirm Date Adjustment'),
     )
+    await act(async () => { changeField(container.querySelector('input[type=date]')!, '2026-08-02'); changeField(container.querySelector('textarea')!, 'Client moved the shooting date') })
     expect(confirmBtn?.disabled).toBe(false)
 
     await act(async () => {
@@ -333,7 +340,7 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
     expect(mockOnClose).not.toHaveBeenCalled()
 
     // Error must be displayed inline
-    expect(container.textContent).toContain('Reschedule Failed')
+    expect(container.textContent).toContain('Reschedule failed')
     expect(container.textContent).toContain('Concurrency collision: reservation lock failed')
   })
 
@@ -342,7 +349,7 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
       id: 'bk-test-3',
       kind: 'Reserved',
       label: 'BK-TEST-3',
-      bookingNo: 'BK-TEST-3',
+      bookingNo: 'BK-TEST-3', bookingId: 'test-3', revision: '2026-07-01T00:00:00Z', stage: 'Booked', intervalStart: '2026-08-01T00:15:00Z', intervalEnd: '2026-08-03T00:15:00Z',
       from: mockDates.baseDay,
       to: mockDates.addDays(mockDates.baseDay, 2),
     }
@@ -369,9 +376,8 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
       b.textContent?.includes('Confirm Date Adjustment'),
     )
 
-    await act(async () => {
-      confirmBtn?.click()
-    })
+    await act(async () => { changeField(container.querySelector('input[type=date]')!, '2026-08-02'); changeField(container.querySelector('textarea')!, 'Client moved the shooting date') })
+    await act(async () => { confirmBtn?.click() })
 
     expect(mockResolveCommand).toHaveBeenCalled()
     expect(mockOnSuccess).toHaveBeenCalledWith(
@@ -382,7 +388,7 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
     expect(mockOnClose).toHaveBeenCalled()
   })
 
-  it('guards direct in-calendar reschedule in Calendar UI and routes staff to Rentals Hub lifecycle', async () => {
+  it('opens the guarded command while confirmation waits for changed dates and a reason', async () => {
     await act(async () => {
       root.render(
         <MemoryRouter initialEntries={['/calendar?view=day&d=2026-08-01']}>
@@ -410,9 +416,9 @@ describe('P0 Negative Regression 2: Reschedule Persistence Integrity & Fail-Clos
     })
 
     // Reschedule modal opens with Lifecycle Guard and Open in Rentals Hub
-    expect(container.textContent).toContain('Lifecycle Guard')
-    expect(container.textContent).toContain('In-calendar direct rescheduling is disabled')
-    expect(container.textContent).toContain('Open in Rentals Hub')
+    expect(container.textContent).toContain('Move the whole rental')
+    expect(container.textContent).toContain('Independently scheduled crew')
+    expect(container.textContent).toContain('Open Rental')
 
     const confirmBtn = Array.from(container.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Confirm Date Adjustment'),

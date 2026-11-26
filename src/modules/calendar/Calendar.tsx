@@ -9,6 +9,14 @@ import { Card, PageHeader, PageActions, Button, cardStyle, Rail } from '../../co
 import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { listInventory } from '../../lib/queries/inventory'
+import { useAuth } from '../../lib/auth'
+import { listCalendarResources, type CalendarResources } from '../../lib/queries/calendarResources'
+import { shiftedRentalWindow } from '../../lib/calendarIntervals'
+import { rescheduleRental } from '../../actions/rentals/rescheduleRental'
+import { ScheduleAgreement } from '../rentals/components/ScheduleAgreement'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { useUnsavedRecord, UnsavedLeaveDialog } from '../../components/ui/RecordWorkspace'
+import { kathmanduCivil } from '../../lib/bs'
 import './calendar.css'
 import { BRAND } from '../../lib/status'
 import {
@@ -43,7 +51,6 @@ import {
   VIEWS_BY_WIDTH,
   DEFAULT_VIEW,
   ROW_TYPES,
-  ROWS,
   BAR_STYLE,
   BAR_KINDS,
   SAVED_VIEWS,
@@ -310,7 +317,7 @@ function clientFromParam(raw: string | null): string {
 
 /** `?res=` carries a row id; a stale id is "All" rather than an empty timeline. */
 function resourceFromParam(raw: string | null): string {
-  return raw && ROWS.some((r) => r.id === raw) ? raw : 'All'
+  return raw && /^(unit|product|crew-v2|crew-legacy|vehicle):[a-zA-Z0-9_-]+$/.test(raw) ? raw : 'All'
 }
 
 /** Where the window starts so `day` is visible — one column in, as the render shows. */
@@ -1514,13 +1521,7 @@ function AvailabilityPanel({ onCheckAvailability }: { onCheckAvailability?: () =
  * The wording deliberately does not say "no results": nothing is being filtered
  * out, the rows do not exist.
  */
-const TIMELINE_EMPTY_TITLE = 'No resources to lay out yet'
-const TIMELINE_EMPTY_BODY =
-  'A resource timeline draws one lane per physical item — this camera, that van, this bay — and no unit ' +
-  'records exist yet, so there are no lanes to draw. Nothing is hidden by a filter here. Month and Week show ' +
-  'the same bookings this view would, without the resource dimension: which booking, which client, and which ' +
-  'days it covers.'
-
+const TIMELINE_EMPTY_TITLE = 'No recorded resources match this view'
 /* ── mini month (rail) ─────────────────────────────────────────────────── */
 
 function MiniMonth({
@@ -1860,270 +1861,90 @@ export interface RescheduleModalProps {
   onPersistCommand?: (bookingNo: string, newFrom: Date, newTo: Date, reason?: string) => Promise<void>
 }
 
-function toIsoDate(d: Date): string {
-  if (!d || Number.isNaN(d.getTime())) return ''
-  return d.toISOString().slice(0, 10)
-}
-
-export function RescheduleModal({ bar, allBars, onClose, onSuccess, onPersistCommand }: RescheduleModalProps) {
+export function RescheduleModal({ bar, onClose, onSuccess, onPersistCommand }: RescheduleModalProps) {
   const navigate = useNavigate()
-  const [fromStr, setFromStr] = useState(() => (bar ? toIsoDate(bar.from) : ''))
-  const [toStr, setToStr] = useState(() => (bar ? toIsoDate(bar.to) : ''))
+  const { user } = useAuth()
+  const initialDay = bar?.intervalStart ? new Date(kathmanduCivil(new Date(bar.intervalStart))).toISOString().slice(0, 10) : ''
+  const [pickupDay, setPickupDay] = useState(initialDay)
   const [reason, setReason] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [persistError, setPersistError] = useState<string | null>(null)
-
-  if (!bar) return null
-
-  const parsedFrom = fromStr ? new Date(`${fromStr}T00:00:00.000Z`) : null
-  const parsedTo = toStr ? new Date(`${toStr}T00:00:00.000Z`) : null
-  const isValidDates =
-    parsedFrom &&
-    parsedTo &&
-    Number.isFinite(parsedFrom.getTime()) &&
-    Number.isFinite(parsedTo.getTime()) &&
-    parsedFrom.getTime() <= parsedTo.getTime()
-
-  // Find concurrent bookings during proposed dates using strict half-open interval <
-  const conflicts = isValidDates
-    ? allBars.filter(
-        (b) =>
-          b.id !== bar.id &&
-          b.bookingNo !== bar.bookingNo &&
-          b.kind !== 'Completed' &&
-          b.kind !== 'Draft' &&
-          b.from.getTime() < parsedTo.getTime() &&
-          parsedFrom.getTime() < b.to.getTime(),
-      )
-    : []
-
-  const handleConfirm = async () => {
-    if (!isValidDates || !bar.bookingNo || !parsedFrom || !parsedTo) return
-    if (!onPersistCommand) return
-
-    setIsSubmitting(true)
-    setPersistError(null)
-    try {
-      await onPersistCommand(bar.bookingNo, parsedFrom, parsedTo, reason)
-      setIsSubmitting(false)
-      onSuccess(bar.bookingNo, parsedFrom, parsedTo)
-      onClose()
-    } catch (err: unknown) {
-      setIsSubmitting(false)
-      const msg = err instanceof Error ? err.message : String(err)
-      setPersistError(msg)
-    }
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [agreementReady, setAgreementReady] = useState(false)
+  const [agreementId, setAgreementId] = useState<string | null>(null)
+  const [pendingClose, setPendingClose] = useState<(() => void) | null>(null)
+  const errorRef = useRef<HTMLParagraphElement>(null)
+  const dirty = pickupDay !== initialDay || reason.trim().length > 0 || agreementId !== null
+  useUnsavedRecord(dirty || busy)
+  useEffect(() => { if (error) errorRef.current?.focus() }, [error])
+  const requestClose = (destination?: string) => {
+    if (busy) return
+    const leave = () => { if (destination) navigate(destination); onClose() }
+    if (dirty) setPendingClose(() => leave)
+    else leave()
   }
-
-  return (
-    <Modal
-      isOpen={Boolean(bar)}
-      onClose={onClose}
-      title={`Reschedule Booking ${bar.label}`}
-      subtitle={bar.client ? `Client: ${bar.client}` : undefined}
-      size="md"
-      footer={
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
-          {bar.bookingNo && (
-            <Button
-              variant="secondary"
-              icon="file"
-              onClick={() => {
-                navigate(`/rentals/${bar.bookingNo}`)
-                onClose()
-              }}
-            >
-              Open in Rentals Hub
-            </Button>
-          )}
-          <div style={{ display: 'flex', gap: 'var(--sp-sm)', marginLeft: 'auto' }}>
-            <Button variant="secondary" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              icon="calendar_event"
-              disabled={!onPersistCommand || !isValidDates || isSubmitting}
-              title={
-                !onPersistCommand
-                  ? 'In-calendar date adjustment disabled pending authorized lifecycle command'
-                  : undefined
-              }
-              onClick={handleConfirm}
-            >
-              {isSubmitting ? 'Updating...' : 'Confirm Date Adjustment'}
-            </Button>
-          </div>
-        </div>
+  const attempt = useRef<{ fingerprint: string; key: string } | null>(null)
+  const agreementChanged = useCallback((id: string | null, ready: boolean) => {
+    setAgreementId(id)
+    setAgreementReady(ready)
+  }, [])
+  if (!bar) return null
+  const shiftDays = (Date.parse(pickupDay + 'T00:00:00Z') - Date.parse(initialDay + 'T00:00:00Z')) / 86400000
+  const valid = Number.isSafeInteger(shiftDays) && shiftDays !== 0
+    && Boolean(bar.bookingId && bar.revision && bar.intervalStart && bar.intervalEnd)
+    && (bar.stage === 'Quote' || bar.stage === 'Booked')
+  const proposed = valid && bar.intervalStart && bar.intervalEnd
+    ? shiftedRentalWindow(bar.intervalStart, bar.intervalEnd, shiftDays) : null
+  const allowed = Boolean(user && ['Owner', 'Admin', 'Manager', 'Coordinator'].includes(user.role))
+  const confirm = async () => {
+    if (!valid || !proposed || !user || !bar.bookingId || !bar.revision || reason.trim().length < 10 || busy) return
+    setBusy(true); setError(null)
+    const fingerprint = JSON.stringify([bar.bookingId, bar.revision, shiftDays, reason.trim(), agreementId])
+    if (attempt.current?.fingerprint !== fingerprint) attempt.current = { fingerprint, key: crypto.randomUUID() }
+    try {
+      if (onPersistCommand && bar.bookingNo) {
+        await onPersistCommand(bar.bookingNo, new Date(proposed.pickupAt), new Date(proposed.returnAt), reason.trim())
+        onSuccess(bar.bookingNo, new Date(proposed.pickupAt), new Date(proposed.returnAt))
+      } else {
+        const saved = await rescheduleRental({ bookingId: bar.bookingId, expectedRevision: bar.revision,
+          shiftDays, reason: reason.trim(), clientUuid: attempt.current.key, agreementProposalId: agreementId },
+          { userId: user.id, role: user.role, isOnline: navigator.onLine })
+        onSuccess(saved.bookingNo, new Date(saved.pickupAt), new Date(saved.returnAt))
       }
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-        <div
-          role="alert"
-          style={{
-            padding: '10px 12px',
-            background: 'var(--st-primary-bg)',
-            color: 'var(--st-primary-fg)',
-            borderRadius: 'var(--r-card)',
-            border: '1px solid var(--border)',
-            display: 'flex',
-            gap: 8,
-            alignItems: 'flex-start',
-          }}
-        >
-          <Icon name="info" size={18} />
-          <div style={{ fontSize: 'var(--t-meta)', lineHeight: 1.45 }}>
-            <strong>Lifecycle Guard:</strong> In-calendar direct rescheduling is disabled. Date adjustments require authoritative availability validation, line price recalculation, and stage gate transitions in Rentals Hub.
-          </div>
-        </div>
-
-        {persistError && (
-          <div
-            role="alert"
-            style={{
-              padding: '10px 12px',
-              background: 'var(--st-danger-bg)',
-              color: 'var(--st-danger-fg)',
-              borderRadius: 'var(--r-card)',
-              border: '1px solid var(--danger)',
-              display: 'flex',
-              gap: 8,
-              alignItems: 'flex-start',
-            }}
-          >
-            <Icon name="alert_triangle" size={18} />
-            <div style={{ fontSize: 'var(--t-meta)', lineHeight: 1.45 }}>
-              <strong>Reschedule Failed:</strong> {persistError}
-            </div>
-          </div>
-        )}
-        <div
-          style={{
-            padding: '10px 12px',
-            background: 'var(--bg-subtle)',
-            borderRadius: 'var(--r-card)',
-            border: '1px solid var(--border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-          }}
-        >
-          <div style={{ fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)' }}>CURRENT SCHEDULE</div>
-          <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)', fontWeight: 600 }}>
-            {formatBsOrAd(bar.from)} – {formatBsOrAd(bar.to)}{' '}
-            <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', fontWeight: 400 }}>
-              ({formatAd(bar.from)} to {formatAd(bar.to)})
-            </span>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
-              PROPOSED PICKUP (AD)
-            </label>
-            <input
-              type="date"
-              value={fromStr}
-              onChange={(e) => setFromStr(e.target.value)}
-              style={{
-                width: '100%',
-                height: 44,
-                padding: '0 10px',
-                borderRadius: 'var(--r-input)',
-                border: '1px solid var(--border)',
-                background: 'var(--bg)',
-                color: 'var(--text)',
-                fontFamily: 'inherit',
-                fontSize: 'var(--t-ui)',
-                boxSizing: 'border-box',
-              }}
-            />
-            {parsedFrom && Number.isFinite(parsedFrom.getTime()) && (
-              <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
-                BS: {formatBsOrAd(parsedFrom)}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
-              PROPOSED RETURN (AD)
-            </label>
-            <input
-              type="date"
-              value={toStr}
-              onChange={(e) => setToStr(e.target.value)}
-              style={{
-                width: '100%',
-                height: 44,
-                padding: '0 10px',
-                borderRadius: 'var(--r-input)',
-                border: '1px solid var(--border)',
-                background: 'var(--bg)',
-                color: 'var(--text)',
-                fontFamily: 'inherit',
-                fontSize: 'var(--t-ui)',
-                boxSizing: 'border-box',
-              }}
-            />
-            {parsedTo && Number.isFinite(parsedTo.getTime()) && (
-              <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
-                BS: {formatBsOrAd(parsedTo)}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
-            ADJUSTMENT REASON (OPTIONAL)
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Client requested 2-day shoot extension"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            style={{
-              width: '100%',
-              height: 44,
-              padding: '0 10px',
-              borderRadius: 'var(--r-input)',
-              border: '1px solid var(--border)',
-              background: 'var(--bg)',
-              color: 'var(--text)',
-              fontFamily: 'inherit',
-              fontSize: 'var(--t-ui)',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        {conflicts.length > 0 && (
-          <div
-            style={{
-              padding: '10px 12px',
-              background: 'var(--st-danger-bg)',
-              color: 'var(--st-danger-fg)',
-              borderRadius: 'var(--r-card)',
-              border: '1px solid var(--danger)',
-              display: 'flex',
-              gap: 8,
-              alignItems: 'flex-start',
-            }}
-          >
-            <Icon name="alert_triangle" size={18} />
-            <div style={{ fontSize: 'var(--t-meta)', lineHeight: 1.45 }}>
-              <strong>Conflict Warning:</strong> {conflicts.length} overlapping booking(s) detected during this
-              proposed date window ({conflicts.slice(0, 3).map((c) => c.label).join(', ')}
-              {conflicts.length > 3 ? ` +${conflicts.length - 3} more` : ''}). Review resource lanes to ensure
-              adequate inventory availability.
-            </div>
-          </div>
-        )}
-      </div>
-    </Modal>
-  )
+      onClose()
+    } catch (failure: unknown) {
+      setError(failure instanceof Error ? failure.message : 'The date change was not confirmed. Retry this same request.')
+    } finally { setBusy(false) }
+  }
+  return <><Modal isOpen onClose={() => requestClose()} title={`Reschedule Rental ${bar.label}`} size="md"
+    footer={<div className="calendar-reschedule-footer">
+      <Button variant="secondary" onClick={() => requestClose(`/rentals/${bar.bookingNo ?? ''}`)}>Open Rental</Button>
+      <Button variant="secondary" disabled={busy} onClick={() => requestClose()}>Cancel</Button>
+      <Button variant="primary" disabled={!allowed || !valid || busy || reason.trim().length < 10 || (!onPersistCommand && !agreementReady)}
+        style={{ minHeight: 56 }} onClick={() => void confirm()}>{busy ? 'Saving…' : 'Confirm Date Adjustment'}</Button>
+    </div>}>
+    <div className="calendar-reschedule-form">
+      <p>Move the whole rental without changing its duration, prices or assigned equipment. Availability is checked when you confirm.</p>
+      <p>Independently scheduled crew and delivery work must be handled in their own workspaces. Packed rentals and later stages use their existing actions.</p>
+      {!allowed && <p role="alert">Your role cannot reschedule this rental.</p>}
+      {!bar.revision && <p role="alert">Reload the rental to obtain its current revision before changing dates.</p>}
+      {bar.stage && !['Quote', 'Booked'].includes(bar.stage) && <p role="alert">This stage cannot be moved from Calendar. Use the existing rental actions.</p>}
+      {error && <p ref={errorRef} role="alert" tabIndex={-1} className="calendar-source-error">Reschedule failed: {error}</p>}
+      <p><strong>Current:</strong> {formatBsOrAd(bar.from)} – {formatBsOrAd(bar.to)}</p>
+      <label>Proposed pickup date (AD)
+        <input type="date" value={pickupDay} disabled={busy} onChange={event => setPickupDay(event.target.value)} />
+      </label>
+      {proposed && <p><strong>Proposed return:</strong> {formatBsOrAd(new Date(proposed.returnAt))} ({formatAd(new Date(proposed.returnAt))}). Recorded pickup and return times are preserved.</p>}
+      <label>Reason for the date change
+        <textarea value={reason} disabled={busy} rows={3} minLength={10} required onChange={event => setReason(event.target.value)} />
+      </label>
+      {proposed && bar.bookingId && bar.revision && !onPersistCommand && <ScheduleAgreement bookingId={bar.bookingId}
+        expectedRevision={bar.revision} pickupAt={proposed.pickupAt} returnAt={proposed.returnAt} onProposalReady={agreementChanged} />}
+    </div>
+  </Modal><ConfirmDialog isOpen={pendingClose !== null} onClose={() => setPendingClose(null)}
+    onConfirm={() => { pendingClose?.(); setPendingClose(null) }} title="Discard this date change?"
+    description="The rental keeps its current dates. Any uncommitted agreement proposal remains separate from the active agreement."
+    confirmLabel="Discard Changes" cancelLabel="Keep Editing" variant="danger" />
+    <UnsavedLeaveDialog /></>
 }
 
 /**
@@ -2279,7 +2100,10 @@ function SelectedEventPanel({
         )}
         {bar.draftId && <Button icon="file" onClick={() => navigate(`/rentals?action=new&draft=${bar.draftId}`)}>Open draft</Button>}
         {onReschedule && bar.bookingNo && (
-          <Button variant="secondary" icon="calendar_event" onClick={() => onReschedule(bar)}>
+          <Button variant="secondary" icon="calendar_event"
+            disabled={!['Quote', 'Booked'].includes(bar.stage ?? '')}
+            title={!['Quote', 'Booked'].includes(bar.stage ?? '') ? 'Only Quote and Booked rentals can move from Calendar.' : undefined}
+            onClick={() => onReschedule(bar)}>
             Reschedule
           </Button>
         )}
@@ -2291,6 +2115,8 @@ function SelectedEventPanel({
 /* ── screen ────────────────────────────────────────────────────────────── */
 
 export default function Calendar() {
+  const { user } = useAuth()
+
   const navigate = useNavigate()
   /* §8.3 — the shared hook, same call site as every other screen. It omits the
      money rows below; nothing here is masked. */
@@ -2373,7 +2199,7 @@ export default function Calendar() {
 
   useEffect(() => {
     let active = true
-    listInventory({ withMoney: true }).then((res) => {
+    listInventory({ withMoney: money }).then((res) => {
       if (!active) return
       setCatalogProducts(
         res.rows.map((r) => ({
@@ -2390,7 +2216,7 @@ export default function Calendar() {
     return () => {
       active = false
     }
-  }, [])
+  }, [money])
   /*
    * ⛔ An `overlays` Set lived here, holding the three §5.1 layer names, driven
    * by three chips in the header. It is gone with them — see `layerToggles`
@@ -2445,6 +2271,7 @@ export default function Calendar() {
     function onKey(e: KeyboardEvent) {
       const el = e.target as HTMLElement | null
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return
       if (e.key === 'Escape') {
         if (showShortcuts) setShowShortcuts(false)
         else if (dayChoice && !phone) setDayChoice(null)
@@ -2498,9 +2325,25 @@ export default function Calendar() {
   /* `isFilteredOverride: false` — the window is what this list MEANS, not
      something the operator narrowed. The chips below do the narrowing. */
   const barList = useList<Bar>(fetchCalendarBars, windowFilters, { isFilteredOverride: false })
+  const [resourceData, setResourceData] = useState<CalendarResources>({ catalogue: [], bars: [], sources: [] })
+  const [resourceLoading, setResourceLoading] = useState(false)
+  const [resourceError, setResourceError] = useState<string | null>(null)
+  const [resourceRefresh, setResourceRefresh] = useState(0)
+  useEffect(() => {
+    if (view !== 'Timeline') return
+    let active = true
+    setResourceLoading(true); setResourceError(null)
+    listCalendarResources(windowFrom, windowTo).then(result => {
+      if (active) setResourceData(result)
+    }).catch((failure: unknown) => {
+      if (active) { setResourceData({ catalogue: [], bars: [], sources: [] }); setResourceError(failure instanceof Error ? failure.message : 'Resource data could not be confirmed.') }
+    }).finally(() => { if (active) setResourceLoading(false) })
+    return () => { active = false }
+  }, [view, windowFrom, windowTo, resourceRefresh])
 
   const refreshCalendar = useCallback(() => {
     barList.refetch()
+    setResourceRefresh(value => value + 1)
   }, [barList])
 
   useDomainEvent(EVENT_TYPES.RENTAL_CREATED, refreshCalendar)
@@ -2516,6 +2359,12 @@ export default function Calendar() {
 
   const toast = useToast()
   const [reschedulingBar, setReschedulingBar] = useState<Bar | null>(null)
+  const openReschedule = (bar: Bar) => {
+    const canonical = barList.rows.find(row => row.bookingId === bar.bookingId || row.bookingNo === bar.bookingNo)
+    if (canonical && user && ['Owner', 'Admin', 'Manager', 'Coordinator'].includes(user.role)) setReschedulingBar(canonical)
+  }
+  const rescheduleHandler = user && ['Owner', 'Admin', 'Manager', 'Coordinator'].includes(user.role) ? openReschedule : undefined
+
 
   const handleRescheduleSuccess = useCallback((bookingNo: string, newFrom: Date, newTo: Date) => {
     toast.showSuccessToast(
@@ -2523,6 +2372,7 @@ export default function Calendar() {
       `${bookingNo} rescheduled to ${formatBsOrAd(newFrom)} – ${formatBsOrAd(newTo)} (${formatAd(newFrom)} to ${formatAd(newTo)}).`
     )
     barList.refetch()
+    setResourceRefresh(value => value + 1)
   }, [toast, barList])
 
   const rescheduleModal = reschedulingBar && (
@@ -2577,7 +2427,11 @@ export default function Calendar() {
    * The resource lanes the Timeline view draws, mapped with active bookings and conflicts.
    */
   const resourceRows = useMemo(() => {
-    const raw = buildResourceTimeline(barList.rows, rowType)
+    const allocationBars = resourceData.bars.map(allocation => {
+      const canonical = barList.rows.find(booking => booking.bookingId === allocation.bookingId)
+      return canonical ? { ...canonical, ...allocation } : allocation
+    })
+    const raw = buildResourceTimeline(allocationBars, rowType, resourceData.catalogue)
     const out = raw
       .filter((r) => resource === 'All' || r.id === resource)
       .map((r) => {
@@ -2600,7 +2454,7 @@ export default function Calendar() {
       out.sort((a, b) => (sort === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)))
     }
     return out
-  }, [barList.rows, rowType, resource, kinds, client, q, filterActive, sort])
+  }, [resourceData, barList.rows, rowType, resource, kinds, client, q, filterActive, sort])
 
   /**
    * The Week view's lanes: **one per booking**, not one per resource.
@@ -3320,15 +3174,15 @@ export default function Calendar() {
             <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--text2)', marginBottom: 5 }}>Resource</span>
             <Select value={resource} onChange={(e) => pickResource(e.target.value)} style={{ ...selectStyle, width: '100%' }} aria-label="Resource">
               <option value="All">All</option>
-              {ROWS.filter((r) => rowType === 'All' || r.type === rowType).map((r) => (
+              {resourceData.catalogue.filter((r) => rowType === 'All' || r.type === rowType).map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </Select>
           </label>
 
           <p style={{ margin: '-6px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.45 }}>
-            These two narrow the lanes on this view. It has none yet — no unit records exist — so neither
-            changes what is drawn until it does.
+            These filters narrow recorded resource lanes. Assignments without a resource ID or a complete
+            time window are not allocated.
           </p>
         </>
       ) : (
@@ -3476,7 +3330,18 @@ export default function Calendar() {
         </span>
         <span style={{ marginLeft: 'auto' }}>{zoomControl}</span>
       </div>
-      <Timeline
+      {resourceLoading ? <p role="status" className="calendar-resource-notice">Loading recorded resources…</p> : resourceError ? <p role="alert" className="calendar-source-error">{resourceError}</p> : <>
+      {resourceData.sources.filter(source => source.status === 'unavailable' || (source.unallocated ?? 0) > 0).map(source =>
+        <p key={source.id} className="calendar-resource-notice">{source.reason ?? `${source.unallocated} ${source.id} assignments lack a complete time window and are not allocated.`}</p>)}
+      {phone ? <div className="calendar-resource-agenda" aria-label="Resource agenda">
+        {resourceRows.length === 0 && <p>No recorded resource allocations match this view.</p>}
+        {resourceRows.map(row => <section key={row.id} className="calendar-resource-agenda-row">
+          <h3>{row.name} {row.code && <span className="identifier">{row.code}</span>}</h3><p>{row.meta}</p>
+          {row.bars.map(bar => <button type="button" key={bar.id} onClick={() => setSelectedId(bar.id)}
+            aria-pressed={selectedId === bar.id}><Icon name={BAR_STYLE[bar.kind].icon ?? 'calendar_event'} size={18} />
+            <span>{bar.label} · {bar.kind}<br />{formatBsOrAd(bar.from)} – {formatBsOrAd(bar.to)}</span></button>)}
+        </section>)}
+      </div> : <Timeline
         rows={resourceRows}
         days={days}
         selectedId={selectedId}
@@ -3486,8 +3351,8 @@ export default function Calendar() {
         labelHeading={rowType === 'All' ? 'Resource' : rowType}
         itemCount={resourceRows.length}
         emptyTitle={TIMELINE_EMPTY_TITLE}
-        emptyBody={TIMELINE_EMPTY_BODY}
-      />
+        emptyBody="No source-backed resources match this view. Unknown or unsupported sources are stated above."
+      />}</>}
       {markerLegend}
     </Card>
   )
@@ -3934,7 +3799,7 @@ export default function Calendar() {
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>{centre}</div>
           <Rail width={300} label="Event detail">
             {selected ? (
-              <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} onReschedule={setReschedulingBar} />
+              <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} {...(rescheduleHandler ? { onReschedule: rescheduleHandler } : {})} />
             ) : (
               <Card bodyStyle={{ padding: 14 }}>
                 <div style={{ fontSize: 'var(--t-ui)', fontWeight: 700, marginBottom: 6 }}>Selected Event</div>
@@ -4153,7 +4018,7 @@ export default function Calendar() {
         >
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
             {centre}
-            {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} onReschedule={setReschedulingBar} />}
+            {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} {...(rescheduleHandler ? { onReschedule: rescheduleHandler } : {})} />}
           </div>
           <Rail width={300} label="Event detail">
             {railDefault}
@@ -4166,7 +4031,7 @@ export default function Calendar() {
            not used here and its defaults are untouched. */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>
           {centre}
-          {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} onReschedule={setReschedulingBar} />}
+          {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} {...(rescheduleHandler ? { onReschedule: rescheduleHandler } : {})} />}
 
           {/* §5.1 phone — the selected-day agenda sits under the grid, not in a sheet. */}
           {phone && day && <Card bodyStyle={{ padding: 'var(--sp-md)' }}>{dayJobList}</Card>}

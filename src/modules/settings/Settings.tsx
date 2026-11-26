@@ -235,7 +235,7 @@ export default function Settings() {
   const compactHeaderActions =
     active === 'branches' && !onPhoneList ? (
       <PageActions
-        primary={<Button icon="plus" variant="primary" aria-label="Add Branch" onClick={() => setAddOpen(true)}>{phone ? 'Add' : 'Add Branch'}</Button>}
+        primary={<Button className="app-settings-add-action" icon="plus" variant="primary" aria-label="Add Branch" onClick={() => setAddOpen(true)}>{phone ? 'Add' : 'Add Branch'}</Button>}
         overflow={[{ label: 'Export branches', icon: 'download', onClick: exportBranches }]}
       />
     ) : (

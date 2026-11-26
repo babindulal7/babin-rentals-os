@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-10-29 — Cadra responsive implementation and local verification
+
+**Did**
+- Implemented the approved plan on `codex/cadra-responsive-ui-20261026`, isolated from baseline `34cce2dcd9b9197ad3b2384363df632d195e5f14`. Desktop uses the existing destination registry in one dock; tablet/phone reuse one bottom bar. Kept a development classic comparison, restored the approved font roles and consolidated competing global styles.
+- Added guarded unit identity/location/condition persistence, authoritative Calendar resource reads and atomic whole-rental date moves. Signed rentals require retained PDF upload or on-device drawn amendment linked to the unchanged original. Unsupported resource sources and independent schedules remain explicit blockers.
+- Repaired observed responsive widths and selected-navigation contrast. Removed the inline transparent background that overrode the selected surface; high-contrast Today is now readable. Initial mock unit revision metadata supports the guarded seeded editor. The focus regression now waits for the actual PAN/VAT focus outcome rather than a fixed delay.
+- Completed the current-source 1,704-scenario browser matrix and 23 named interactions; retained before/after screenshots, PDF raster review, exact changelog and R-01–R-20 evidence map. The requested preview uses localhost:3300 in seeded Mock Mode.
+
+**Ruled**
+- Approved decisions remain in `RULINGS-2026-10-26.md`: unit edits Owner/Admin/Manager; C+ online rescheduling Quote/Booked only; unchanged duration/prices/assignments/financial and custody records; signed replacements retain originals. Routine cleaning does not block verified usable stock; genuine defects do.
+- Agreement evidence records staff attestation/content provenance, without claiming cryptographic signer authentication. Migrations 0178–0180 are WRITTEN + VERIFIED locally by matching current-source PGlite/lifecycle gates. Nothing is APPLIED or PRODUCTION-VERIFIED.
+
+**Verified**
+- Frozen source: `447632cb610f8860ffbaf25ddb684a8a3e147c24df2b4cf94079189c863700d1`. Browser matrix: 1,704/1,704 REVIEWED, zero geometry failures/unverified states/uncaught page errors/source changes; all screenshots exist and navigation ownership matches every staff state. Before baseline: 1,548 REVIEWED / 156 FAIL across the same 1,704 scenarios.
+- Browser interactions: 23/23, zero errors, unchanged fingerprint. Covers Operations at 1440/820/375/320 light/dark, phone Pickup/Return switch, More/Scan, classic comparison, loaded theme modes, actual selected-navigation contrast, forced colors/reduced-motion computed styles, unit draft/reflow/save/reopen, Calendar unavailable resources and PDF generation. Current PDF raster and Today comparison anchors were visually inspected.
+- Focused RecordForm 31/31 and shell 44/44 passed. Typecheck and ESLint passed on unchanged current source. Historical full coverage 5,828/5,828 on `a008a257…` does not certify subsequent changes. Interrupted later attempts are not successful full receipts.
+- The fresh full coverage run completed on unchanged current source: 5,827/5,829 passed, two timeouts, zero skipped, 473 files; receipt `b383851a-4827-42b4-b139-e8929b63239a` is valid but unsuccessful. Inventory header-search and Finance directory smoke cases timed out. A focused retry does not turn this into a full-suite PASS.
+- Current-source PGlite rebuilt all 177 migrations with no anonymous view/RPC leak or unpinned definer; lifecycle passed 33/33. Financial/security, server/partial-return, unit (35 assertions), Calendar (20 groups), agreement (24 groups), receipt integrity (11 tests), shell lint (801 files), UI-copy checks, contrast (97 pairs) and production build/PWA passed. The receipt-tool temporary-folder permission issue passed after using workspace temporary files; its initial error log is retained. The generated Completion block below retains the failed full-suite result. Isolated retry passed 21/22: Inventory passed, Finance still timed out. Full-suite acceptance remains open. Preview responded HTTP 200 on port 3300; progress lint and whitespace checks passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 58 / 61 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | — |
+| Lifecycle | steps green / total | 33 / 33 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 177 files · check:pglite 177/177 applied, 0 failed (recorded 2026-10-28T15:29:17.725Z). Suite: NOT PASSING — 5827/5829 passed, 2 failed (recorded 2026-10-28T09:36:00.664Z); source fingerprint matches.
+Coverage suite: NOT PASSING — 5827/5829 passed, 2 failed (recorded 2026-10-28T09:36:00.664Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-28T15:30:25.243Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Finish isolated timeout-file retries and obtain a successful full-suite rerun before declaring full acceptance. The complete current-source coverage result remains 5,827/5,829 with two timeouts. Hosted policies and physical-device/scanner/offline/screen-reader acceptance remain independent. See `docs/verification/cadra-20261026/CADRA_INTERACTION_RESULTS.md` and the requirement evidence map.
+
 ## 2026-10-25 — Documentation pointer and status-label corrections (docs only)
 
 **Did**

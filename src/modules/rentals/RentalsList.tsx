@@ -1429,6 +1429,7 @@ export default function RentalsList() {
   useDomainEvent(EVENT_TYPES.RENTAL_RESET_COMPLETED, refreshAll)
   useDomainEvent(EVENT_TYPES.RENTAL_CLOSED, refreshAll)
   useDomainEvent(EVENT_TYPES.RENTAL_CANCELLED, refreshAll)
+  useDomainEvent(EVENT_TYPES.RENTAL_RESCHEDULED, refreshAll)
   useDomainEvent(EVENT_TYPES.DEPOSIT_SETTLED, refreshAll)
 
   /*

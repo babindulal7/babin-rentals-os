@@ -229,3 +229,10 @@
     transform: none;
   }
 }
+
+/* RULING 2026-10-26: narrow module tabs scroll as one strip rather than
+ * compressing labels or introducing another global navigation row. */
+@media (max-width: 1279px) {
+  .segmented-control--full { display: flex !important; overflow-x: auto; overscroll-behavior-inline: contain; }
+  .segmented-control--full > [role='tab'] { flex: 1 0 auto; }
+}

@@ -161,6 +161,7 @@ function unit(over: Partial<InventoryUnitRow> = {}): InventoryUnitRow {
     insuranceExpiresAd: null,
     retiredAtAd: null,
     retirementReason: null,
+    revision: null,
     purchasePrice: null,
     replacementValue: null,
     ...over,

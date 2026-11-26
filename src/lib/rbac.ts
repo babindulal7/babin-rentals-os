@@ -666,3 +666,8 @@ export function canPublishTeamViews(role: SystemRole): boolean {
 export function canExportClientPii(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
+
+/** RULING 2026-10-26: fixed-duration Calendar moves retain the C+ online boundary. */
+export function canRescheduleRental(role: SystemRole, isOnline = true): boolean {
+  return isOnline && ['Owner','Admin','Manager','Coordinator'].includes(role)
+}

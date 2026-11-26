@@ -397,6 +397,8 @@ export interface InventoryListRow {
 /** A single serialised unit, as the per-serial expansion renders it. */
 export interface InventoryUnitRow {
   id: string
+  /** Observed database revision; absent legacy data refuses editing until reload. */
+  revision: string | null
   productId: string
   /**
    * `product_units.serial_no` — `text` **NULLABLE** (0004:194), unique.
@@ -599,6 +601,7 @@ interface RawInventoryRow {
 
 interface RawUnitRow {
   id: string
+  updated_at: string | null
   product_id: string
   /** NULLABLE in the schema (0004:194). */
   serial_no: string | null
@@ -627,7 +630,7 @@ interface RawUnitRow {
 }
 
 const UNIT_COLUMNS =
-  'id, product_id, serial_no, asset_tag, barcode, qr_code, status, condition, ' +
+  'id, updated_at, product_id, serial_no, asset_tag, barcode, qr_code, status, condition, ' +
   'branch_id, warehouse_id, storage_zone_id, rack, shelf, bin, container_id, ' +
   'running_hours, last_maintenance_at, next_maintenance_at, ' +
   'warranty_expires_at, insurance_expires_at, retired_at, retirement_reason'
@@ -720,6 +723,7 @@ function toRow(r: RawInventoryRow): InventoryListRow {
 function toUnitRow(r: RawUnitRow): InventoryUnitRow {
   return {
     id: r.id,
+    revision: r.updated_at ?? null,
     productId: r.product_id,
     serialNo: r.serial_no,
     assetTag: r.asset_tag,

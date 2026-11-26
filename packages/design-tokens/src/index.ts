@@ -10,16 +10,16 @@
 
 export const lightColors = {
   // Core elevations
-  bg0: '#eae6de',
-  bg: '#f5f7fb',
-  bgGlow: '#edf2f9',
+  bg0: '#e4e4e7',
+  bg: '#f4f4f5',
+  bgGlow: '#fafafa',
   surface: '#ffffff',
-  surface2: '#edf3fa',
-  inset: '#f5f3ee',
-  inset2: '#eae6de',
-  border: '#cbd5e1',
-  border2: '#d8e2ee',
-  divider: '#cbd5e1',
+  surface2: '#f4f4f5',
+  inset: '#f4f4f5',
+  inset2: '#e4e4e7',
+  border: '#71717a',
+  border2: '#52525b',
+  divider: '#a1a1aa',
 
   // Translucent alpha scale (slate-based)
   w02: 'rgba(15, 23, 42, 0.02)',
@@ -37,17 +37,17 @@ export const lightColors = {
   bgGradient1: '#f5f7fb',
   bgGradient2: '#edf2f9',
   bgRadialMesh: 'none',
-  surfaceCard: '#ffffff',
-  surfaceCardHover: '#edf3fa',
+  surfaceCard: 'var(--surface)',
+  surfaceCardHover: 'var(--surface-2)',
   glassTint: 0.88,
   specularRim: '0 0 0 transparent',
   bezelOuterRing: '0 0 0 1px rgba(16, 32, 59, 0.06)',
   bezelOuterBg: 'rgba(16, 32, 59, 0.025)',
 
   // Text
-  text: '#1c1e22',
-  text2: '#4b4e54',
-  muted: '#6d7076',
+  text: '#09090b',
+  text2: '#27272a',
+  muted: '#52525b',
   disabled: '#9b9ea4',
 
   // Brand & status
@@ -78,25 +78,25 @@ export const lightColors = {
   onDim: '#5a5d63',
 
   // Extended
-  extFg: '#1e49b8',
-  extLine: '#2456d6',
-  extBg: 'rgba(36, 86, 214, 0.1)',
-  gold: '#2456d6',
+  extFg: '#7f620a',
+  extLine: '#92700f',
+  extBg: 'transparent',
+  gold: '#92700f',
   brandMark: '#2456d6',
 
   // Surfaces
-  app: '#f5f7fb',
+  app: '#f4f4f5',
   sidebar: '#ffffff',
   card: '#ffffff',
-  card2: '#edf3fa',
+  card2: '#f4f4f5',
   modal: '#ffffff',
   dropdown: '#ffffff',
 
   // Hover
-  hoverCard: '#eef4fb',
-  hoverSidebar: '#eef4fb',
+  hoverCard: '#f4f4f5',
+  hoverSidebar: '#f4f4f5',
   hoverButton: '#1e49b8',
-  hoverRow: '#eef4fb',
+  hoverRow: '#f4f4f5',
 
   // Buttons
   btnPrimaryBg: '#2456d6',
@@ -113,15 +113,15 @@ export const lightColors = {
 
   // Inputs
   inputBg: '#ffffff',
-  inputBorder: '#afc0d4',
-  inputPlaceholder: '#6d7e95',
+  inputBorder: '#71717a',
+  inputPlaceholder: '#52525b',
   inputFocus: '#2456d6',
 
   // Tables
-  thBg: '#edf3fa',
+  thBg: '#f4f4f5',
   trBg: '#ffffff',
-  trHover: '#eef4fb',
-  trAlt: '#f5f7fb',
+  trHover: '#f4f4f5',
+  trAlt: '#fafafa',
 
   // Shadows (tinted to slate)
   shadowXs: '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
@@ -146,7 +146,7 @@ export const lightColors = {
   dangerSoft: '#fdf6f6',
   scrim: 'rgba(15, 23, 42, 0.45)',
 
-  chartGrid: '#dbe5f0',
+  chartGrid: '#e4e4e7',
   cat1: '#0072b2',
   cat2: '#c87a00',
   cat3: '#009e73',
@@ -159,16 +159,16 @@ export const lightColors = {
 
 export const darkColors = {
   // Core elevations (5-tier obsidian)
-  bg0: '#02060b',
-  bg: '#050b12',
-  bgGlow: '#0a1826',
-  surface: '#0b1622',
-  surface2: '#0d1a29',
-  inset: '#081522',
-  inset2: '#0b1b2c',
-  border: 'rgba(255, 255, 255, 0.08)',
-  border2: 'rgba(255, 255, 255, 0.12)',
-  divider: 'rgba(255, 255, 255, 0.08)',
+  bg0: '#000000',
+  bg: '#09090b',
+  bgGlow: '#0f0f11',
+  surface: '#18181b',
+  surface2: '#27272a',
+  inset: '#09090b',
+  inset2: '#18181b',
+  border: 'rgba(255, 255, 255, 0.22)',
+  border2: 'rgba(255, 255, 255, 0.30)',
+  divider: 'rgba(255, 255, 255, 0.20)',
 
   // Translucent alpha scale (white-based)
   w02: 'rgba(255, 255, 255, 0.02)',
@@ -185,18 +185,18 @@ export const darkColors = {
   // Gradients
   bgGradient1: '#050b12',
   bgGradient2: '#02060b',
-  bgRadialMesh: 'radial-gradient(ellipse 80% 50% at 50% -20%, #0a1826 0%, #050b12 100%)',
-  surfaceCard: 'linear-gradient(180deg, var(--card2) 0%, var(--card) 100%)',
-  surfaceCardHover: '#0d1a29',
+  bgRadialMesh: 'none',
+  surfaceCard: 'var(--surface)',
+  surfaceCardHover: 'var(--surface-2)',
   glassTint: 0.88,
   specularRim: '0 1px 0 rgba(255, 255, 255, 0.08) inset',
   bezelOuterRing: '0 0 0 1px rgba(255, 255, 255, 0.08)',
   bezelOuterBg: 'rgba(255, 255, 255, 0.02)',
 
   // Text
-  text: '#f1f5f9',
-  text2: '#94a3b8',
-  muted: '#8b8e96',
+  text: '#fafafa',
+  text2: '#e4e4e7',
+  muted: '#a1a1aa',
   disabled: '#475569',
 
   // Brand & status
@@ -227,25 +227,25 @@ export const darkColors = {
   onDim: '#8b8e96',
 
   // Extended
-  extFg: '#85b2ff',
-  extLine: '#386af7',
-  extBg: 'rgba(56, 106, 247, 0.14)',
-  gold: '#386af7',
+  extFg: '#e6c25c',
+  extLine: '#d8a93a',
+  extBg: 'transparent',
+  gold: '#d8a93a',
   brandMark: '#85b2ff',
 
   // Surfaces
-  app: '#050b12',
-  sidebar: '#050b12',
-  card: '#0b1622',
-  card2: '#0d1a29',
-  modal: '#0d1a29',
-  dropdown: '#0d1a29',
+  app: '#09090b',
+  sidebar: '#09090b',
+  card: '#18181b',
+  card2: '#27272a',
+  modal: '#18181b',
+  dropdown: '#18181b',
 
   // Hover
-  hoverCard: '#0f1e30',
-  hoverSidebar: '#0d1a29',
+  hoverCard: '#27272a',
+  hoverSidebar: '#27272a',
   hoverButton: '#2f5ce0',
-  hoverRow: 'rgba(255, 255, 255, 0.035)',
+  hoverRow: 'rgba(255, 255, 255, 0.055)',
 
   // Buttons
   btnPrimaryBg: '#386af7',
@@ -261,16 +261,16 @@ export const darkColors = {
   navIcon: '#94a3b8',
 
   // Inputs
-  inputBg: '#081522',
-  inputBorder: 'rgba(255, 255, 255, 0.12)',
-  inputPlaceholder: '#64748b',
+  inputBg: '#18181b',
+  inputBorder: 'rgba(255, 255, 255, 0.44)',
+  inputPlaceholder: '#a1a1aa',
   inputFocus: '#386af7',
 
   // Tables
-  thBg: '#081522',
-  trBg: '#0b1622',
+  thBg: '#18181b',
+  trBg: '#141416',
   trHover: 'rgba(255, 255, 255, 0.035)',
-  trAlt: '#081522',
+  trAlt: '#101012',
 
   // Shadows (tinted to obsidian)
   shadowXs: '0 1px 2px 0 rgba(2, 6, 11, 0.35)',
@@ -295,7 +295,7 @@ export const darkColors = {
   dangerSoft: '#1a1315',
   scrim: 'rgba(0, 0, 0, 0.65)',
 
-  chartGrid: '#263849',
+  chartGrid: '#3f3f46',
   cat1: '#3b82d6',
   cat2: '#b87a1e',
   cat3: '#249e76',
@@ -369,11 +369,11 @@ export const space = {
 
 export const fontFamilies = {
   display: ['Outfit', 'system-ui', 'sans-serif'],
-  body: ['Outfit', 'system-ui', 'sans-serif'],
-  mono: ['Outfit', 'system-ui', 'sans-serif'],
-  id: ['Outfit', 'system-ui', 'sans-serif'],
-  neDisplay: ['Outfit', 'system-ui', 'sans-serif'],
-  neBody: ['Outfit', 'system-ui', 'sans-serif'],
+  body: ['Source Sans 3', 'system-ui', 'sans-serif'],
+  mono: ['JetBrains Mono Variable', 'JetBrains Mono', 'monospace'],
+  id: ['JetBrains Mono Variable', 'JetBrains Mono', 'monospace'],
+  neDisplay: ['Asar', 'Hind', 'serif'],
+  neBody: ['Hind', 'Source Sans 3', 'sans-serif'],
 } as const;
 
 export const fontSizes = {
@@ -421,7 +421,7 @@ export const radii = {
   xs: '4px',
   sm: '6px',     // --r-chip / --r-xs
   md: '8px',     // --r-btn / --r-input / --r-sm
-  lg: '10px',    // --r-card
+  lg: '12px',    // --r-card
   xl: '12px',    // --r-modal
   '2xl': '16px',
   full: '9999px', // --r-badge
@@ -472,7 +472,7 @@ export const zIndex = {
 // ============================================================================
 
 export const iconStroke = {
-  regular: 1.5,
+  regular: 2.0,
   fill: 2.0,
 } as const;
 

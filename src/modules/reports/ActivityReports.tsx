@@ -221,7 +221,7 @@ export default function ActivityReports() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: viewport === 'phone' ? '1fr' : '1fr 1fr',
+              gridTemplateColumns: viewport === 'phone' ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
               gap: 'var(--sp-md)',
             }}
           >
@@ -247,7 +247,7 @@ export default function ActivityReports() {
                 Volume distribution across operational workflows and modules.
               </p>
               {categorySlices.length > 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-lg)' }}>
+                <div className="chart-breakdown" style={{ gap: 'var(--sp-lg)' }}>
                   <Donut
                     slices={categorySlices}
                     centreLabel="Total Events"
@@ -285,7 +285,7 @@ export default function ActivityReports() {
                 Breakdown of audit occurrences by operational impact severity.
               </p>
               {severitySlices.length > 0 ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-lg)' }}>
+                <div className="chart-breakdown" style={{ gap: 'var(--sp-lg)' }}>
                   <Donut
                     slices={severitySlices}
                     centreLabel="Flags"
