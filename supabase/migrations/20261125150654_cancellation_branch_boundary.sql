@@ -188,4 +188,89 @@ create trigger trg_00_guard_cancelled_booking_transition
   after insert on public.booking_stage_transitions
   for each row execute function public.guard_cancelled_booking_transition();
 
+-- Protect the final handover receipt as well as individual pickup movements.
+-- Same booking row lock as cancel_booking. AFTER row validation keeps the
+-- existing RLS and session write authorization in force.
+create function record_editor_private.guard_cancelled_handover_completion()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_cancelled_at timestamptz;
+  v_archived_at timestamptz;
+begin
+  if NEW.operation <> 'Handover' or
+     (NEW.state <> 'Completed' and NEW.completed_at is null) then
+    return NEW;
+  end if;
+  if TG_OP = 'UPDATE' then
+    if OLD.operation = NEW.operation and OLD.booking_id = NEW.booking_id
+       and OLD.state = NEW.state
+       and OLD.completed_at is not distinct from NEW.completed_at then
+      return NEW;
+    end if;
+  end if;
+  if current_setting('role', true) in ('authenticated', 'anon')
+     and public.auth_user_id() is null then
+    raise exception 'Handover requires an authenticated operator.' using errcode = '42501';
+  end if;
+  select b.cancelled_at, b.archived_at into v_cancelled_at, v_archived_at
+    from public.bookings b where b.id = NEW.booking_id for update;
+  if not found or v_cancelled_at is not null or v_archived_at is not null then
+    raise exception 'GATE:gate.booking.cancelled|Handover cannot complete for a cancelled or archived rental.'
+      using errcode = 'P0001';
+  end if;
+  return NEW;
+end;
+$$;
+revoke all on function record_editor_private.guard_cancelled_handover_completion() from public, anon, authenticated;
+create trigger trg_00_guard_cancelled_handover_completion
+  after insert or update on public.operation_sessions
+  for each row execute function record_editor_private.guard_cancelled_handover_completion();
+
+-- The serial unit writer is independent of quantity movements and line state.
+-- Share the cancellation row lock and leave existing return transitions intact.
+create function record_editor_private.guard_cancelled_serial_pickup()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_cancelled_at timestamptz;
+  v_archived_at timestamptz;
+begin
+  if NEW.unit_state::text <> 'Picked Up' then
+    return NEW;
+  end if;
+  if TG_OP = 'UPDATE' then
+    if OLD.unit_state = NEW.unit_state
+       and OLD.booking_line_id = NEW.booking_line_id
+       and OLD.asset_id is not distinct from NEW.asset_id
+       and OLD.handover_session_id is not distinct from NEW.handover_session_id then
+      return NEW;
+    end if;
+  end if;
+  if current_setting('role', true) in ('authenticated', 'anon')
+     and public.auth_user_id() is null then
+    raise exception 'Pickup requires an authenticated operator.' using errcode = '42501';
+  end if;
+  select b.cancelled_at, b.archived_at into v_cancelled_at, v_archived_at
+    from public.bookings b join public.booking_lines l on l.booking_id = b.id
+   where l.id = NEW.booking_line_id
+   for update of b;
+  if not found or v_cancelled_at is not null or v_archived_at is not null then
+    raise exception 'GATE:gate.booking.cancelled|Serial pickup cannot continue for a cancelled or archived rental.'
+      using errcode = 'P0001';
+  end if;
+  return NEW;
+end;
+$$;
+revoke all on function record_editor_private.guard_cancelled_serial_pickup() from public, anon, authenticated;
+create trigger trg_00_guard_cancelled_serial_pickup
+  after insert or update on public.booking_line_units
+  for each row execute function record_editor_private.guard_cancelled_serial_pickup();
+
 commit;
