@@ -6955,7 +6955,11 @@ STEPS.push({
 
       await asService(async () => {
         await q(`select * from process_due_payment_reminders(50) where booking_id = $1::uuid`, [noEmailBookingId])
+      })
 
+      // This read RPC is staff-scoped: don't accidentally test it under a
+      // service-role session with no staff user/JWT identity.
+      await as('Owner', async () => {
         const tasks = (await q(`select * from get_pending_whatsapp_draft_tasks()`)).rows
         const task = tasks.find(t => t.booking_id === noEmailBookingId && t.event_type === 'payment_reminder')
         assert(task, 'WhatsApp draft task appears in get_pending_whatsapp_draft_tasks')
