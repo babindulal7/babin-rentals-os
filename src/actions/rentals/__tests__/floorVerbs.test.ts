@@ -897,9 +897,7 @@ describe('Handover', () => {
       OWNER,
     )
 
-    expect(insertsOn('handover_lines')[0]?.payload['state']).toBe('Remaining')
-    // Only a completed line stamps the session that took the last unit.
-    expect(insertsOn('handover_lines')[0]?.payload['completed_session_id']).toBeUndefined()
+    expect(opsOn('handover_lines')).toHaveLength(0) // the database owns the projection
     expect(result.stage).toBeNull()
     expect(result.stageHeldBy).toEqual([LINE_A, LINE_B])
     expect(insertsOn('booking_stage_transitions')).toHaveLength(0)
@@ -908,7 +906,7 @@ describe('Handover', () => {
     expect(result.sessionClosed).toBe(true)
   })
 
-  it('marks a line complete only after its committed movements reach the booked quantity across sessions', async () => {
+  it('does not overwrite the database pickup projection after a later session', async () => {
     db.state.responses['operation_sessions'] = [[{ id: 'morning', session_no: 1, state: 'Completed' }]]
     db.state.responses['handover_lines'] = [
       [{ id: 'hl-1', booking_line_id: LINE_A, state: 'Remaining' }],
@@ -917,20 +915,18 @@ describe('Handover', () => {
     db.state.responses['handover_pickup_totals'] = [[{ booking_line_id: LINE_A, picked_qty: 2 }]]
     await handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
     const movement = writes.state.ops.findIndex((op) => op.table === 'session_line_movements')
-    const line = writes.state.ops.findIndex((op) => op.table === 'handover_lines')
     expect(movement).toBeGreaterThanOrEqual(0)
-    expect(line).toBeGreaterThan(movement)
-    expect(opsOn('handover_lines')[0]?.payload).toMatchObject({ state: 'Picked Up', qty_required: 2 })
+    expect(opsOn('handover_lines')).toHaveLength(0)
   })
 
-  it('reads the line created atomically by a first pickup before updating it', async () => {
+  it('leaves the first pickup projection to the database trigger', async () => {
     db.state.responses['handover_pickup_totals'] = [[{ booking_line_id: LINE_A, picked_qty: 1 }]]
     db.state.responses['handover_lines'] = [
       [], [{ id: 'trigger-line', booking_line_id: LINE_A, state: 'Remaining' }],
       [{ id: 'trigger-line', booking_line_id: LINE_A, state: 'Remaining' }],
     ]
     await handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
-    expect(opsOn('handover_lines')[0]).toMatchObject({ kind: 'update', id: 'trigger-line', payload: { state: 'Remaining' } })
+    expect(opsOn('handover_lines')).toHaveLength(0)
   })
 
   it('refuses a changed quantity when retrying a session with an immutable pickup receipt', async () => {
@@ -953,7 +949,7 @@ describe('Handover', () => {
     ]
     await handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
     expect(insertsOn('session_line_movements')).toHaveLength(0)
-    expect(opsOn('handover_lines')[0]?.payload['state']).toBe('Picked Up')
+    expect(opsOn('handover_lines')).toHaveLength(0)
   })
 
   it('finishes an open handover that already has a saved pickup without adding a movement', async () => {
@@ -1012,7 +1008,7 @@ describe('Handover', () => {
     expect(result.stage).toEqual({ from: 'Packed', to: 'On Rent' })
   })
 
-  it('updates the existing line row on a second session rather than inserting a duplicate', async () => {
+  it('leaves the existing line projection to the movement trigger on a second session', async () => {
     // `handover_lines` is unique on booking_line_id (0003:323), so the second
     // session must UPDATE what the first one wrote.
     db.state.responses['handover_lines'] = [
@@ -1036,11 +1032,7 @@ describe('Handover', () => {
     )
 
     const lineOps = opsOn('handover_lines')
-    expect(lineOps.map((o) => o.kind)).toEqual(['update', 'insert'])
-    expect(lineOps[0]?.id).toBe('hl-1')
-    // first_session_id is NOT in the update — the first session to touch the
-    // line is a fact the second must not overwrite.
-    expect(Object.keys(lineOps[0]?.payload ?? {})).not.toContain('first_session_id')
+    expect(lineOps).toHaveLength(0) // pickup movements update the projection atomically
     // session_no is read, not assumed.
     expect(insertsOn('operation_sessions')[0]?.payload['session_no']).toBe(2)
   })
@@ -2145,7 +2137,8 @@ describe('one shape, four verbs', () => {
       await run()
 
       const tables = new Set(writes.state.ops.map((o) => o.table))
-      expect(tables.has(LINE_TABLE[job])).toBe(true)
+      expect(tables.has(LINE_TABLE[job])).toBe(job !== 'Handover')
+      if (job === 'Handover') expect(tables.has('session_line_movements')).toBe(true)
       for (const other of Object.values(LINE_TABLE)) {
         if (other !== LINE_TABLE[job]) expect(tables.has(other)).toBe(false)
       }

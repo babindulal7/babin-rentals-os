@@ -1342,7 +1342,7 @@ export async function runFloorVerb(
   for (const line of lines) {
     const required = requiredByLine.get(line.bookingLineId) ?? 0
     const moved = movedQty(line, required)
-    let priorId = existing.get(line.bookingLineId)?.id ?? null
+    const priorId = existing.get(line.bookingLineId)?.id ?? null
 
     if (job === 'Pack') await writePackingLine(sessionId, line, required, moved, ctx, occurredAt, priorId, actionUuid)
     else if (job === 'Return') {
@@ -1366,19 +1366,10 @@ export async function runFloorVerb(
       movements += await writeMovements(job, sessionId, line, moved, ctx, occurredAt, priorMovements.get(line.bookingLineId))
     }
 
-    if (job === 'Handover') {
-      // Only committed movements can make the line terminal. This read also
-      // includes earlier sessions and compensating movements, without counting
-      // an idempotent retry a second time.
+    if (job === 'Handover' && (line.outcome ?? 'done') === 'missing') {
       const totals = await fetchHandoverPickupTotals([line.bookingLineId])
       const picked = totals.get(line.bookingLineId) ?? 0
       if (picked > required) throw new Error('Recorded pickup quantity exceeds the booking; ask a manager to review it.')
-      // The movement trigger creates the line in the same transaction. The
-      // earlier read predates that insert, so resolve its id before updating.
-      if (priorId === null && picked > 0) {
-        priorId = (await readLineRows('Handover', [line.bookingLineId])).get(line.bookingLineId)?.id ?? null
-        if (priorId === null) throw new Error('The pickup was recorded, but its handover line could not be verified. Reload and contact a manager if it remains unavailable.')
-      }
       await writeHandoverLine(sessionId, line, required, picked, ctx, occurredAt, priorId, actionUuid)
     }
 
