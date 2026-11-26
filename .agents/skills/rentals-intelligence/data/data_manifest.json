@@ -1,0 +1,31 @@
+{
+  "manifest_version": "1.0.0",
+  "generated_at": "2026-10-16T00:00:00Z",
+  "live_operational_data_available": false,
+  "operational_constraint": "Live availability, account balances, payment approvals, and owner approval records must come from an external operational record. This skill contains no live Booqable connection.",
+  "files": {
+    "data_manifest.json": {"purpose":"Data provenance and permitted usage registry","source_class":"INTERNAL_GOVERNANCE","usage_mode":"OPERATING_POLICY","reviewed_at":"2026-10-16T00:00:00Z"},
+    "rental_catalog.json": {"purpose":"Local catalog and planning-rate resolution","source_class":"INTERNAL_RATE_MIGRATION","usage_mode":"PLANNING_ESTIMATE","reviewed_at":null},
+    "booqable_snapshot_2026-09-29.json": {"purpose":"PII-free 2026-09-29 Booqable export snapshot and explicit catalog-SKU evidence","source_class":"BOOQABLE_CSV_EXPORT","usage_mode":"HISTORICAL_ANALYSIS","data_as_of":"2026-09-29","reviewed_at":"2026-10-16T00:00:00Z","live_operational_data":false},
+    "os_laws.json": {"purpose":"Babin Rentals policy invariants","source_class":"INTERNAL_POLICY","usage_mode":"OPERATING_POLICY","reviewed_at":null},
+    "product_specs.json": {"purpose":"Product technical facts","source_class":"OEM_AND_RESEARCH","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "compatibility_graph.json": {"purpose":"Compatibility relationships","source_class":"OEM_AND_BABIN_RULES","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "cinema_lab_benchmarks.json": {"purpose":"Cinema equipment benchmark observations","source_class":"CINEMA_LAB_RESEARCH","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "accessory_dependencies.json": {"purpose":"Required accessories","source_class":"Babin_operations","usage_mode":"OPERATING_POLICY","reviewed_at":null},
+    "equipment_care_profiles.json": {"purpose":"Dispatch, return, and storage checks","source_class":"Babin_operations","usage_mode":"OPERATING_POLICY","reviewed_at":null},
+    "power_matrix.json": {"purpose":"Power and runtime data","source_class":"OEM_AND_BABIN_TESTS","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "media_matrix.json": {"purpose":"Approved recording media","source_class":"OEM_DOCUMENTATION","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "payload_matrix.json": {"purpose":"Payload capacity data","source_class":"OEM_DOCUMENTATION","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "replacement_values.json": {"purpose":"Replacement-value estimates","source_class":"MARKET_RESEARCH","usage_mode":"PLANNING_ESTIMATE","reviewed_at":null},
+    "shoot_blueprints.json": {"purpose":"Recommended shoot packages","source_class":"Babin_operations","usage_mode":"PLANNING_ESTIMATE","reviewed_at":null},
+    "rental_patterns.json": {"purpose":"Transaction-derived rental patterns","source_class":"BOOQABLE_EXPORT","usage_mode":"HISTORICAL_ANALYSIS","reviewed_at":"2026-07-06T00:00:00Z"},
+    "recommendation_outcomes.json": {"purpose":"Recorded recommendation results","source_class":"Babin_operations","usage_mode":"HISTORICAL_ANALYSIS","reviewed_at":null},
+    "lost_demand_log.json": {"purpose":"Turned-away demand analysis","source_class":"Babin_operations","usage_mode":"HISTORICAL_ANALYSIS","reviewed_at":null},
+    "product_lifecycle.json": {"purpose":"Product market lifecycle data","source_class":"MARKET_RESEARCH","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "source_provenance.json": {"purpose":"Technical source registry","source_class":"OEM_AND_DEALER_RESEARCH","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "external_issue_signals.json": {"purpose":"External product issue signals","source_class":"COMMUNITY_AND_RESEARCH","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "lighting_matrix.json": {"purpose":"Lighting compatibility data","source_class":"OEM_AND_BABIN_RULES","usage_mode":"TECHNICAL_REFERENCE","reviewed_at":null},
+    "nepal_market_registry.json": {"purpose":"Procurement and customs estimates","source_class":"MARKET_RESEARCH","usage_mode":"PLANNING_ESTIMATE","reviewed_at":null},
+    "rental_event_schema.json": {"purpose":"Rental event interface","source_class":"INTERNAL_SCHEMA","usage_mode":"OPERATING_POLICY","reviewed_at":null}
+  }
+}

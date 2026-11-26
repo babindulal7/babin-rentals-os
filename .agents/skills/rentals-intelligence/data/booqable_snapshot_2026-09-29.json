@@ -1,0 +1,726 @@
+{
+  "snapshot_version": "1.0.0",
+  "snapshot_id": "booqable-export-2026-09-29",
+  "data_as_of": "2026-09-29",
+  "usage_mode": "HISTORICAL_ANALYSIS",
+  "live_operational_data": false,
+  "operational_constraint": "This dated export cannot confirm current availability, account balances, payment approvals, or owner approvals. It must not set a client-final quote or alter catalog planning rates.",
+  "privacy": "Aggregated operational counts and catalog-SKU evidence only; client names, emails, addresses, phones, and identifiers are excluded.",
+  "source_exports": [
+    {
+      "filename": "products-export-2026-09-29.csv",
+      "sha256": "c9f7ac47a4ccee6bac501ab05d2880426053d96bc7720c6c58c4851a69196896"
+    },
+    {
+      "filename": "orders-export-2026-09-29.csv",
+      "sha256": "2269a523965158350fb653ff7b42a5d6e8b678f7244d0ccde979e36719fa2566"
+    },
+    {
+      "filename": "customers-export-2026-09-29.csv",
+      "sha256": "c4be7ef9675aae349fbc9c873eb38850cd28c36d114aa673851cbbe0fa0c4662"
+    }
+  ],
+  "product_summary": {
+    "export_row_count": 295,
+    "distinct_sku_count": 179,
+    "priced_row_count": 290,
+    "available_unit_count": 345,
+    "status_counts": {
+      "UNSPECIFIED": 93,
+      "expired": 7,
+      "in_downtime": 4,
+      "in_stock": 158,
+      "started": 33
+    }
+  },
+  "order_summary": {
+    "export_row_count": 779,
+    "status_counts": {
+      "Draft": 18,
+      "Reserved": 8,
+      "Started": 5,
+      "Stopped": 748
+    },
+    "payment_status_counts": {
+      "overpaid": 3,
+      "paid": 665,
+      "partially_paid": 37,
+      "payment_due": 74
+    },
+    "order_balance_due_paisa": 274369408,
+    "active_or_reserved_order_count": 13
+  },
+  "customer_summary": {
+    "export_row_count": 403,
+    "customer_balance_due_paisa": 243141158,
+    "customers_with_balance_due": 41,
+    "largest_customer_balance_due_paisa": 67494903,
+    "pii_retained": false
+  },
+  "catalog_mappings": [
+    {
+      "catalog_product_id": "BRPI-SONY-FX3A-BODY",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 350000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CAM-FX3A-SON-KIT",
+          "observed_names": [
+            "Sony FX3A ",
+            "Sony FX3A  - For Bundle "
+          ],
+          "observed_daily_rates_paisa": [
+            350000
+          ],
+          "export_row_count": 4
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 350000,
+      "rate_difference_paisa": 0
+    },
+    {
+      "catalog_product_id": "BRPI-RED-KOMODO-6K-BODY",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 800000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CAM-KOMODO6K-RED",
+          "observed_names": [
+            "Red Komodo 6k Camera"
+          ],
+          "observed_daily_rates_paisa": [
+            800000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 800000,
+      "rate_difference_paisa": 0
+    },
+    {
+      "catalog_product_id": "BRPI-RED-KOMODOX-6K-BODY",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 1000000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CAM-KOMODOX-RED",
+          "observed_names": [
+            "Red Komodo X Body"
+          ],
+          "observed_daily_rates_paisa": [
+            1000000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 1000000,
+      "rate_difference_paisa": 0
+    },
+    {
+      "catalog_product_id": "BRPI-DJI-RONIN4D-6K",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 1000000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CAM-R4D6K-DJI",
+          "observed_names": [
+            "DJI Ronin 4D 6K 4-Axis Cinema Camera System (Body Only)"
+          ],
+          "observed_daily_rates_paisa": [
+            1300000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 1300000,
+      "rate_difference_paisa": 300000
+    },
+    {
+      "catalog_product_id": "BRPI-SONY-A7SIII-BODY",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 300000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CAM-A7S3-SON",
+          "observed_names": [
+            "Sony A7S III Body"
+          ],
+          "observed_daily_rates_paisa": [
+            300000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 300000,
+      "rate_difference_paisa": 0
+    },
+    {
+      "catalog_product_id": "BRPI-SONY-A7IV-BODY",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 250000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CAM-A7IV-SON",
+          "observed_names": [
+            "Sony Alpha 7 IV/ A7IV "
+          ],
+          "observed_daily_rates_paisa": [
+            225000
+          ],
+          "export_row_count": 2
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 225000,
+      "rate_difference_paisa": -25000
+    },
+    {
+      "catalog_product_id": "BRPI-SONY-A7V-BODY",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 250000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CAM-A7V-SON",
+          "observed_names": [
+            "Sony Alpha 7V | A7V"
+          ],
+          "observed_daily_rates_paisa": [
+            300000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 300000,
+      "rate_difference_paisa": 50000
+    },
+    {
+      "catalog_product_id": "BRPI-CHIOPT-XTREME-ZOOM-SET",
+      "match_status": "COMPOSITE_REVIEW",
+      "catalog_planning_daily_rate_paisa": 600000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "CHP-LNS-28-85MM",
+          "observed_names": [
+            "CHIOPT XTREME Zoom Lens 28\u201385mm T3.2"
+          ],
+          "observed_daily_rates_paisa": [
+            500000
+          ],
+          "export_row_count": 1
+        },
+        {
+          "sku": "CHP-LNS-75-250MM",
+          "observed_names": [
+            "CHIOPT XTREME Zoom Lens 75\u2013250mm T3.2"
+          ],
+          "observed_daily_rates_paisa": [
+            500000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "note": "Export has two individual zoom SKUs; confirm package definition before use."
+    },
+    {
+      "catalog_product_id": "BRPI-BLAZAR-MANTIS-SET",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 500000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LEN-MANTIS-SET-BLZ",
+          "observed_names": [
+            "BLAZAR LENS MANTIS 1.33x Anamorphic 5-Lens Set (ARRI PL)"
+          ],
+          "observed_daily_rates_paisa": [
+            700000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 700000,
+      "rate_difference_paisa": 200000
+    },
+    {
+      "catalog_product_id": "BRPI-GREATJOY-ANAMORPHIC-SET",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 450000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LEN-BLZ-GREATJOY-SET",
+          "observed_names": [
+            "Blazar Great Joy 1.8x T2.9 Anamorphic lens set (PL) "
+          ],
+          "observed_daily_rates_paisa": [
+            500000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 500000,
+      "rate_difference_paisa": 50000
+    },
+    {
+      "catalog_product_id": "BRPI-NISI-ATHENA-SET",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 400000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LEN-NISI-SET",
+          "observed_names": [
+            "NiSi ATHENA PRIME Cinema Lens Series"
+          ],
+          "observed_daily_rates_paisa": [
+            500000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 500000,
+      "rate_difference_paisa": 100000
+    },
+    {
+      "catalog_product_id": "BRPI-SIGMA-24-70-ART-II",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 150000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LEN-24-70-DGDN2-SIG",
+          "observed_names": [
+            "Sigma 24-70/F2.8 DG DN II"
+          ],
+          "observed_daily_rates_paisa": [
+            150000
+          ],
+          "export_row_count": 2
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 150000,
+      "rate_difference_paisa": 0
+    },
+    {
+      "catalog_product_id": "BRPI-TAMRON-70-180",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 120000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "TAM-70-180-G2-SE",
+          "observed_names": [
+            "Tamron 70-180mm f/2.8 Di III VC VXD G2 Lens (Sony E)"
+          ],
+          "observed_daily_rates_paisa": [
+            150000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 150000,
+      "rate_difference_paisa": 30000
+    },
+    {
+      "catalog_product_id": "BRPI-SONY-70-200",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 200000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LEN-70-200-GM2-SON",
+          "observed_names": [
+            "Sony 70-200 GM II 2.8"
+          ],
+          "observed_daily_rates_paisa": [
+            250000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 250000,
+      "rate_difference_paisa": 50000
+    },
+    {
+      "catalog_product_id": "BRPI-DJI-RS4PRO",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 250000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "GMB-RS4P-DJI",
+          "observed_names": [
+            "DJI RS 4 Pro"
+          ],
+          "observed_daily_rates_paisa": [
+            200000
+          ],
+          "export_row_count": 6
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 200000,
+      "rate_difference_paisa": -50000
+    },
+    {
+      "catalog_product_id": "BRPI-DJI-RS3PRO",
+      "match_status": "NO_MATCH",
+      "catalog_planning_daily_rate_paisa": 200000,
+      "booqable_sku_evidence": [],
+      "note": "No confirmed matching SKU in this export."
+    },
+    {
+      "catalog_product_id": "BRPI-DJI-RS3",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 150000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "GMB-RS3-DJI",
+          "observed_names": [
+            "DJI RS 3 Gimbal"
+          ],
+          "observed_daily_rates_paisa": [
+            125000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 125000,
+      "rate_difference_paisa": -25000
+    },
+    {
+      "catalog_product_id": "BRPI-ACCSOON-M7",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 200000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "MON-M7PRO-ACC",
+          "observed_names": [
+            "Accsoon CineView M7 Pro 7\" monitor (built in wireless)"
+          ],
+          "observed_daily_rates_paisa": [
+            200000
+          ],
+          "export_row_count": 3
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 200000,
+      "rate_difference_paisa": 0
+    },
+    {
+      "catalog_product_id": "BRPI-ACCSOON-CINEVIEW",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 120000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "VID-TX-RX-CVSDI2-ACC",
+          "observed_names": [
+            "Accsoon cineview Sdi 2"
+          ],
+          "observed_daily_rates_paisa": [
+            150000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 150000,
+      "rate_difference_paisa": 30000
+    },
+    {
+      "catalog_product_id": "BRPI-AMARAN-300C",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 220000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LGT-AM300C",
+          "observed_names": [
+            "Amaran 300c "
+          ],
+          "observed_daily_rates_paisa": [
+            150000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 150000,
+      "rate_difference_paisa": -70000
+    },
+    {
+      "catalog_product_id": "BRPI-AMARAN-200D",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 150000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LGT-AM200D",
+          "observed_names": [
+            "Amaran 200d S LED Video Light"
+          ],
+          "observed_daily_rates_paisa": [
+            100000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 100000,
+      "rate_difference_paisa": -50000
+    },
+    {
+      "catalog_product_id": "BRPI-APUTURE-600X-PRO",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 450000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "LGT-600X-APU",
+          "observed_names": [
+            "Aperture LS 600x light"
+          ],
+          "observed_daily_rates_paisa": [
+            300000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 300000,
+      "rate_difference_paisa": -150000
+    },
+    {
+      "catalog_product_id": "BRPI-APUTURE-400X",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 350000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "APUTURE-400X",
+          "observed_names": [
+            "Aputure 400x"
+          ],
+          "observed_daily_rates_paisa": [
+            250000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 250000,
+      "rate_difference_paisa": -100000
+    },
+    {
+      "catalog_product_id": "BRPI-VMOUNT-99WH",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 60000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "BAT-VN99",
+          "observed_names": [
+            "99Whr Vmount battery"
+          ],
+          "observed_daily_rates_paisa": [
+            50000
+          ],
+          "export_row_count": 1
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 50000,
+      "rate_difference_paisa": -10000
+    },
+    {
+      "catalog_product_id": "BRPI-DJI-MIC",
+      "match_status": "NO_MATCH",
+      "catalog_planning_daily_rate_paisa": 80000,
+      "booqable_sku_evidence": [],
+      "note": "Only DJI Mic Mini was confirmed in this export."
+    },
+    {
+      "catalog_product_id": "BRPI-DJI-MIC-MINI",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 70000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "AUD-MICMINI-DJI",
+          "observed_names": [
+            "Dji Mic Mini"
+          ],
+          "observed_daily_rates_paisa": [
+            50000
+          ],
+          "export_row_count": 2
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 50000,
+      "rate_difference_paisa": -20000
+    },
+    {
+      "catalog_product_id": "BRPI-TRIPOD-STANDARD",
+      "match_status": "MANUAL_REVIEW",
+      "catalog_planning_daily_rate_paisa": 80000,
+      "booqable_sku_evidence": [],
+      "note": "Several tripod SKUs exist; no generic rate match is safe."
+    },
+    {
+      "catalog_product_id": "BRPI-STUDIO-ASSIST-TRIPOD",
+      "match_status": "EXACT",
+      "catalog_planning_daily_rate_paisa": 150000,
+      "booqable_sku_evidence": [
+        {
+          "sku": "TRI-75-SA",
+          "observed_names": [
+            "Studio Assist 75mm tripod"
+          ],
+          "observed_daily_rates_paisa": [
+            200000
+          ],
+          "export_row_count": 2
+        }
+      ],
+      "booqable_snapshot_daily_rate_paisa": 200000,
+      "rate_difference_paisa": 50000
+    }
+  ],
+  "owner_review_queue": {
+    "status": "PENDING_OWNER_DECISION",
+    "approval_gate": "No catalog rate, quote status, availability, balance, or approval state may be changed from this snapshot.",
+    "rate_change_candidates": [
+      {
+        "catalog_product_id": "BRPI-DJI-RONIN4D-6K",
+        "catalog_planning_daily_rate_paisa": 1000000,
+        "booqable_snapshot_daily_rate_paisa": 1300000,
+        "rate_difference_paisa": 300000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-SONY-A7IV-BODY",
+        "catalog_planning_daily_rate_paisa": 250000,
+        "booqable_snapshot_daily_rate_paisa": 225000,
+        "rate_difference_paisa": -25000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-SONY-A7V-BODY",
+        "catalog_planning_daily_rate_paisa": 250000,
+        "booqable_snapshot_daily_rate_paisa": 300000,
+        "rate_difference_paisa": 50000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-BLAZAR-MANTIS-SET",
+        "catalog_planning_daily_rate_paisa": 500000,
+        "booqable_snapshot_daily_rate_paisa": 700000,
+        "rate_difference_paisa": 200000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-GREATJOY-ANAMORPHIC-SET",
+        "catalog_planning_daily_rate_paisa": 450000,
+        "booqable_snapshot_daily_rate_paisa": 500000,
+        "rate_difference_paisa": 50000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-NISI-ATHENA-SET",
+        "catalog_planning_daily_rate_paisa": 400000,
+        "booqable_snapshot_daily_rate_paisa": 500000,
+        "rate_difference_paisa": 100000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-TAMRON-70-180",
+        "catalog_planning_daily_rate_paisa": 120000,
+        "booqable_snapshot_daily_rate_paisa": 150000,
+        "rate_difference_paisa": 30000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-SONY-70-200",
+        "catalog_planning_daily_rate_paisa": 200000,
+        "booqable_snapshot_daily_rate_paisa": 250000,
+        "rate_difference_paisa": 50000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-DJI-RS4PRO",
+        "catalog_planning_daily_rate_paisa": 250000,
+        "booqable_snapshot_daily_rate_paisa": 200000,
+        "rate_difference_paisa": -50000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-DJI-RS3",
+        "catalog_planning_daily_rate_paisa": 150000,
+        "booqable_snapshot_daily_rate_paisa": 125000,
+        "rate_difference_paisa": -25000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-ACCSOON-CINEVIEW",
+        "catalog_planning_daily_rate_paisa": 120000,
+        "booqable_snapshot_daily_rate_paisa": 150000,
+        "rate_difference_paisa": 30000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-AMARAN-300C",
+        "catalog_planning_daily_rate_paisa": 220000,
+        "booqable_snapshot_daily_rate_paisa": 150000,
+        "rate_difference_paisa": -70000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-AMARAN-200D",
+        "catalog_planning_daily_rate_paisa": 150000,
+        "booqable_snapshot_daily_rate_paisa": 100000,
+        "rate_difference_paisa": -50000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-APUTURE-600X-PRO",
+        "catalog_planning_daily_rate_paisa": 450000,
+        "booqable_snapshot_daily_rate_paisa": 300000,
+        "rate_difference_paisa": -150000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-APUTURE-400X",
+        "catalog_planning_daily_rate_paisa": 350000,
+        "booqable_snapshot_daily_rate_paisa": 250000,
+        "rate_difference_paisa": -100000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-VMOUNT-99WH",
+        "catalog_planning_daily_rate_paisa": 60000,
+        "booqable_snapshot_daily_rate_paisa": 50000,
+        "rate_difference_paisa": -10000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-DJI-MIC-MINI",
+        "catalog_planning_daily_rate_paisa": 70000,
+        "booqable_snapshot_daily_rate_paisa": 50000,
+        "rate_difference_paisa": -20000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      },
+      {
+        "catalog_product_id": "BRPI-STUDIO-ASSIST-TRIPOD",
+        "catalog_planning_daily_rate_paisa": 150000,
+        "booqable_snapshot_daily_rate_paisa": 200000,
+        "rate_difference_paisa": 50000,
+        "required_decision": "APPROVE_CURRENT_RATE | KEEP_PLANNING_RATE | REPLACE_WITH_NEW_RATE_CARD"
+      }
+    ],
+    "catalog_mapping_reviews": [
+      {
+        "catalog_product_id": "BRPI-CHIOPT-XTREME-ZOOM-SET",
+        "match_status": "COMPOSITE_REVIEW",
+        "note": "Export has two individual zoom SKUs; confirm package definition before use.",
+        "required_decision": "CONFIRM_MAPPING | EXCLUDE_FROM_CATALOG"
+      },
+      {
+        "catalog_product_id": "BRPI-DJI-RS3PRO",
+        "match_status": "NO_MATCH",
+        "note": "No confirmed matching SKU in this export.",
+        "required_decision": "CONFIRM_MAPPING | EXCLUDE_FROM_CATALOG"
+      },
+      {
+        "catalog_product_id": "BRPI-DJI-MIC",
+        "match_status": "NO_MATCH",
+        "note": "Only DJI Mic Mini was confirmed in this export.",
+        "required_decision": "CONFIRM_MAPPING | EXCLUDE_FROM_CATALOG"
+      },
+      {
+        "catalog_product_id": "BRPI-TRIPOD-STANDARD",
+        "match_status": "MANUAL_REVIEW",
+        "note": "Several tripod SKUs exist; no generic rate match is safe.",
+        "required_decision": "CONFIRM_MAPPING | EXCLUDE_FROM_CATALOG"
+      }
+    ]
+  }
+}
