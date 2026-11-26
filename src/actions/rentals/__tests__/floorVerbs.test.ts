@@ -952,6 +952,30 @@ describe('Handover', () => {
     expect(opsOn('handover_lines')).toHaveLength(0)
   })
 
+  it('records a new pickup when the previous quantity was fully corrected', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
+    const original = { id: 'movement', booking_line_id: LINE_A, unit_id: null, serial: null, qty: 1,
+      resulting_item_state: 'Picked Up', reverses_movement_id: null }
+    const correction = { id: 'correction', booking_line_id: LINE_A, unit_id: null, serial: null, qty: 1,
+      resulting_item_state: 'Picked Up', reverses_movement_id: 'movement' }
+    db.state.responses['session_line_movements'] = [[original, correction], [correction]]
+    db.state.responses['handover_lines'] = [[], [{ id: 'hl-1', booking_line_id: LINE_A, state: 'Remaining' }]]
+    await handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
+    expect(insertsOn('session_line_movements')).toHaveLength(1)
+  })
+
+  it('refuses an ambiguous retry after a partial correction', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
+    db.state.responses['session_line_movements'] = [
+      [{ id: 'movement', booking_line_id: LINE_A, unit_id: null, serial: null, qty: 2,
+        resulting_item_state: 'Picked Up', reverses_movement_id: null }],
+      [{ id: 'correction', qty: 1, reverses_movement_id: 'movement' }],
+    ]
+    await expect(handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER))
+      .rejects.toThrow(/partially corrected pickup needs review/i)
+    expect(writes.state.ops).toHaveLength(0)
+  })
+
   it('finishes an open handover that already has a saved pickup without adding a movement', async () => {
     db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
     db.state.responses['handover_resumable_sessions'] = [[{ session_id: 'open-session' }]]

@@ -14,6 +14,7 @@
 - Independent review identified four blockers: stale application writes can overwrite the movement projection, serial-unit state can lag after interruption, a fully reversed quantity can be skipped as a retry, and a lost session-seal response after stage advance cannot be recovered. Removed the direct application projection update for successful pickups; the separate Missing path still needs concurrency review.
 - Added a database guard which rechecks a Missing decision under the booking lock and refuses it when the whole line is already picked up. A partial line can still be marked Missing. PostgreSQL may abort a transaction on a competing lock-order deadlock; the reverse ordering needs explicit verification and a user-facing recovery check.
 - Moved assigned serialized-unit pickup state into the same transaction as its movement, and restore Ready on a fully corrected pickup when the unit has not been returned or picked up again. The application no longer sends a later successful-handover unit update that could overwrite a correction; mock mode mirrors this projection.
+- Changed the Handover retry read to distinguish original movements from corrections, including corrections recorded in another session. A fully corrected movement no longer blocks a new pickup; partial corrections and ambiguous multiple live quantity receipts fail closed for review.
 
 **Ruled**
 - Custody writes are fail-closed and the booked quantity is the upper bound.
@@ -33,6 +34,7 @@
 - On a newly initialized, loopback-only PostgreSQL 17 cluster with all 275 migrations, two-connection probes observed the second writer block: an over-pickup was rejected with P0001 after the first committed, while a pickup waiting for a correction succeeded once quantity was released. Both left the expected total and line state. These tests cover those two interleavings only. The cluster was stopped; no hosted database was touched. After the projection-write change, 111/111 focused floor-verb tests, typecheck and lint passed. The prior full gate predates this change and must be rerun.
 - A third PostgreSQL 17 probe first reproduced a stale Missing update overwriting a completed pickup, then passed after the guard: the waiting update was rejected with P0001 and the full pickup remained recorded. The isolated cluster was stopped. PGlite rebuilt 275/275 migrations and passed 102/102 lifecycle checks, including valid partial Missing and refusal after full pickup.
 - PostgreSQL 17 confirmed an assigned serial changes to Picked Up with its movement and returns to Ready on full correction, without an application follow-up. PGlite rebuilt 275/275 migrations and passed 102/102 lifecycle checks; the mock projection and floor-verb suites passed 113/113. This does not yet verify serial-only movements without a unit ID, or quantity-only movement on lines with assigned units.
+- A new floor-verb regression first reproduced a fully corrected pickup being skipped. The revised focused suite passed 113/113, covering the new pickup after full correction and refusal of an ambiguous partial-correction retry. This uses mocked API reads; browser and PostgREST verification remain outstanding.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -50,7 +52,7 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Resolve the remaining independent-review blockers: fully reversed quantity retries and recovery after a lost session-seal response. Verify serial-only movements without a unit ID, quantity-only movement on lines with assigned units, reverse lock ordering for Missing versus pickup, deadlock recovery and other PostgreSQL concurrency and correction cases; verify the full browser flow, rerun all local gates and obtain independent review before disposable Playwright. The screen requires the new views. Migration is WRITTEN and locally VERIFIED in PGlite and PostgreSQL 17, not applied to staging or production.
+- Resolve recovery after a lost session-seal response. Verify corrected-quantity retries through PostgREST and the browser, serial-only movements without a unit ID, quantity-only movement on lines with assigned units, reverse lock ordering for Missing versus pickup, deadlock recovery and other PostgreSQL concurrency and correction cases; rerun all local gates and obtain independent review before disposable Playwright. The screen requires the new views. Migration is WRITTEN and locally VERIFIED in PGlite and PostgreSQL 17, not applied to staging or production.
 
 ## 2026-11-26 — Partial pickup Playwright locator repair (Lane A)
 

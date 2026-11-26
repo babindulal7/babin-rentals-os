@@ -1246,7 +1246,7 @@ export async function runFloorVerb(
   // but a changed count needs an explicit correction instead of silently
   // leaving the old receipt behind while rewriting its line state.
   const resumedReturnMovements = (job === 'Return' || job === 'Handover') && resumed !== null
-    ? await readSessionMovements(sessionId, lines.map((line) => line.bookingLineId))
+    ? await readSessionMovements(sessionId, lines.map((line) => line.bookingLineId), job)
     : null
   if (resumedReturnMovements !== null) {
     for (const line of lines) {
@@ -1337,7 +1337,7 @@ export async function runFloorVerb(
   const queueCandidates: ResetQueueCandidate[] = []
   /* Law 8 — a resumed session must not append a second movement for a unit
      the earlier pass already moved. Read once, consult per line. */
-  const priorMovements = resumedReturnMovements ?? await readSessionMovements(sessionId, lines.map((l) => l.bookingLineId))
+  const priorMovements = resumedReturnMovements ?? await readSessionMovements(sessionId, lines.map((l) => l.bookingLineId), job)
 
   for (const line of lines) {
     const required = requiredByLine.get(line.bookingLineId) ?? 0
@@ -2004,16 +2004,44 @@ interface PriorMovements {
   qtyRow: { id: string; qty: number; resultingState: ItemQuantityState } | null
 }
 
-async function readSessionMovements(sessionId: string, lineIds: readonly string[]): Promise<Map<string, PriorMovements>> {
+async function readSessionMovements(sessionId: string, lineIds: readonly string[], job: SessionJob): Promise<Map<string, PriorMovements>> {
   const out = new Map<string, PriorMovements>()
   if (lineIds.length === 0) return out
   const { data, error } = await supabase
     .from('session_line_movements')
-    .select('id, booking_line_id, unit_id, serial, qty, resulting_item_state')
+    .select('id, booking_line_id, unit_id, serial, qty, resulting_item_state, reverses_movement_id')
     .eq('session_id', sessionId)
     .in('booking_line_id', [...lineIds])
   if (error) throw new Error(`Could not read the movements already recorded on session ${sessionId}: ${error.message}`)
-  for (const r of (data ?? []) as Array<{ id: string; booking_line_id: string; unit_id: string | null; serial: string | null; qty: number; resulting_item_state: ItemQuantityState }>) {
+  if (job === 'Handover' && !Array.isArray(data)) throw new Error('Could not verify previously recorded pickup movements.')
+  type Movement = { id: string; booking_line_id: string; unit_id: string | null; serial: string | null; qty: number; resulting_item_state: ItemQuantityState; reverses_movement_id?: string | null }
+  const rows = (data ?? []) as Movement[]
+  if (job === 'Handover' && rows.length >= 1000) throw new Error('Too many session movements to verify safely; ask a manager to review the handover.')
+  const originals = rows.filter((r) => r.reverses_movement_id == null)
+  const reversed = new Map<string, number>()
+  if (job === 'Handover' && originals.length > 0) {
+    const { data: corrections, error: correctionError } = await supabase.from('session_line_movements')
+      .select('id, booking_line_id, qty, reverses_movement_id')
+      .in('reverses_movement_id', originals.map((r) => r.id)).limit(1000)
+    if (correctionError || !Array.isArray(corrections) || corrections.length >= 1000) {
+      throw new Error(`Could not verify pickup corrections: ${correctionError?.message ?? 'incomplete result'}`)
+    }
+    for (const correction of corrections as Array<{ reverses_movement_id?: string | null; qty: number }>) {
+      const id = correction.reverses_movement_id
+      if (id != null) {
+        if (!Number.isSafeInteger(correction.qty) || correction.qty <= 0 || !originals.some((r) => r.id === id)) {
+          throw new Error('Pickup correction data could not be verified; ask a manager to review it.')
+        }
+        reversed.set(id, (reversed.get(id) ?? 0) + correction.qty)
+      }
+    }
+  }
+  for (const r of originals) {
+    if (job === 'Handover' && (!Number.isSafeInteger(r.qty) || r.qty <= 0)) throw new Error('Pickup movement quantity could not be verified.')
+    const corrected = reversed.get(r.id) ?? 0
+    if (corrected < 0 || corrected > r.qty) throw new Error('Pickup correction exceeds the recorded movement; ask a manager to review it.')
+    if (corrected === r.qty) continue
+    if (corrected > 0) throw new Error('A partially corrected pickup needs review before this session can be retried.')
     let p = out.get(r.booking_line_id)
     if (!p) {
       p = { unitIds: new Set(), serials: new Set(), qtyRow: null }
@@ -2021,7 +2049,10 @@ async function readSessionMovements(sessionId: string, lineIds: readonly string[
     }
     if (r.unit_id !== null) p.unitIds.add(r.unit_id)
     else if (r.serial !== null) p.serials.add(r.serial)
-    else p.qtyRow = { id: r.id, qty: r.qty, resultingState: r.resulting_item_state }
+    else {
+      if (job === 'Handover' && p.qtyRow !== null) throw new Error('Multiple pickup receipts need review before this session can be retried.')
+      p.qtyRow = { id: r.id, qty: r.qty, resultingState: r.resulting_item_state }
+    }
   }
   return out
 }
