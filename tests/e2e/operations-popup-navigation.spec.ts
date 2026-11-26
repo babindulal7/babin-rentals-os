@@ -83,8 +83,8 @@ test.describe('Operations popup persisted-stage navigation', () => {
 
 test.describe('Operations packing confirmation and duplicate-submit protection', () => {
   test.skip(!disposable, 'Synthetic local CI only')
-  for (const partial of [false, true]) test(partial ? 'partial pickup keeps booking Packed and preserves both inventory reservations' : 'packing and handover persist once, with evidence, signatures and discard protection', async ({ page }, testInfo) => {
-    test.setTimeout(180_000)
+  for (const partial of [false, true]) test(partial ? 'partial pickup finishes in two sessions without dispatching a quantity line twice' : 'packing and handover persist once, with evidence, signatures and discard protection', async ({ page }, testInfo) => {
+    test.setTimeout(partial ? 300_000 : 180_000)
     const email = process.env.E2E_OWNER_EMAIL
     const password = process.env.E2E_OWNER_PASSWORD
     const key = process.env.E2E_LOCAL_ANON_KEY
@@ -183,8 +183,25 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
       await popup.getByRole('checkbox', { name: 'Government ID Verified', exact: true }).check()
       if (partial) {
-        await popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true }).check()
-        await expect(popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })).not.toBeChecked()
+        await popup.getByRole('tablist', { name: 'Filter handover checklist items' }).getByRole('tab', { name: /^All(?:\s|$)/ }).click({ timeout: 10_000 })
+        const cable = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true })
+        const stand = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })
+        console.log('[partial:' + testInfo.project.name + '] Verify individual pickup controls')
+        await expect(cable).toBeEnabled()
+        await expect(cable).not.toBeChecked()
+        await expect(stand).not.toBeChecked()
+        // Use a bounded real pointer action and assert the controlled state
+        // separately, rather than allowing locator.check to consume the entire
+        // test budget after the click. Do not force, retry, or bypass selection.
+        // Tap the real enclosing label (including its designed 44px hit area).
+        // The Ready filter would remove the row; All keeps both states observable.
+        await popup.locator('label').filter({
+          has: page.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true }),
+        }).click({ timeout: 10_000 })
+        console.log('[partial:' + testInfo.project.name + '] Individual pickup click returned')
+        await expect(cable).toBeChecked({ timeout: 10_000 })
+        await expect(stand).not.toBeChecked()
+        console.log('[partial:' + testInfo.project.name + '] Individual selection verified')
       } else {
         await popup.getByRole('button', { name: 'Mark Ready Picked Up', exact: true }).click()
       }
@@ -249,6 +266,73 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       if (partial) expect(await reservations()).toEqual(before)
       expect(await handoverSessions()).toHaveLength(1)
       expect(await sessions()).toHaveLength(1)
+      // Reloaded, persisted partial pickup must not offer an already dispatched
+      // quantity line again. Finish only the remaining item and reconcile both receipts.
+      if (partial) {
+        await page.getByRole('button', { name: 'Handover', exact: true }).filter({ visible: true }).first().click()
+        await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
+        await popup.getByRole('tablist', { name: 'Filter handover checklist items' }).getByRole('tab', { name: /^All(?:\s|$)/ }).click({ timeout: 10_000 })
+        const pickedBefore = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true })
+        const remaining = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })
+        await expect(remaining).toBeEnabled({ timeout: 30_000 })
+        await expect(remaining).not.toBeChecked()
+        await expect(pickedBefore).toBeDisabled()
+        await expect(pickedBefore).toBeChecked()
+        await popup.getByRole('checkbox', { name: 'Government ID Verified', exact: true }).check()
+        await popup.getByRole('button', { name: 'Mark Ready Picked Up', exact: true }).click()
+        await expect(remaining).toBeChecked()
+        await expect(pickedBefore).toBeDisabled()
+        for (const gate of [3, 4]) {
+          const row = popup.locator('[data-operation-gate="' + gate + '"]')
+          await row.getByRole('button', { name: 'Mark Cleared →', exact: true }).click()
+          await expect(row).toHaveClass(/is-pass/)
+        }
+        for (const [role, signer] of [['Receiver', 'Disposable Test Receiver'], ['Warehouse Staff', 'Disposable Test Dispatcher']]) {
+          await popup.locator('[data-operation-signature="' + role + '"]').getByRole('button', { name: 'Sign on Glass', exact: true }).click()
+          const signature = page.getByRole('dialog', { name: /^Digital Sign-on-Glass/ })
+          await expect(signature).toBeVisible()
+          await signature.getByRole('tab', { name: /Type Legal Signature/ }).click()
+          await signature.getByRole('textbox', { name: 'Signer Legal Full Name' }).fill(signer)
+          if (role === 'Receiver') await signature.getByRole('checkbox', { name: /Verify Government Photo ID/ }).check()
+          await signature.getByRole('checkbox', { name: /I acknowledge and accept this digital signature/ }).check()
+          await signature.getByRole('button', { name: 'Accept & Sign Handover', exact: true }).click()
+          await expect(signature).toHaveCount(0, { timeout: 30_000 })
+        }
+        await expect(handover).toBeEnabled({ timeout: 30_000 })
+        await handover.click({ clickCount: 2 })
+        await expect.poll(stage, { timeout: 30_000 }).toBe('On Rent')
+        await expect.poll(async () => (await handoverSessions()).map(s => s.state).sort(), { timeout: 30_000 }).toEqual(['Completed', 'Completed'])
+        const completed = await handoverSessions()
+        expect(new Set(completed.map(s => s.id)).size).toBe(2)
+        expect(completed.some(s => s.id === receipt.id)).toBe(true)
+        for (const session of completed) {
+          const sigs = await api.from('signatures').select('signature_role,signature_evidence_file_id').eq('session_id', session.id)
+          expect(sigs.error).toBeNull()
+          expect(sigs.data?.map(s => s.signature_role).sort()).toEqual(['Receiver', 'Warehouse staff'])
+          expect(sigs.data?.every(s => Boolean(s.signature_evidence_file_id))).toBe(true)
+        }
+        const lines = await api.from('booking_lines').select('id,description,qty').eq('booking_id', id)
+        expect(lines.error).toBeNull()
+        expect(lines.data).toHaveLength(2)
+        const allMoves = await api.from('session_line_movements').select('session_id,booking_line_id,qty,resulting_item_state').in('session_id', completed.map(s => s.id))
+        expect(allMoves.error).toBeNull()
+        expect(allMoves.data).toHaveLength(2)
+        for (const line of lines.data ?? []) {
+          const matches = allMoves.data?.filter(m => m.booking_line_id === line.id) ?? []
+          expect(matches).toHaveLength(1)
+          expect(matches[0]?.resulting_item_state).toBe('Picked Up')
+          expect(Number(matches[0]?.qty)).toBe(Number(line.qty))
+          expect(matches[0]?.session_id === receipt.id).toBe(line.description === 'Disposable Operations Cable')
+        }
+        const finalTransitions = await api.from('booking_stage_transitions').select('id').eq('booking_id', id).eq('from_stage', 'Packed').eq('to_stage', 'On Rent')
+        expect(finalTransitions.error).toBeNull()
+        expect(finalTransitions.data).toHaveLength(1)
+        await page.reload()
+        expect(await stage()).toBe('On Rent')
+        expect(await handoverSessions()).toHaveLength(2)
+        expect(await reservations()).toEqual(before)
+        expect(await sessions()).toHaveLength(1)
+      }
     } finally {
       await api.auth.signOut({ scope: 'local' })
     }
