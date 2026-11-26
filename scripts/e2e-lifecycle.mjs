@@ -2584,6 +2584,26 @@ STEPS.push({
         'a fully reversed pickup does not make a session resumable')
       await q('rollback to savepoint pickup_correction_probe')
       await q('release savepoint pickup_correction_probe')
+      await q('savepoint pickup_serial_probe')
+      await as('Warehouse', () => q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,unit_id,qty,resulting_item_state,moved_at,created_by)
+        values(gen_random_uuid(),$1,$2,$3,1,'Picked Up',now(),$4)`, [handover,line.id,UNITS[0],U.Warehouse]))
+      const serialNext = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await q(`update operation_sessions set state='Completed' where id=$1`, [handover])
+        await q(`insert into operation_sessions(id,client_uuid,booking_id,operation,session_no,state,delivery_method,warehouse_staff_id,created_by)
+          values($1,gen_random_uuid(),$2,'Handover',2,'In Progress','Client Pickup',$3,$3)`, [serialNext,id,U.Warehouse])
+      })
+      await reject('Warehouse', 'a serialized unit cannot be picked up twice while quantity remains',
+        `insert into session_line_movements(client_uuid,session_id,booking_line_id,unit_id,qty,resulting_item_state,moved_at,created_by)
+         values(gen_random_uuid(),$1,$2,$3,1,'Picked Up',now(),$4)`,
+        [serialNext,line.id,UNITS[0],U.Warehouse], /unit.*already.*pickup|pickup.*already.*unit/i)
+      const serialPickup = await one('select id from session_line_movements where session_id=$1 and unit_id=$2', [handover,UNITS[0]])
+      await as('Warehouse', () => q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,reverses_movement_id,moved_at,created_by)
+        values(gen_random_uuid(),$1,$2,1,'Picked Up',$3,now(),$4)`, [serialNext,line.id,serialPickup,U.Warehouse]))
+      await as('Warehouse', () => q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,unit_id,qty,resulting_item_state,moved_at,created_by)
+        values(gen_random_uuid(),$1,$2,$3,1,'Picked Up',now(),$4)`, [serialNext,line.id,UNITS[0],U.Warehouse]))
+      await q('rollback to savepoint pickup_serial_probe')
+      await q('release savepoint pickup_serial_probe')
       assertEq(Number(await as('Client', () => one('select count(*) from handover_pickup_totals where booking_line_id=$1', [line.id]))), 0,
         'client cannot read staff pickup movements through the view')
       assertEq(await stageOf('qty-ok'), 'Packed', 'partial quantity handover has not advanced the stage')

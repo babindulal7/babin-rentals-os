@@ -113,6 +113,25 @@ begin
     return NEW;
   end if;
 
+  if NEW.unit_id is not null or nullif(NEW.serial, '') is not null then
+    if NEW.qty <> 1 then
+      raise exception 'A pickup for a specific unit must have quantity one.' using errcode = 'P0001';
+    end if;
+    if exists (
+      select 1 from public.session_line_movements m
+      join public.operation_sessions s on s.id = m.session_id
+      where m.booking_line_id = NEW.booking_line_id
+        and s.operation = 'Handover' and m.resulting_item_state = 'Picked Up'
+        and m.reverses_movement_id is null
+        and ((NEW.unit_id is not null and m.unit_id = NEW.unit_id)
+          or (nullif(NEW.serial, '') is not null and m.serial = NEW.serial))
+        and m.qty > coalesce((select sum(r.qty) from public.session_line_movements r
+          where r.reverses_movement_id = m.id), 0)
+    ) then
+      raise exception 'This unit was already recorded for pickup.' using errcode = 'P0001';
+    end if;
+  end if;
+
   select coalesce((select picked_qty from public.handover_pickup_totals
     where booking_line_id = NEW.booking_line_id), 0) into v_picked;
 
