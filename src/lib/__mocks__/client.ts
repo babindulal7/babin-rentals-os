@@ -157,6 +157,11 @@ function read(table: string): Row[] {
     const movements = store['session_line_movements'] ?? []
     return (store['operation_sessions'] ?? []).filter((session) => {
       if (session['operation'] !== 'Handover' || session['state'] !== 'In Progress') return false
+      const advanced = (store['bookings'] ?? []).some((booking) => booking['id'] === session['booking_id'] && booking['stage'] === 'On Rent') &&
+        (store['booking_stage_transitions'] ?? []).some((transition) => transition['booking_id'] === session['booking_id'] &&
+          transition['client_uuid'] === session['client_uuid'] && transition['handover_session_id'] === session['id'] && transition['from_stage'] === 'Packed' &&
+          transition['to_stage'] === 'On Rent' && transition['is_reversal'] !== true)
+      if (advanced) return true
       return movements.filter((m) => m['session_id'] === session['id'] && m['resulting_item_state'] === 'Picked Up' && m['reverses_movement_id'] == null)
         .some((m) => Number(m['qty']) > movements.filter((r) => r['reverses_movement_id'] === m['id'])
           .reduce((sum, r) => sum + Number(r['qty']), 0))
@@ -278,6 +283,9 @@ function applyTriggers(table: string, row: Row): void {
     return
   }
   if (table === 'booking_stage_transitions') {
+    row['handover_session_id'] = (row['from_stage'] === 'Packed' && row['to_stage'] === 'On Rent' && row['is_reversal'] !== true)
+      ? ((store['operation_sessions'] ?? []).find((s) => s['booking_id'] === row['booking_id'] && s['operation'] === 'Handover' &&
+          s['state'] === 'In Progress' && s['client_uuid'] === row['client_uuid'])?.['id'] ?? null) : null
     const bookingId = row['booking_id']
     const to = row['to_stage']
     if (typeof bookingId !== 'string' || typeof to !== 'string') return
@@ -1533,6 +1541,26 @@ export const mockSupabase = {
           row['revoked_at'] == null && row['branch_id'] === booking['branch_id'],
         ))
       return Promise.resolve({ data: null, error: allowed ? null : pgErr('P0001', 'GATE:operations.grant|Operation branch authorization refused.') })
+    }
+    if (name === 'finish_handover_after_transition') {
+      const actor = readSession()?.user.id
+      const role = store['users']?.find((user) => user['id'] === actor)?.['primary_role']
+      const booking = store['bookings']?.find((row) => row['id'] === args?.['p_booking_id'])
+      const session = store['operation_sessions']?.find((row) => row['id'] === args?.['p_session_id'] && row['booking_id'] === booking?.['id'])
+      const transition = (store['booking_stage_transitions'] ?? []).find((row) => row['booking_id'] === booking?.['id'] &&
+        row['client_uuid'] === session?.['client_uuid'] && row['handover_session_id'] === session?.['id'] && row['from_stage'] === 'Packed' && row['to_stage'] === 'On Rent' && row['is_reversal'] !== true)
+      return mockSupabase.rpc('assert_operation_branch_grant', { p_operation: 'handover', p_booking_id: booking?.['id'] }).then((grant) => {
+        if (!actor || !['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'].includes(String(role)) || grant.error ||
+          !booking || booking['stage'] !== 'On Rent' || booking['cancelled_at'] != null || booking['closed_at'] != null || booking['archived_at'] != null ||
+          !session || session['operation'] !== 'Handover' || !['In Progress', 'Completed'].includes(String(session['state'])) || !transition) {
+          return { data: null, error: pgErr('P0001', 'Handover completion cannot be verified for this session.') }
+        }
+        if (session['state'] === 'In Progress') {
+          const now = new Date().toISOString()
+          hooks.update('operation_sessions', { state: 'Completed', completed_at: now, completed_by: actor, updated_at: now }, (row) => row['id'] === session['id'])
+        }
+        return { data: { session_id: session['id'], booking_id: booking['id'], state: 'Completed' }, error: null }
+      })
     }
     if (name === 'read_record_editor' || name === 'save_record_editor' || name === 'save_record_section') {
       try {

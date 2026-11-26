@@ -1487,6 +1487,28 @@ export default function HandoverWorkspace({
                   : 'Nothing can be handed over here.')
             : null
 
+  const finishRecordedHandover = async () => {
+    if (!floor || !resumableSession || !user || dispatching) return
+    const bookingId = floor.id
+    const route = id
+    setDispatching(true)
+    setDispatchError(null)
+    try {
+      const { handoverRental } = await import('../../actions/rentals/index')
+      await handoverRental({ bookingId, lines: [], resumeSessionId: resumableSession }, { userId: user.id, role: user.role })
+      if (!settle.current.mounted || settle.current.floorId !== bookingId || settle.current.route !== route) return
+      showSuccessToast('Handover Completed', `Rental ${floor.bookingNo} is on rent`)
+      if (onConfirmSuccess) onConfirmSuccess()
+      else navigate(`/rentals/${route}`)
+    } catch (err: unknown) {
+      if (settle.current.mounted && settle.current.floorId === bookingId && settle.current.route === route) {
+        setDispatchError(formatGateError(err))
+      }
+    } finally {
+      if (settle.current.mounted && settle.current.floorId === bookingId && settle.current.route === route) setDispatching(false)
+    }
+  }
+
   // Floor scale (DEVICES.md item 3) is applied automatically by route in App.tsx's Shell, not here.
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
@@ -1500,7 +1522,15 @@ export default function HandoverWorkspace({
         emptyTitle={`No booking matches ${id}`}
         emptyMessage="Check the booking number — nothing with this number exists, so there is nothing to hand over."
       >
-        {floor !== null && stageBlock !== null && (
+        {floor !== null && stageBlock !== null && floor.stage === 'On Rent' && resumableSession !== null && !floor.isCancelled && !floor.isClosed ? (
+          <div>
+            <p>This rental is on rent, but its handover session still needs to be finished.</p>
+            <Button onClick={() => { void finishRecordedHandover() }} disabled={dispatching || !isOnline}>
+              {dispatching ? 'Finishing handover…' : 'Finish recorded handover'}
+            </Button>
+            {dispatchError && <ErrorBanner title="Could not finish this handover" message={dispatchError} />}
+          </div>
+        ) : floor !== null && stageBlock !== null && (
           <EmptyState
             title={`Handover is not available for ${floor.bookingNo}`}
             description={stageBlock}

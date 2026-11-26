@@ -62,12 +62,15 @@ const db = vi.hoisted(() => {
     grantError: null as { message: string } | null,
     returnKeyRows: [] as unknown[],
     returnKeyError: null as { message: string } | null,
+    recoveryResult: null as Record<string, unknown> | null,
   }
 
   function nextRows(table: string): unknown[] {
     const queue = state.responses[table]
     if (queue === undefined || queue.length === 0) return []
-    return queue.length === 1 ? (queue[0] as unknown[]) : (queue.shift() as unknown[])
+    const rows = queue.length === 1 ? (queue[0] as unknown[]) : (queue.shift() as unknown[])
+    return table === 'operation_sessions' ? rows.map((row) => row && typeof row === 'object' && 'session_no' in row && !('client_uuid' in row)
+      ? { ...row, client_uuid: 'original-session-key' } : row) : rows
   }
 
   function from(table: string) {
@@ -125,6 +128,7 @@ const db = vi.hoisted(() => {
     state.grantError = null
     state.returnKeyRows = []
     state.returnKeyError = null
+    state.recoveryResult = null
   }
 
   return { state, from, reset }
@@ -135,7 +139,7 @@ vi.mock('../../../lib/supabase', () => ({
     from: db.from,
     rpc: async (name: string, args: Record<string, unknown>) => {
       db.state.grants.push({ name, args })
-      return { data: null, error: db.state.grantError }
+      return { data: name === 'finish_handover_after_transition' ? db.state.recoveryResult : null, error: db.state.grantError }
     },
   },
   newClientUuid: () => 'test-action-key',
@@ -781,6 +785,25 @@ describe('Handover', () => {
       ],
     ]
     db.state.responses['operation_sessions'] = [[]]
+  })
+
+  it('finishes only the specified recorded session after the booking advanced', async () => {
+    db.state.responses['bookings'] = [[bookingAt('On Rent')]]
+    db.state.recoveryResult = { booking_id: BOOKING_ID, session_id: 'open-session', state: 'Completed' }
+    const result = await handoverRental({ bookingId: 'B-715', lines: [], resumeSessionId: 'open-session' }, OWNER)
+    expect(result).toMatchObject({ sessionId: 'open-session', sessionClosed: true, stage: null })
+    expect(db.state.grants.at(-1)).toEqual({ name: 'finish_handover_after_transition', args: { p_booking_id: BOOKING_ID, p_session_id: 'open-session' } })
+    expect(writes.state.ops).toEqual([])
+  })
+
+  it('binds a resumed session transition to the session original key', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'open-session', client_uuid: 'original-session-key', session_no: 1, state: 'In Progress' }]]
+    db.state.responses['handover_lines'] = [[], [
+      { id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' },
+      { id: 'hl-2', booking_line_id: LINE_B, state: 'Picked Up' },
+    ]]
+    await handoverRental({ bookingId: 'B-715', clientUuid: 'new-ui-key', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
+    expect(insertsOn('booking_stage_transitions')[0]?.payload['client_uuid']).toBe('original-session-key')
   })
 
   it('confirms a committed session and stage after the seal response is lost', async () => {

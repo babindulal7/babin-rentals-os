@@ -26,8 +26,28 @@ select m.booking_line_id,
 revoke all on public.handover_pickup_totals from public, anon;
 grant select on public.handover_pickup_totals to authenticated;
 
--- Only an open session with an unreversed pickup can be finished without new
--- marks. Aggregation keeps the query bounded to one row per session.
+-- Bind a new transition to an already-open session at insertion time. A
+-- later session cannot claim a historical transition by copying its key.
+alter table public.booking_stage_transitions
+  add column handover_session_id uuid references public.operation_sessions(id);
+create function public.bind_handover_transition_session()
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  NEW.handover_session_id := null;
+  if NEW.from_stage = 'Packed' and NEW.to_stage = 'On Rent' and not NEW.is_reversal then
+    select s.id into NEW.handover_session_id from public.operation_sessions s
+     where s.booking_id = NEW.booking_id and s.operation = 'Handover'
+       and s.state = 'In Progress' and s.client_uuid = NEW.client_uuid;
+  end if;
+  return NEW;
+end
+$$;
+create trigger trg_bind_handover_transition_session
+before insert on public.booking_stage_transitions
+for each row execute function public.bind_handover_transition_session();
+
+-- An open session with an unreversed pickup can finish without new marks.
+-- A transition-linked On Rent session can also be recovered after a lost seal.
 create view public.handover_resumable_sessions
 with (security_invoker = true) as
 select s.id as session_id, s.booking_id
@@ -39,8 +59,15 @@ select s.id as session_id, s.booking_id
   ) r on true
  where s.operation = 'Handover' and s.state = 'In Progress'
    and m.resulting_item_state = 'Picked Up' and m.reverses_movement_id is null
- group by s.id, s.booking_id
-having sum(m.qty - r.reversed_qty) > 0;
+group by s.id, s.booking_id
+having sum(m.qty - r.reversed_qty) > 0
+union
+select s.id as session_id, s.booking_id
+  from public.operation_sessions s
+  join public.bookings b on b.id = s.booking_id and b.stage = 'On Rent'
+  join public.booking_stage_transitions t on t.booking_id = s.booking_id and t.client_uuid = s.client_uuid and t.handover_session_id = s.id
+ where s.operation = 'Handover' and s.state = 'In Progress'
+   and t.from_stage = 'Packed' and t.to_stage = 'On Rent' and not t.is_reversal;
 revoke all on public.handover_resumable_sessions from public, anon;
 grant select on public.handover_resumable_sessions to authenticated;
 
@@ -254,3 +281,45 @@ $$;
 create trigger trg_sync_handover_line_from_pickup
 after insert on public.session_line_movements
 for each row execute function public.sync_handover_line_from_pickup();
+
+-- Repair only a session whose own completion key already moved this booking
+-- to On Rent. The transition gate is the evidence that the handover passed.
+create function public.finish_handover_after_transition(p_booking_id uuid, p_session_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_actor uuid := public.auth_user_id();
+  v_booking uuid;
+  v_stage public.booking_stage;
+  v_cancelled timestamptz;
+  v_closed timestamptz;
+  v_archived timestamptz;
+  v_session public.operation_sessions%rowtype;
+begin
+  if v_actor is null or coalesce(public.auth_user_role()::text, '') not in ('Owner','Admin','Manager','Warehouse','Technician') then
+    raise exception 'Only authorized floor staff can finish this handover.' using errcode = '42501';
+  end if;
+  select booking_id into v_booking from public.operation_sessions where id = p_session_id and booking_id = p_booking_id and operation = 'Handover';
+  if v_booking is null then raise exception 'Handover session could not be verified.' using errcode = 'P0001'; end if;
+  perform public.assert_operation_branch_grant('handover', v_booking);
+  select stage, cancelled_at, closed_at, archived_at into v_stage, v_cancelled, v_closed, v_archived from public.bookings where id = v_booking for update;
+  select * into v_session from public.operation_sessions where id = p_session_id and booking_id = v_booking for update;
+  if v_stage is distinct from 'On Rent' or v_cancelled is not null or v_closed is not null or v_archived is not null or v_session.operation <> 'Handover'
+     or v_session.state not in ('In Progress', 'Completed')
+     or not exists (select 1 from public.booking_stage_transitions t
+       where t.booking_id = v_booking and t.client_uuid = v_session.client_uuid and t.handover_session_id = v_session.id
+         and t.from_stage = 'Packed' and t.to_stage = 'On Rent' and not t.is_reversal) then
+    raise exception 'Handover completion cannot be verified for this session.' using errcode = 'P0001';
+  end if;
+  if v_session.state = 'In Progress' then
+    update public.operation_sessions set state = 'Completed', completed_at = now(), completed_by = v_actor, updated_at = now()
+      where id = p_session_id;
+  end if;
+  return jsonb_build_object('session_id', p_session_id, 'booking_id', v_booking, 'state', 'Completed');
+end
+$$;
+revoke all on function public.finish_handover_after_transition(uuid, uuid) from public, anon;
+grant execute on function public.finish_handover_after_transition(uuid, uuid) to authenticated;

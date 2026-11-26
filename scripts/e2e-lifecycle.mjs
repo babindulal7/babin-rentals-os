@@ -2550,6 +2550,39 @@ STEPS.push({
       })
       const request = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'revert', target_stage: 'Booked', reason: 'Attempt after equipment handed over' }
       await reject('Manager', 'cannot reverse custody', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(request)], /before handover/i)
+      const historicalKey = await one("select client_uuid from booking_stage_transitions where booking_id=$1 and from_stage='Packed' and to_stage='On Rent'", [bookingIds.c])
+      const copiedSession = crypto.randomUUID()
+      await as('Warehouse', () => q(`insert into operation_sessions(id,client_uuid,booking_id,operation,session_no,state,delivery_method,warehouse_staff_id,created_by)
+        values($1,$2,$3,'Handover',2,'In Progress','Client Pickup',$4,$4)`, [copiedSession,historicalKey,bookingIds.c,U.Warehouse]))
+      await reject('Warehouse', 'a later session cannot claim a historical transition by copying its key',
+        'select finish_handover_after_transition($1,$2)', [bookingIds.c,copiedSession], /cannot be verified/i)
+    })
+    await undone(async () => {
+      const id = bookingIds.c, session = crypto.randomUUID(), key = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] })
+        await q(`insert into operation_sessions(id,client_uuid,booking_id,operation,state,delivery_method,warehouse_staff_id,created_by,government_id_verified,booking_authorization_verified)
+          values($1,$2,$3,'Handover','In Progress','Client Pickup',$4,$4,true,true)`, [session,key,id,U.Warehouse])
+        await q(`insert into handover_lines(client_uuid,booking_line_id,state,qty_required,first_session_id,completed_session_id,created_by)
+          select gen_random_uuid(),id,'Picked Up',qty,$1,$1,$2 from booking_lines where booking_id=$3 limit 1`, [session,U.Warehouse,id])
+        await q(`insert into signatures(client_uuid,session_id,signature_role,signer_name,signed_at,device,is_required,created_by)
+          values(gen_random_uuid(),$1,'Receiver','Test receiver',now(),'test',true,$2)`, [session,U.Warehouse])
+      })
+      await reject('Warehouse', 'unfinished handover without its transition cannot be sealed',
+        'select finish_handover_after_transition($1,$2)', [id,session], /cannot be verified/i)
+      await as('Warehouse', () => q(`insert into booking_stage_transitions(client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at,reason)
+        values($1,$2,$3,'Packed','On Rent',$4,'Warehouse',now(),'Handover recovery verification')`, [key,id,BRANCH,U.Warehouse]))
+      await reject('Driver', 'Driver cannot finish a handover session',
+        'select finish_handover_after_transition($1,$2)', [id,session], /authorized floor staff|permission denied/i)
+      await reject('Warehouse', 'recovery must match the requested booking',
+        'select finish_handover_after_transition($1,$2)', [bookingIds['qty-ok'],session], /could not be verified/i)
+      await as('Warehouse', async () => {
+        const result = await one('select finish_handover_after_transition($1,$2)', [id,session])
+        assertEq(result.state, 'Completed', 'transition-linked handover can be finished')
+        const again = await one('select finish_handover_after_transition($1,$2)', [id,session])
+        assertEq(again.state, 'Completed', 'handover recovery is idempotent')
+      })
+      assertEq(await one('select state::text from operation_sessions where id=$1', [session]), 'Completed', 'recovery seals the original session')
     })
     await undone(async () => {
       const id = bookingIds['qty-ok']

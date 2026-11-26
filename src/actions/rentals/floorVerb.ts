@@ -837,24 +837,25 @@ async function readLineRows(job: SessionJob, bookingLineIds: readonly string[]):
 async function readLatestSession(
   bookingId: string,
   operation: OperationKind,
-): Promise<{ id: string; session_no: number; state: string; notes: string | null } | null> {
+): Promise<{ id: string; client_uuid: string; session_no: number; state: string; notes: string | null } | null> {
   const { data, error } = await supabase
     .from('operation_sessions')
     // `notes` so a resumed session can keep what the earlier pass wrote; no
     // money column appears here or anywhere else in this file (Law 6).
-    .select('id, session_no, state, notes')
+    .select('id, client_uuid, session_no, state, notes')
     .eq('booking_id', bookingId)
     .eq('operation', operation)
     .order('session_no', { ascending: false })
     .limit(1)
 
   if (error) throw new Error(`Could not read existing ${operation} sessions: ${error.message}`)
-  const rows = (data ?? []) as Array<{ id: string; session_no: number; state: string; notes: string | null }>
+  const rows = (data ?? []) as Array<{ id: string; client_uuid: string; session_no: number; state: string; notes: string | null }>
   return rows[0] ?? null
 }
 
 interface ExistingReturnSession {
   id: string
+  client_uuid: string
   session_no: number
   state: 'In Progress' | 'Completed'
   notes: string | null
@@ -877,7 +878,7 @@ async function readReturnSessionForAction(bookingId: string, actionUuid: string)
     (row.notes !== null && typeof row.notes !== 'string')) {
     throw new Error('Return receipt retry does not match this booking and completion key. Nothing was written.')
   }
-  return { id: row.id, session_no: row.session_no, state: row.state, notes: row.notes }
+  return { id: row.id, client_uuid: actionUuid, session_no: row.session_no, state: row.state, notes: row.notes }
 }
 
 async function completedReturnResult(booking: BookingHead, session: ExistingReturnSession): Promise<FloorVerbResult> {
@@ -1106,7 +1107,9 @@ export async function runFloorVerb(
   }
   // A stable Return key can prove that a sealed session already succeeded,
   // including when the final stage changed before its response was lost.
-  if (job !== 'Return' || input.clientUuid === undefined) assertStage()
+  const recoverHandover = job === 'Handover' && booking.stage === 'On Rent' &&
+    input.resumeSessionId !== undefined && (input.lines?.length ?? 0) === 0
+  if (!recoverHandover && (job !== 'Return' || input.clientUuid === undefined)) assertStage()
 
   // RULING 2026-10-24: integrate guarded preflight in live AND mock paths.
   // Reset's queue/task policies (0172) also enforce scope inside Postgres;
@@ -1117,6 +1120,19 @@ export async function runFloorVerb(
   })
   if (grantError) {
     throw new Error(`${job} authorization could not be confirmed: ${grantError.message}. Nothing was written.`)
+  }
+
+  if (recoverHandover && input.resumeSessionId) {
+    const { data, error } = await supabase.rpc('finish_handover_after_transition', {
+      p_booking_id: booking.id, p_session_id: input.resumeSessionId,
+    })
+    if (error) throw new Error(`Could not finish the recorded handover: ${error.message}`)
+    if (!data || typeof data !== 'object' || Array.isArray(data) ||
+      data['booking_id'] !== booking.id || data['session_id'] !== input.resumeSessionId || data['state'] !== 'Completed') {
+      throw new Error('The handover completion could not be verified. Refresh and try again.')
+    }
+    return { success: true, bookingId: booking.id, sessionId: input.resumeSessionId, sessionClosed: true,
+      lines: 0, movements: 0, unitsReset: 0, damageFindings: 0, queued: 0, stage: null, stageHeldBy: [] }
   }
 
   const originalReturnSession = job === 'Return' && input.clientUuid !== undefined
@@ -1171,6 +1187,9 @@ export async function runFloorVerb(
    *     returns the payload instead of a server-assigned row. */
   const latest = originalReturnSession ?? await readLatestSession(booking.id, operation)
   const resumed = latest !== null && latest.state === 'In Progress' ? latest : null
+  if (job === 'Handover' && resumed !== null && (typeof resumed.client_uuid !== 'string' || !resumed.client_uuid)) {
+    throw new Error('The open handover session identity could not be verified. Nothing was written.')
+  }
   if (lines.length === 0) {
     const eligible = job === 'Handover' ? await fetchResumableHandoverSession(booking.id) : null
     if (!resumed || !input.resumeSessionId || resumed.id !== input.resumeSessionId || eligible !== resumed.id) {
@@ -1512,7 +1531,8 @@ export async function runFloorVerb(
   let stageRefusal: Error | null = null
   if (complete) {
     try {
-      stage = await advanceStage(job, booking, ctx, actionUuid, occurredAt, input.overrideReason)
+      const transitionKey = job === 'Handover' && resumed !== null ? resumed.client_uuid : actionUuid
+      stage = await advanceStage(job, booking, ctx, transitionKey, occurredAt, input.overrideReason)
       stageMoved = true
     } catch (err) {
       stageRefusal = err instanceof Error ? err : new Error(String(err))

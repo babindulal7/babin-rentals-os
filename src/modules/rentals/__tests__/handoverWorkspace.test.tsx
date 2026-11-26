@@ -53,6 +53,7 @@ let returnAtAd: string | null = '2026-07-19T00:15:00.000Z'
 let settleDispatch: { resolve: (v: unknown) => void; reject: (e: unknown) => void } | null = null
 let savedEvidenceCount = 0
 let resumableSession: string | null = null
+let bookingStage = 'Packed'
 let lastDispatch: unknown = null
 vi.mock('../../../lib/queries/operationEvidence', () => ({
   fetchOperationEvidence: async () => ({ files: savedEvidenceCount, filesByUnit: {} }),
@@ -74,7 +75,7 @@ vi.mock('../../../lib/queries/bookings', () => ({
   fetchFloorBooking: async (ref: string) => ({
     id: ref === 'B-901' ? B901 : B902,
     bookingNo: ref,
-    stage: 'Packed',
+    stage: bookingStage,
     clientName: 'Himalayan Films Pvt. Ltd.',
     project: 'Film Shoot',
     pickupAtAd,
@@ -197,6 +198,7 @@ afterEach(async () => {
   settleDispatch = null
   savedEvidenceCount = 0
   resumableSession = null
+  bookingStage = 'Packed'
   lastDispatch = null
   navigate = null
 })
@@ -258,6 +260,14 @@ describe('HO-12 — the bulk control says what it does, and moves only Ready row
     await mount()
     await passAllGates(false)
     await click(button('Complete Session'))
+    await flush()
+    expect(lastDispatch).toMatchObject({ bookingId: B901, lines: [], resumeSessionId: 'open-session' })
+  })
+  it('offers recovery on an On Rent booking with an open recorded session', async () => {
+    resumableSession = 'open-session'
+    bookingStage = 'On Rent'
+    await mount()
+    await click(button('Finish recorded handover'))
     await flush()
     expect(lastDispatch).toMatchObject({ bookingId: B901, lines: [], resumeSessionId: 'open-session' })
   })
