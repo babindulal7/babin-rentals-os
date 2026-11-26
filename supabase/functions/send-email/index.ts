@@ -11,6 +11,7 @@
 // =============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { isAuthorizedEmailSender, resolveBoundRecipientEmail } from './recipientPolicy.ts'
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -285,27 +286,41 @@ export async function handleSendEmail(req: Request): Promise<Response> {
     const body: SendEmailRequest = await req.json()
     const { templateId, recipientUserId, recipientEmail, entityType, entityId, language = 'en' } = body
 
-    if (!templateId) {
+    if (typeof templateId !== 'string' || !templateId.trim()) {
       return new Response(JSON.stringify({ error: 'Missing templateId' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Service role client for database lookups and logging
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
+    // Do not permit unrelated recipient-user and booking identifiers to be combined.
+    if ((!recipientUserId && !entityId) || (recipientUserId && entityId)) {
+      return new Response(JSON.stringify({ error: 'Provide exactly one trusted recipient or entity context' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
-    // Verify caller role and anti-forgery:
-    // If caller is Client, they cannot send emails addressed to other users
+    if (!supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: 'Email service is not configured' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Service role client for trusted server-side data lookups and logging.
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Verify the caller is allowed to dispatch transactional mail.
+    // Client/warehouse/driver/technician sessions may never call this endpoint.
     const { data: callerUser } = await adminClient
       .from('users')
       .select('id, primary_role')
       .eq('id', user.id)
       .single()
 
-    const isClient = callerUser?.primary_role === 'Client'
-    if (isClient && recipientUserId && recipientUserId !== user.id) {
-      return new Response(JSON.stringify({ error: 'Forbidden: cannot send email for another user' }), {
+    if (!isAuthorizedEmailSender(callerUser?.primary_role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden: email dispatch requires an authorized staff role' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -314,7 +329,7 @@ export async function handleSendEmail(req: Request): Promise<Response> {
     // Build email payload server-side using RPC (stops client forging)
     const { data: payload, error: rpcError } = await adminClient.rpc('build_email_payload', {
       p_template_id: templateId,
-      p_recipient_user_id: recipientUserId || (isClient ? user.id : null),
+      p_recipient_user_id: recipientUserId || null,
       p_entity_id: entityId || null,
     })
 
@@ -325,10 +340,14 @@ export async function handleSendEmail(req: Request): Promise<Response> {
       })
     }
 
-    const targetEmail = recipientEmail || payload.recipient_email || user.email
-    if (!targetEmail) {
-      return new Response(JSON.stringify({ error: 'No recipient email resolved' }), {
-        status: 400,
+    // A supplied recipient is a confirmation only, NEVER an override.
+    // The authoritative destination comes from server-side booking/user records.
+    let targetEmail: string
+    try {
+      targetEmail = resolveBoundRecipientEmail(payload.recipient_email, recipientEmail)
+    } catch {
+      return new Response(JSON.stringify({ error: 'Recipient does not match trusted server records' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -336,9 +355,16 @@ export async function handleSendEmail(req: Request): Promise<Response> {
     const emailHtml = renderEmailHtml(payload, language)
     const subject = payload.subject || 'Notification from Babin Rentals'
 
-    // Dispatch via Provider (e.g. Resend) or Mock
+    // Fail closed when the remote function has no sending credential.
+    // Local frontend mock tests remain separate; never claim a real send happened.
     const resendApiKey = Deno.env.get('RESEND_API_KEY')
-    let dispatchStatus = 'mock_sent'
+    if (!resendApiKey) {
+      return new Response(JSON.stringify({ error: 'Email provider is not configured' }), {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    let dispatchStatus = 'failed'
     let dispatchError: string | null = null
 
     if (resendApiKey) {
@@ -377,9 +403,6 @@ export async function handleSendEmail(req: Request): Promise<Response> {
         dispatchStatus = 'failed'
         dispatchError = err instanceof Error ? err.message : String(err)
       }
-    } else {
-      // Mock mode for local dev / staging without active key
-      dispatchStatus = 'mock_sent'
     }
 
     // Audit log send (strictly NO email body stored per S13 / W21)
