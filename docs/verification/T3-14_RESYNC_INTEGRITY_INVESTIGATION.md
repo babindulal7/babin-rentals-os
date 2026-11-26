@@ -1,6 +1,6 @@
 # T3-14 draft-invoice resynchronization investigation
 
-Status: **unresolved; no migration written or applied**. Investigated against main `44300a17`.
+Status: **unresolved; an untracked experimental migration exists but is unsafe and must not be applied**. Investigated against main `44300a17`.
 
 `resync_draft_invoice` in migration 0200 deletes every invoice line and rebuilds lines from booking, crew and transport records. Any independently appended line can disappear. A row referenced by `charges.invoice_line_id` instead causes a foreign-key failure, rolling back the enclosing change. The function also retains the draft's old discount and VAT header although `change_booking` updates booking discounts before calling it.
 
@@ -9,3 +9,7 @@ A line's category is not a safe source identifier: the `line_kind` enum contains
 A blanket refusal to resync any nonempty draft would protect data but block ordinary confirmed-booking edits and extensions. A correct repair should establish durable source identity for each automatically generated line, preserve independent line IDs and charge references, serialize the invoice and source changes, and handle 0239's consumable append. Existing rows require a strictly unambiguous, auditable reconciliation with ambiguous rows explicitly held for review. Header changes must use the established discount and tax rules, including treatment, and totals must be recomputed through canonical database functions. Add database lifecycle tests covering duplicate-shaped lines, legacy ambiguity, charge FKs, consumables, changed discounts/VAT, retries and concurrency. This is design guidance, not a verified implementation.
 
 Accountant confirmation of O-17 remains required before shipping any change to invoice numbering timing. Existing application behavior and local database were not changed by this investigation. No hosted action was taken.
+
+The experimental `0244_draft_invoice_source_guard.sql` adds a client-writable provenance flag and refuses legacy drafts with unclassified lines. Invoice-line insert and update policies admit money roles, so that flag cannot establish trusted ownership; the blanket legacy refusal also breaks ordinary booking changes. It is not a candidate fix. A replacement must store provenance in a server-controlled relation, preserve independent invoice-line IDs and their `charges.invoice_line_id` references, and decide legacy ambiguity before source changes remove the old comparison state. RLS, privileges and concurrent transactions must be tested alongside the financial totals.
+
+The owner requested electronic bills without IRD sync, manual supplier entry for sub-rentals, and voiding and replacing a changed finalized invoice. The owner also requested invoicing at a choice of handover or return, or on full payment. These are product directions, not accountant confirmation of statutory requirements or VAT timing; the numbering and replacement tax treatment remain pending accountant review.

@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2026-11-19 — T3-14 invoice source review (Lane C)
+
+**Did**
+- Documented why the untracked experimental 0244 migration is unsafe and the requirements for a replacement.
+
+**Ruled**
+- Recorded owner directions for invoices and e-billing, pending accountant confirmation of statutory treatment.
+
+**Verified**
+- Documentation review only; no code fix or database validation completed.
+
+### Completion
+Not measured: fresh completion results unavailable.
+
+### Remaining
+- Implement and test trusted invoice-line provenance and safe legacy handling; obtain accountant confirmation before shipping numbering changes.
+
+
 ## 2026-11-19 — T3-14 draft invoice integrity investigation (Lane C)
 
 **Did**
