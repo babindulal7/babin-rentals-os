@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2026-11-20 — T3-13 supplier repair reconciliation (Lane C)
+
+**Did**
+- Documented the manually entered supplier persistence gap, unsafe containment draft and overlapping T2-23 picker changes in `docs/verification/T3-13_SUPPLIER_REPAIR_STATUS.md`.
+
+**Ruled**
+- Owner requested manual supplier entry; no new product decisions.
+
+**Verified**
+- Mock-only focused test runner could not start because this worktree lacks Vitest. Dependency installation did not finish and was interrupted; no tests passed in this run.
+
+### Completion
+Not measured: fresh completion evidence unavailable.
+
+### Remaining
+- Complete supplier-name and cost persistence, resolve overlap against T2-23 and reconcile migration numbers on current main; run tests, local gates and staging acceptance.
+
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**

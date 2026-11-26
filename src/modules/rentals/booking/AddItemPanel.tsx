@@ -60,8 +60,7 @@ import type { BundleRecord } from '../../../lib/queries/bundles'
 import { AvailabilityChip, BundlePreview, KitCapacityLine } from './BundlePreview'
 import { TOUCH } from './ClientHealthChip'
 import { OverbookingOverrideModal } from './OverbookingOverrideModal'
-import { SubRentalPartnerModal } from './SubRentalPartnerModal'
-import { SUBRENTAL_PARTNERS, findSimilarFreeEquipment } from '../../../lib/availability'
+import { findSimilarFreeEquipment } from '../../../lib/availability'
 import { getAllowOverbooking } from '../../../lib/bookingRules'
 import './add-item-panel.css'
 import {
@@ -344,7 +343,6 @@ export function AddItemPanel({
   // header comment: Settings and this panel are never mounted together.
   const [allowOverbooking] = useState<boolean>(() => getAllowOverbooking())
   const [overrideUnit, setOverrideUnit] = useState<EquipmentResult | null>(null)
-  const [subRentModalUnit, setSubRentModalUnit] = useState<EquipmentResult | null>(null)
   const [availability, setAvailability] = useState<AvailabilityLevel | 'any'>('any')
   const [sort, setSort] = useState<SortKey>('recommended')
   const [filtersExpanded, setFiltersExpanded] = useState(false)
@@ -353,6 +351,7 @@ export function AddItemPanel({
   const [scannerOpen, setScannerOpen] = useState(false)
   const [scanCode, setScanCode] = useState('')
   const [scanBusy, setScanBusy] = useState(false)
+  const [subRentalUnavailable, setSubRentalUnavailable] = useState(false)
   const [scanMessage, setScanMessage] = useState<{ error: boolean; text: string } | null>(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [preview, setPreview] = useState<BundleRecord | null>(null)
@@ -528,13 +527,13 @@ export function AddItemPanel({
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null
       if (rootRef.current && !rootRef.current.contains(target)) {
-        if (preview !== null || overrideUnit !== null || subRentModalUnit !== null) return
+        if (preview !== null || overrideUnit !== null) return
         setOpen(false)
       }
     }
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
-  }, [open, preview, overrideUnit, subRentModalUnit])
+  }, [open, preview, overrideUnit])
 
   /** ⌘K / Ctrl+K — open the panel and put the cursor in the field. */
   useEffect(() => {
@@ -569,51 +568,11 @@ export function AddItemPanel({
     [existing, onAdd, days],
   )
 
-  const addSubRentEquipment = useCallback(
-    (e: EquipmentResult, partner = SUBRENTAL_PARTNERS[0] as string, customRate?: Paisa, supplierCost?: number) => {
-      const draft = equipmentLineDraft(e, days)
-      const subDraft: BookingLineDraft = {
-        ...draft,
-        id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        clientUuid: generateClientUuid(),
-        lineType: 'Sub-rental',
-        category: 'Sub-rental',
-        name: partner ? `${e.name} (${partner})` : `${e.name} (Sub-rental)`,
-        serial: '-',
-        location: partner ? `Vendor: ${partner}` : 'Sub-rented',
-        ratePaisa: customRate ?? draft.ratePaisa,
-        days: Math.max(1, days || 1),
-        qty: 1,
-        committedTo: '—',
-        supplier: partner,
-        ...(supplierCost !== undefined ? { supplierCost } : {}),
-      }
-      onAdd([subDraft], { kind: e.kind, id: subDraft.id, name: subDraft.name })
-    },
-    [days, onAdd],
-  )
-
-  const handleAddCustomSubRental = useCallback(
-    (name: string, partner: string, rateRupees: number, qty: number) => {
-      const draft: BookingLineDraft = {
-        id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        clientUuid: generateClientUuid(),
-        lineType: 'Sub-rental',
-        category: 'Sub-rental',
-        name: partner ? `${name} (${partner})` : `${name} (Sub-rental)`,
-        serial: '-',
-        location: partner ? `Vendor: ${partner}` : 'Sub-rented',
-        ratePaisa: rupees(rateRupees) as Paisa,
-        days: Math.max(1, days || 1),
-        qty: Math.max(1, qty),
-        discountPct: 0,
-        committedTo: '—',
-        supplier: partner,
-      }
-      onAdd([draft], { kind: 'equipment', id: draft.id, name: draft.name })
-    },
-    [days, onAdd],
-  )
+  // Supplier details are not yet preserved by the booking save path. Refuse
+  // additions until they can be saved, instead of inventing a supplier.
+  const addSubRentEquipment = useCallback((_equipment: EquipmentResult, _partner?: string, _rate?: Paisa, _cost?: number) => {
+    setSubRentalUnavailable(true)
+  }, [])
 
   const addBundle = useCallback(
     (b: BundleResult) => {
@@ -1158,25 +1117,11 @@ export function AddItemPanel({
             </p>
           </div>
 
+          {subRentalUnavailable && <p role="alert">Sub-rental cannot be added here yet because supplier details cannot be saved. Use the booking's sub-rental action after creating it.</p>}
+
           {/* ── Results ──────────────────────────────────────────────── */}
           <div ref={resultsRef} className="new-rental-equipment-catalogue-results" style={{ maxHeight: 400, minHeight: 0, overflowY: 'auto', flex: '1 1 auto', overscrollBehavior: 'contain' }}>
-            {tab === 'sub-rentals' &&
-              (inputStyle ? (
-                <SubRentalQuickAdd
-                  initialName={query.trim()}
-                  days={days}
-                  {...(showPrices !== undefined ? { showPrices } : {})}
-                  inputStyle={inputStyle}
-                  onAddSubRental={handleAddCustomSubRental}
-                />
-              ) : (
-                <SubRentalQuickAdd
-                  initialName={query.trim()}
-                  days={days}
-                  {...(showPrices !== undefined ? { showPrices } : {})}
-                  onAddSubRental={handleAddCustomSubRental}
-                />
-              ))}
+            {tab === 'sub-rentals' && <p role="status">Sub-rental cannot be added here yet because supplier details cannot be saved. Use the booking's sub-rental action after creating it.</p>}
             <ul
               id={listboxId}
               role="listbox"
@@ -1279,8 +1224,6 @@ export function AddItemPanel({
                                   }
                                 }}
                                 onPickSimilar={(unit) => addEquipment(unit)}
-                                onSubRent={(unit, partner, customRate, supplierCost) => addSubRentEquipment(unit, partner, customRate, supplierCost)}
-                                onOpenSubRentModal={(unit) => setSubRentModalUnit(unit)}
                                 onRequestOverride={(unit) => setOverrideUnit(unit)}
                               />
                             )
@@ -1414,258 +1357,13 @@ export function AddItemPanel({
         showPrices={showPrices}
         onClose={() => setOverrideUnit(null)}
         onOverbook={(unit) => addEquipment(unit)}
-        onSubRent={(unit, partner, customRate, supplierCost) => addSubRentEquipment(unit, partner, customRate, supplierCost)}
       />
 
-      {/* T3-13: Sub-rent from partner dialog for fully booked items */}
-      <SubRentalPartnerModal
-        isOpen={subRentModalUnit !== null}
-        unit={subRentModalUnit}
-        days={days}
-        showPrices={showPrices}
-        onClose={() => setSubRentModalUnit(null)}
-        onConfirm={(unit, partner, customRate, supplierCost) => addSubRentEquipment(unit, partner, customRate, supplierCost)}
-      />
     </div>
   )
 }
 
 /* ── Sub-Rental Quick Add Component ─────────────────────────────────────── */
-
-function SubRentalQuickAdd({
-  initialName,
-  days,
-  showPrices,
-  inputStyle,
-  onAddSubRental,
-}: {
-  initialName?: string | undefined
-  days: number
-  showPrices?: boolean | undefined
-  inputStyle?: CSSProperties | undefined
-  onAddSubRental: (name: string, partner: string, rateRupees: number, qty: number) => void
-}) {
-  const [name, setName] = useState(initialName ?? '')
-  const [partner, setPartner] = useState('GearHouse KTM')
-  const [customPartner, setCustomPartner] = useState('')
-  const [rate, setRate] = useState('5000')
-  const [qty, setQty] = useState(1)
-
-  useEffect(() => {
-    if (initialName) setName(initialName)
-  }, [initialName])
-
-  const effectivePartner = partner === 'Custom' ? customPartner : partner
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim()) return
-    onAddSubRental(name.trim(), effectivePartner.trim(), Number(rate) || 0, Math.max(1, qty))
-    setName('')
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        margin: 'var(--sp-xs) var(--sp-xs) var(--sp-sm)',
-        padding: '12px 14px',
-        borderRadius: 'var(--r-card)',
-        background: 'var(--card2)',
-        border: '1px solid var(--border)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{ display: 'inline-flex', color: 'var(--primary)' }}>
-            <Icon name="box" size={15} />
-          </span>
-          <span style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>
-            Cross-Hire / Sub-Rental From Partner
-          </span>
-          <span
-            style={{
-              padding: '1px 6px',
-              borderRadius: 'var(--r-badge)',
-              fontSize: '11px',
-              fontWeight: 700,
-              background: 'var(--st-primary-bg)',
-              color: 'var(--st-primary-fg)',
-            }}
-          >
-            Sub-Rental
-          </span>
-        </div>
-        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-          {days} day{days === 1 ? '' : 's'} · Bypasses in-house inventory
-        </span>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, alignItems: 'end' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '2 1 180px' }}>
-          <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
-            Equipment / Item Name
-          </label>
-          <input
-            type="text"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. RED V-Raptor 8K VV, Master Prime 50mm"
-            style={{
-              ...inputStyle,
-              width: '100%',
-              height: 36,
-              padding: '0 10px',
-              borderRadius: 'var(--r-input)',
-              border: '1px solid var(--border)',
-              background: 'var(--card)',
-              color: 'var(--text)',
-              fontSize: 'var(--t-meta)',
-            }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1.5 1 140px' }}>
-          <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
-            Partner / Supplier
-          </label>
-          <select
-            value={partner}
-            onChange={(e) => setPartner(e.target.value)}
-            style={{
-              ...inputStyle,
-              width: '100%',
-              height: 36,
-              padding: '0 8px',
-              borderRadius: 'var(--r-input)',
-              border: '1px solid var(--border)',
-              background: 'var(--card)',
-              color: 'var(--text)',
-              fontSize: 'var(--t-meta)',
-            }}
-          >
-            <option value="GearHouse KTM">GearHouse KTM</option>
-            <option value="Kathmandu Cinema Works">Kathmandu Cinema Works</option>
-            <option value="Everest Cine Rentals">Everest Cine Rentals</option>
-            <option value="Pokhara Film Gear">Pokhara Film Gear</option>
-            <option value="Custom">Custom / Other Partner…</option>
-          </select>
-        </div>
-
-        {partner === 'Custom' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1.5 1 140px' }}>
-            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
-              Partner Name
-            </label>
-            <input
-              type="text"
-              required
-              value={customPartner}
-              onChange={(e) => setCustomPartner(e.target.value)}
-              placeholder="e.g. CineLab Nepal"
-              style={{
-                ...inputStyle,
-                width: '100%',
-                height: 36,
-                padding: '0 10px',
-                borderRadius: 'var(--r-input)',
-                border: '1px solid var(--border)',
-                background: 'var(--card)',
-                color: 'var(--text)',
-                fontSize: 'var(--t-meta)',
-              }}
-            />
-          </div>
-        )}
-
-        {showPrices && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '1 1 90px' }}>
-            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
-              Rate / Day (Rs.)
-            </label>
-            <input
-              type="number"
-              min={0}
-              step={100}
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              style={{
-                ...inputStyle,
-                width: '100%',
-                height: 36,
-                padding: '0 10px',
-                borderRadius: 'var(--r-input)',
-                border: '1px solid var(--border)',
-                background: 'var(--card)',
-                color: 'var(--text)',
-                fontSize: 'var(--t-meta)',
-              }}
-            />
-          </div>
-        )}
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: '0.8 1 65px' }}>
-          <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
-            Qty
-          </label>
-          <input
-            type="number"
-            min={1}
-            max={99}
-            value={qty}
-            onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-            style={{
-              ...inputStyle,
-              width: '100%',
-              height: 36,
-              padding: '0 10px',
-              borderRadius: 'var(--r-input)',
-              border: '1px solid var(--border)',
-              background: 'var(--card)',
-              color: 'var(--text)',
-              fontSize: 'var(--t-meta)',
-            }}
-          />
-        </div>
-
-        <div style={{ flex: '1 1 130px' }}>
-          <button
-            type="submit"
-            className="press"
-            style={{
-              position: 'relative',
-              width: '100%',
-              height: 38,
-              minHeight: TOUCH,
-              padding: '0 12px',
-              borderRadius: 'var(--r-btn)',
-              border: 'none',
-              background: 'var(--primary)',
-              color: '#fff',
-              fontSize: 'var(--t-meta)',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
-          >
-            <TouchInset />
-            <Icon name="plus" size={14} />
-            Add Sub-Rental
-          </button>
-        </div>
-      </div>
-    </form>
-  )
-}
-
-/* ── Rows ──────────────────────────────────────────────────────────────── */
 
 /**
  * §31 — name, "Bundle · Category · N Items", price/day, availability, the
@@ -1835,7 +1533,6 @@ function EquipmentGroupRow({
   onPickUnit,
   onPickSimilar,
   onSubRent,
-  onOpenSubRentModal,
   onRequestOverride,
 }: {
   id: string
@@ -1852,7 +1549,6 @@ function EquipmentGroupRow({
   onPickUnit: (unit: EquipmentResult) => void
   onPickSimilar?: (unit: EquipmentResult) => void
   onSubRent?: (unit: EquipmentResult, partner?: string, customRate?: Paisa, supplierCost?: number) => void
-  onOpenSubRentModal?: (unit: EquipmentResult) => void
   /** A booked/maintenance chip while the valve is on opens the override dialog instead of adding directly. */
   onRequestOverride: (unit: EquipmentResult) => void
 }) {
@@ -2298,66 +1994,7 @@ function EquipmentGroupRow({
                   2. Sub-rent from a partner:
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="press"
-                  aria-label={`Sub-rent ${group.name} from ${SUBRENTAL_PARTNERS[0]}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const target = group.units[0]
-                    if (target && onSubRent) onSubRent(target, SUBRENTAL_PARTNERS[0])
-                  }}
-                  style={{
-                    position: 'relative',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    minHeight: 30,
-                    padding: '3px 10px',
-                    borderRadius: 'var(--r-btn, 6px)',
-                    border: '1px solid var(--primary, #2563eb)',
-                    background: 'var(--primary, #2563eb)',
-                    color: '#fff',
-                    fontSize: 'var(--t-meta, 12px)',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <TouchInset />
-                  <Icon name="box" size={12} />
-                  <span>+ Sub-rent ({SUBRENTAL_PARTNERS[0]})</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="press"
-                  aria-label={`Choose partner or supplier rate to sub-rent ${group.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const target = group.units[0]
-                    if (target && onOpenSubRentModal) onOpenSubRentModal(target)
-                  }}
-                  style={{
-                    position: 'relative',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    minHeight: 30,
-                    padding: '3px 10px',
-                    borderRadius: 'var(--r-btn, 6px)',
-                    border: '1px solid var(--border, #d1d5db)',
-                    background: 'var(--card2, #f9fafb)',
-                    color: 'var(--text, #111)',
-                    fontSize: 'var(--t-meta, 12px)',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <TouchInset />
-                  <span>Choose partner / rate…</span>
-                </button>
-              </div>
+              <p role="status">Sub-rental cannot be added here yet because supplier details cannot be saved. Use the booking's sub-rental action after creating it.</p>
             </div>
           </div>
         </div>

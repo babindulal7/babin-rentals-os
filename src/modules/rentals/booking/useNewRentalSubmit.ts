@@ -185,6 +185,9 @@ export function useNewRentalSubmit({
    */
   const createQuoteFromForm = useCallback(
     async (ctx: NonNullable<ReturnType<typeof dispatchContext>>, pressKey: string) => {
+      if (lines.some((line) => line.lineType === 'Sub-rental')) {
+        throw new Error('Sub-rental details cannot be saved from this screen yet. Remove the sub-rental line and use the booking sub-rental action after creating it.')
+      }
       const clientDbId = client?.dbId
       if (!clientDbId || !pickupAt || !returnAt) {
         throw new Error('this booking has no client record or no usable dates')
@@ -410,6 +413,11 @@ export function useNewRentalSubmit({
       return
     }
 
+    if (lines.some((line) => line.lineType === 'Sub-rental')) {
+      setActionError('Sub-rental details cannot be saved from this screen yet. Remove the sub-rental line and use the booking sub-rental action after creating it.')
+      return
+    }
+
     confirming.current = true
     setActionError(null)
     setSaveState('saving')
@@ -514,6 +522,11 @@ export function useNewRentalSubmit({
     const ctx = dispatchContext()
     if (!ctx) {
       setActionError('Not saved — you are not signed in, so this quote cannot be attributed to anyone. Sign in and save again.')
+      return
+    }
+
+    if (lines.some((line) => line.lineType === 'Sub-rental')) {
+      setActionError('Sub-rental details cannot be saved from this screen yet. Remove the sub-rental line and use the booking sub-rental action after creating it.')
       return
     }
 

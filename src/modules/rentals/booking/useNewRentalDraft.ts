@@ -427,6 +427,10 @@ export function useNewRentalDraft({
 
   const saveQuote = useCallback(async () => {
     if (!quoteSnapshot || quoteSaving.current) return
+    if (draftData.lines.some((line) => line.lineType === 'Sub-rental')) {
+      setActionError('This booking contains a sub-rental whose supplier details cannot be saved from this screen. No changes were saved.')
+      return
+    }
     const ctx = dispatchContext()
     if (!ctx) return
     quoteSaving.current = true
@@ -497,6 +501,10 @@ export function useNewRentalDraft({
   const saveDraft = useCallback(
     (options?: { silent?: boolean }) => {
       if (editBookingId || saveState === 'saving') return
+      if (draftData.lines.some((line) => line.lineType === 'Sub-rental')) {
+        setActionError('Sub-rental details cannot be saved from this screen yet. Remove the sub-rental line before saving.')
+        return
+      }
       const ctx = dispatchContext()
       if (!ctx) {
         setActionError('Not saved — you are not signed in, so this draft cannot be attributed to anyone. Sign in and save again.')

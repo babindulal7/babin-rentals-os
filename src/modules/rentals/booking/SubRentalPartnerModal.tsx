@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import Icon from '../../../components/ui/Icon'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
-import { SUBRENTAL_PARTNERS } from '../../../lib/availability'
 import { rupees, type Paisa } from '../../../lib/money'
 import type { EquipmentResult } from './itemCatalogue'
 
@@ -23,24 +22,22 @@ export function SubRentalPartnerModal({
   showPrices = false,
   onConfirm,
 }: SubRentalPartnerModalProps) {
-  const [partner, setPartner] = useState<string>(SUBRENTAL_PARTNERS[0])
-  const [customPartner, setCustomPartner] = useState('')
+  const [partner, setPartner] = useState<string>('')
   const [rateRupees, setRateRupees] = useState<string>('')
   const [costRupees, setCostRupees] = useState<string>('')
 
   useEffect(() => {
     if (isOpen && unit) {
-      setPartner(SUBRENTAL_PARTNERS[0])
-      setCustomPartner('')
+      setPartner('')
       const defaultRate = unit.ratePaisa ? Math.round(unit.ratePaisa / 100) : 0
-      setRateRupees(defaultRate > 0 ? String(defaultRate) : '5000')
+      setRateRupees(defaultRate > 0 ? String(defaultRate) : '')
       setCostRupees('')
     }
   }, [isOpen, unit])
 
   if (!unit) return null
 
-  const effectivePartner = partner === 'Custom' ? customPartner.trim() : partner
+  const effectivePartner = partner.trim()
   const isValid = Boolean(effectivePartner)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -78,58 +75,16 @@ export function SubRentalPartnerModal({
           >
             Partner / External Supplier
           </label>
-          <select
+          <input
             id="subrent-partner-select"
+            type="text"
+            required
             value={partner}
             onChange={(e) => setPartner(e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: 40,
-              padding: '0 10px',
-              borderRadius: 'var(--r-input, 6px)',
-              border: '1px solid var(--border, #d1d5db)',
-              background: 'var(--card, #fff)',
-              color: 'var(--text, #111)',
-              fontSize: 'var(--t-meta, 13px)',
-            }}
-          >
-            {SUBRENTAL_PARTNERS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-            <option value="Custom">Custom / Other Partner…</option>
-          </select>
+            autoComplete="off"
+            style={{ width: '100%', minHeight: 44, padding: '0 10px', borderRadius: 'var(--r-input, 6px)', border: '1px solid var(--border, #d1d5db)', background: 'var(--card, #fff)', color: 'var(--text, #111)', fontSize: 'var(--t-meta, 13px)' }}
+          />
         </div>
-
-        {partner === 'Custom' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label
-              htmlFor="subrent-custom-partner"
-              style={{ fontSize: 'var(--t-meta, 12px)', fontWeight: 600, color: 'var(--text, #111)' }}
-            >
-              Custom Partner Name
-            </label>
-            <input
-              id="subrent-custom-partner"
-              type="text"
-              required
-              value={customPartner}
-              onChange={(e) => setCustomPartner(e.target.value)}
-              placeholder="e.g. CineLab Nepal"
-              style={{
-                width: '100%',
-                minHeight: 40,
-                padding: '0 10px',
-                borderRadius: 'var(--r-input, 6px)',
-                border: '1px solid var(--border, #d1d5db)',
-                background: 'var(--card, #fff)',
-                color: 'var(--text, #111)',
-                fontSize: 'var(--t-meta, 13px)',
-              }}
-            />
-          </div>
-        )}
 
         {/* Money gating (Law 6) — visible to money roles only */}
         {showPrices && (

@@ -50,14 +50,6 @@ async function typeInput(input: HTMLInputElement, value: string) {
   })
 }
 
-async function changeSelect(select: HTMLSelectElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!.set!
-  await act(async () => {
-    setter.call(select, value)
-    select.dispatchEvent(new Event('change', { bubbles: true }))
-  })
-}
-
 describe('SubRentalPartnerModal (T3-13)', () => {
   let container: HTMLDivElement
   let root: Root
@@ -93,9 +85,9 @@ describe('SubRentalPartnerModal (T3-13)', () => {
       )
     })
 
-    const partnerSelect = document.querySelector<HTMLSelectElement>('#subrent-partner-select')!
-    expect(partnerSelect).toBeTruthy()
-    expect(partnerSelect.value).toBe('GearHouse KTM')
+    const partnerInput = document.querySelector<HTMLInputElement>('#subrent-partner-select')!
+    expect(partnerInput.value).toBe('')
+    await typeInput(partnerInput, 'Real supplier')
 
     // Prices must not exist in DOM for non-money roles
     expect(document.querySelector('#subrent-client-rate')).toBeNull()
@@ -111,7 +103,7 @@ describe('SubRentalPartnerModal (T3-13)', () => {
       confirmBtn.click()
     })
 
-    expect(onConfirm).toHaveBeenCalledWith(sampleUnit, 'GearHouse KTM', undefined, undefined)
+    expect(onConfirm).toHaveBeenCalledWith(sampleUnit, 'Real supplier', undefined, undefined)
   })
 
   it('shows prices and cost inputs for money-authorized roles and permits custom partners', async () => {
@@ -137,14 +129,8 @@ describe('SubRentalPartnerModal (T3-13)', () => {
     expect(rateInput.value).toBe('5000')
     expect(costInput).toBeTruthy()
 
-    // Change partner to Custom
-    const partnerSelect = document.querySelector<HTMLSelectElement>('#subrent-partner-select')!
-    await changeSelect(partnerSelect, 'Custom')
-
-    const customInput = document.querySelector<HTMLInputElement>('#subrent-custom-partner')!
-    expect(customInput).toBeTruthy()
-
-    await typeInput(customInput, 'CineLab Kathmandu')
+    const partnerInput = document.querySelector<HTMLInputElement>('#subrent-partner-select')!
+    await typeInput(partnerInput, 'CineLab Kathmandu')
     await typeInput(rateInput, '6000')
     await typeInput(costInput, '4500')
 
