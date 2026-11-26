@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import Icon from '../../components/ui/Icon'
@@ -21,7 +21,7 @@ import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel, { dashboardAction } from './DashboardMovementPanel'
 import LegacyExportCard from './LegacyExportCard'
 import RoleTaskCockpit from './RoleTaskCockpit'
-import { CounterSaleModal } from '../sales/CounterSaleModal'
+const CounterSaleModal = lazy(() => import('../sales/CounterSaleModal').then(m => ({ default: m.CounterSaleModal })))
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -922,14 +922,16 @@ export default function Today() {
       </details>
 
       {showCounterSale && (
-        <CounterSaleModal
-          isOpen={showCounterSale}
-          onClose={() => setShowCounterSale(false)}
-          onSuccess={() => {
-            setShowCounterSale(false)
-            refetchMovement()
-          }}
-        />
+        <Suspense fallback={null}>
+          <CounterSaleModal
+            isOpen={showCounterSale}
+            onClose={() => setShowCounterSale(false)}
+            onSuccess={() => {
+              setShowCounterSale(false)
+              refetchMovement()
+            }}
+          />
+        </Suspense>
       )}
 
     </PageShell>

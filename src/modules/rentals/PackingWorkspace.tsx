@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
@@ -14,7 +14,8 @@ import { PageBody } from '../../components/ui/PageBody'
 import { STATUS, jobStateChip } from '../../lib/status'
 import { statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
-import { BarcodeScannerModal, type ScanOutcome } from '../../components/ui/BarcodeScannerModal'
+import type { ScanOutcome } from '../../components/ui/BarcodeScannerModal'
+const BarcodeScannerModal = lazy(() => import('../../components/ui/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })))
 import { Input } from '../../components/ui/Input'
 import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { useFloorViewport } from '../operations/floorPanelContext'
@@ -2355,18 +2356,22 @@ export default function PackingWorkspace({
               />
             )}
 
-            <BarcodeScannerModal
-              isOpen={showScanner}
-              onClose={() => setShowScanner(false)}
-              mode="pack"
-              bookingId={id}
-              items={scannableUnits}
-              /* PK-09 — the modal shows THIS answer: one scan, one verdict,
-                 in the place the operator is looking. Returning it is what
-                 stops the modal beeping success over a "already packed" the
-                 rail behind it recorded. */
-              onItemScanned={(item) => pack(item.id, 'scan')}
-            />
+            {showScanner && (
+              <Suspense fallback={null}>
+                <BarcodeScannerModal
+                  isOpen={showScanner}
+                  onClose={() => setShowScanner(false)}
+                  mode="pack"
+                  bookingId={id}
+                  items={scannableUnits}
+                  /* PK-09 — the modal shows THIS answer: one scan, one verdict,
+                     in the place the operator is looking. Returning it is what
+                     stops the modal beeping success over a "already packed" the
+                     rail behind it recorded. */
+                  onItemScanned={(item) => pack(item.id, 'scan')}
+                />
+              </Suspense>
+            )}
 
             {showAddConsumable && floor && user && (
               <AddConsumableModal

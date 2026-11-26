@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, PageHeader, KpiStrip } from '../../components/ui/Page'
@@ -9,7 +9,7 @@ import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Unavailable } from '../../components/ui/Unavailable'
-import { BarcodeScannerModal } from '../../components/ui/BarcodeScannerModal'
+const BarcodeScannerModal = lazy(() => import('../../components/ui/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })))
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
 import { canWriteFloor } from '../../lib/rbac'
@@ -1075,21 +1075,25 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
         </>
       )}
 
-      <BarcodeScannerModal
-        isOpen={showScannerModal}
-        onClose={() => setShowScannerModal(false)}
-        mode="reset"
-        items={items.rows.map((it) => ({
-          id: it.id,
-          name: titleOf(it),
-          ...(it.serialNo ? { serial: it.serialNo } : {}),
-          ...(it.assetTag ? { assetTag: it.assetTag } : {}),
-        }))}
-        matchLabel="matched — code copied to the scan field; press Scan to check it against the manifest (nothing saved)"
-        onItemScanned={(item) => {
-          setScanInput(item.serial ?? item.assetTag ?? item.id)
-        }}
-      />
+      {showScannerModal && (
+        <Suspense fallback={null}>
+          <BarcodeScannerModal
+            isOpen={showScannerModal}
+            onClose={() => setShowScannerModal(false)}
+            mode="reset"
+            items={items.rows.map((it) => ({
+              id: it.id,
+              name: titleOf(it),
+              ...(it.serialNo ? { serial: it.serialNo } : {}),
+              ...(it.assetTag ? { assetTag: it.assetTag } : {}),
+            }))}
+            matchLabel="matched — code copied to the scan field; press Scan to check it against the manifest (nothing saved)"
+            onItemScanned={(item) => {
+              setScanInput(item.serial ?? item.assetTag ?? item.id)
+            }}
+          />
+        </Suspense>
+      )}
       </div>
     </PageShell>
   )

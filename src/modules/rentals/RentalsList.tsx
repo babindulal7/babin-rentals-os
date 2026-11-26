@@ -90,7 +90,7 @@ import { FloatingBulkActionBar } from '../../components/ui/QuickActionPanel'
 import { BooqableRentalFilterDrawer } from '../../components/ui/BooqableRentalFilterDrawer'
 import { FastReturnModal } from './modals/FastReturnModal'
 import { BarcodeLookupModal } from './modals/BarcodeLookupModal'
-import { CounterSaleModal } from '../sales/CounterSaleModal'
+const CounterSaleModal = lazy(() => import('../sales/CounterSaleModal').then(m => ({ default: m.CounterSaleModal })))
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { captureError } from '../../lib/monitoring'
 import { TouchTarget } from '../../components/ui/TouchTarget'
@@ -3144,20 +3144,24 @@ export default function RentalsList() {
         bookingNo={summaryBookingNo ?? ''}
       />
 
-      <CounterSaleModal
-        isOpen={isCounterSale}
-        onClose={() => {
-          const p = new URLSearchParams(rawParams)
-          p.delete('action')
-          setRawParams(p)
-        }}
-        onSuccess={() => {
-          refreshAll()
-          const p = new URLSearchParams(rawParams)
-          p.delete('action')
-          setRawParams(p)
-        }}
-      />
+      {isCounterSale && (
+        <Suspense fallback={null}>
+          <CounterSaleModal
+            isOpen={isCounterSale}
+            onClose={() => {
+              const p = new URLSearchParams(rawParams)
+              p.delete('action')
+              setRawParams(p)
+            }}
+            onSuccess={() => {
+              refreshAll()
+              const p = new URLSearchParams(rawParams)
+              p.delete('action')
+              setRawParams(p)
+            }}
+          />
+        </Suspense>
+      )}
 
     </PageShell>
   )
