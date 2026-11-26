@@ -914,3 +914,14 @@ export function canViewDayRoute(role: SystemRole | null | undefined): boolean {
   return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
 }
 
+/**
+ * Edit a unit's identity and location — asset tag, serial, rack, shelf, bin.
+ * Mirrors `product_units_update` RLS policy (0018): Owner, Admin, Manager, Warehouse.
+ * Status and condition are engine-owned (gate.unit_status.direct_write, 0114) and
+ * condition at intake only (PERMISSIONS §3.1 W6) — NOT editable here.
+ * RULING 2026-11-03 (T2-17): new capability for unit identity/location edits.
+ */
+export function canEditUnitIdentity(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse'
+}
+

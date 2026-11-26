@@ -329,6 +329,11 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'maintenance.complete':
       return rbac.canCompleteMaintenance(ctx.role);
 
+    // RULING 2026-11-03 (T2-17): edit unit identity and location (asset tag, serial, rack, shelf, bin).
+    // Mirrors product_units_update RLS policy (0018): Owner, Admin, Manager, Warehouse.
+    case 'inventory.edit_identity':
+      return rbac.canEditUnitIdentity(ctx.role);
+
     case 'client.merge':
       return rbac.canMergeClients(ctx.role);
 
