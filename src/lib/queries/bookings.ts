@@ -1,14 +1,12 @@
 import { supabase } from '../supabase'
 import { parseBookingNoSearch } from '../format'
 import { getSetting } from '../settingsStore'
-import { dayStartMinutesFrom, operationalDayBounds, operationalDayOf } from '../operationalDay'
+import { dayStartMinutesFrom } from '../operationalDay'
+import { nepalOperationalDay, startOfOperationalDay, endOfOperationalDay } from './dayBounds'
 import { rupees, type Paisa } from '../money'
 import { applyListFilters, type ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
-
-/** A bare calendar date, `YYYY-MM-DD` — what a date picker emits. */
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * # The bookings list query
@@ -1085,21 +1083,11 @@ function operationalDayStartMinutes(): number {
  * will build a screen that swallows it.
  */
 function nepalDay(dayAd: string): string {
-  if (DATE_ONLY.test(dayAd)) return dayAd
-
-  const t = Date.parse(dayAd)
-  if (Number.isNaN(t)) {
-    throw new Error(`Expected an AD day (YYYY-MM-DD) or a full ISO instant, got ${JSON.stringify(dayAd)}`)
-  }
-  // An instant resolves to the OPERATIONAL day it belongs to (D4): 05:30
-  // Kathmandu is still yesterday's day when the day starts at 06:00.
-  // `operationalDayOf` shifts by the day start and then asks the same
-  // `kathmanduCivil` the render side uses, so filter-day and label-day agree.
-  return operationalDayOf(dayAd, operationalDayStartMinutes())
+  return nepalOperationalDay(dayAd, operationalDayStartMinutes())
 }
 
 function startOfDay(dayAd: string): string {
-  return operationalDayBounds(nepalDay(dayAd), operationalDayStartMinutes()).fromAd
+  return startOfOperationalDay(dayAd, operationalDayStartMinutes())
 }
 
 /**
@@ -1118,7 +1106,7 @@ function startOfDay(dayAd: string): string {
  * with `00:00` it degrades to the old same-day `T23:59:59.999` bound exactly.
  */
 function endOfDay(dayAd: string): string {
-  return operationalDayBounds(nepalDay(dayAd), operationalDayStartMinutes()).toAd
+  return endOfOperationalDay(dayAd, operationalDayStartMinutes())
 }
 
 /**

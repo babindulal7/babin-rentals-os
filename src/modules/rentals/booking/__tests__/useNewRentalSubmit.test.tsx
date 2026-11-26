@@ -130,11 +130,16 @@ describe('useNewRentalSubmit', () => {
     if (scenario === 'request link rejected') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: false, requestId: 'request-1', bookingId: 'test-booking-id-123' })
     if (scenario === 'create retry') vi.mocked(createRental).mockRejectedValueOnce(new Error('Connection interrupted'))
     if (scenario === 'payment hold') vi.mocked(createBookingPaymentLink).mockRejectedValueOnce(new Error('Online payment links are temporarily unavailable.'))
+    const hasRequestId =
+      scenario === 'request link retry' ||
+      scenario === 'request link mismatch' ||
+      scenario === 'request link rejected' ||
+      scenario === 'payment hold'
     const overrides: Partial<UseNewRentalSubmitOptions> = scenario === 'blocked' ? { confirmBlocked: true }
       : scenario === 'no session' ? { dispatchContext: () => null }
       : scenario === 'missing client' ? { client: null }
       : scenario === 'draft link retry' ? { draftId: 'draft-1' }
-      : scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected' ? { requestId: 'request-1' } : {}
+      : hasRequestId ? { requestId: 'request-1' } : {}
 
     function TestComponent() {
       submitHook = useNewRentalSubmit({
@@ -247,7 +252,11 @@ describe('useNewRentalSubmit', () => {
           expect(input).toEqual({ requestId: 'request-1', bookingId: 'test-booking-id-123' })
         }
       }
-      expect(createBookingPaymentLink).toHaveBeenCalledExactlyOnceWith('test-booking-id-123')
+      if (hasRequestId) {
+        expect(createBookingPaymentLink).toHaveBeenCalledExactlyOnceWith('test-booking-id-123')
+      } else {
+        expect(createBookingPaymentLink).not.toHaveBeenCalled()
+      }
       // Toast must be dispatched per Law 12
       expect(showSuccessToast).toHaveBeenCalledTimes(1)
       expect(showSuccessToast).toHaveBeenCalledWith('Booking Confirmed', 'Rental 6 is now Booked')
@@ -259,9 +268,17 @@ describe('useNewRentalSubmit', () => {
       expect(setConfirmedSuccess).toHaveBeenCalledWith(expect.objectContaining({
         bookingId: 'test-booking-id-123',
         bookingNo: '6',
-        paymentToken: scenario === 'payment hold' ? undefined : 'test-payment-token',
-        paymentLink: scenario === 'payment hold' ? undefined : `${window.location.origin}/pay/link/test-payment-token`,
+        ...(hasRequestId && scenario !== 'payment hold'
+          ? {
+              paymentToken: 'test-payment-token',
+              paymentLink: `${window.location.origin}/pay/link/test-payment-token`,
+            }
+          : {}),
       }))
+      if (!hasRequestId || scenario === 'payment hold') {
+        expect(setConfirmedSuccess.mock.calls[0]?.[0]).not.toHaveProperty('paymentToken')
+        expect(setConfirmedSuccess.mock.calls[0]?.[0]).not.toHaveProperty('paymentLink')
+      }
     } finally {
       await act(async () => {
         root.unmount()

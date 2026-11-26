@@ -35,16 +35,13 @@ import type { LineKind, SystemRole } from '../../types/database'
  * alternative; it was a third answer neither document allows. The modal is a
  * preview, and this module is what it previews.
  *
- * ## It MIRRORS `actions/finance/createInvoice.ts`, deliberately and by hand
+ * ## Preview over `_v` views while `createInvoice` writes via server RPC
  *
- * ⚠ Every read below is the same table, the same column list, the same filter
- * and the same shaping as `createInvoice.execute`. That duplication is not an
- * oversight and it is not free — **the two must be changed together.** The
- * alternative was to have the action import this module, which would have meant
- * editing `createInvoice.ts`; that file is being changed elsewhere in the same
- * window and a merge there costs more than this comment does. Fold this into the
- * action the moment both are quiet.
- * TODO(refactor): have `createInvoice` build its lines from `billableLines()`.
+ * ⚠ `actions/finance/createInvoice.ts` now allocates and inserts the Draft
+ * invoice and its `invoice_lines` atomically on the server via `.rpc('create_invoice')`
+ * (`0096_create_invoice_rpc.sql`) so partial invoice headers cannot exist and
+ * restricted rate columns never enter browser write payloads. `billableLines()`
+ * stays here as the read-only modal preview over `_v` views.
  *
  * The differences, both stated rather than silent:
  *

@@ -57,6 +57,8 @@ export type PackingLineState = 'Pending' | 'Packed' | 'Partial' | 'Missing' | 'N
 export type PhysicalCondition = 'Excellent' | 'Good' | 'Fair' | 'Damaged' | 'Not Inspected'
 export type SignatureRole = 'Receiver' | 'Warehouse staff' | 'Driver' | 'Witness' | 'Returning person'
 export type CollateralType = 'citizenship_card' | 'passport' | 'driving_licence' | 'other'
+export type ClientFlagType = 'VIP' | 'Blocked' | 'Upgrade Candidate'
+export type FlagSource = 'Manual' | 'System'
 
 export type ClientIdDocumentType =
   | 'citizenship_card'
@@ -415,48 +417,122 @@ export interface Database {
         Row: {
           id: string
           client_uuid: string
-          client_no: string
-          type_parent: ClientTypeParent
-          organisation_subtype: string | null
-          company_name: string | null
-          full_name: string
-          email: string
-          mobile: string
-          pan_vat_no: string | null
-          address: string
-          city: string
-          status: string
-          credit_limit: number
-          is_vip: boolean
-          is_blocked: boolean
+          client_code: string
+          name: string
+          phone: string
+          email: string | null
+          type_parent: ClientTypeParent | null
+          org_subtype: string | null
+          address_line: string | null
+          billing_address: string | null
+          business_registration: string | null
+          city: string | null
+          district: string | null
+          postal_code: string | null
+          country: string
+          pan_vat: string | null
+          notes: string | null
+          status: 'Active' | 'Deactivated'
+          client_since: string
+          approved_credit_limit: number | null
+          payment_terms: 'Immediate' | '7 days' | '15 days' | '30 days'
+          assigned_staff_id: string | null
+          is_staff: boolean
+          staff_user_id: string | null
+          marketing_photo_consent: boolean
+          merged_into_client_id: string | null
+          portal_default_language: 'NE' | 'EN'
+          preferred_contact_channels: Array<'Email' | 'SMS' | 'WhatsApp' | 'Push'>
+          professions: string[]
+          segments: string[]
+          tags: string[]
+          government_id_kind: 'Citizenship' | 'Passport' | null
+          government_id_number: string | null
+          referred_by_client_id: string | null
+          source: string | null
+          website: string | null
+          deactivated_at: string | null
+          deactivated_by: string | null
+          deactivation_reason: string | null
           created_at: string
           created_by: string | null
           updated_at: string
-          updated_by: string | null
         }
         Insert: {
           id?: string
           client_uuid: string
-          client_no: string
-          type_parent: ClientTypeParent
-          organisation_subtype?: string | null
-          company_name?: string | null
-          full_name: string
-          email: string
-          mobile: string
-          pan_vat_no?: string | null
-          address: string
-          city?: string
-          status?: string
-          credit_limit?: number
-          is_vip?: boolean
-          is_blocked?: boolean
+          client_code: string
+          name: string
+          phone: string
+          email?: string | null
+          type_parent?: ClientTypeParent | null
+          org_subtype?: string | null
+          address_line?: string | null
+          billing_address?: string | null
+          business_registration?: string | null
+          city?: string | null
+          district?: string | null
+          postal_code?: string | null
+          country?: string
+          pan_vat?: string | null
+          notes?: string | null
+          status?: 'Active' | 'Deactivated'
+          client_since?: string
+          approved_credit_limit?: number | null
+          payment_terms?: 'Immediate' | '7 days' | '15 days' | '30 days'
+          assigned_staff_id?: string | null
+          is_staff?: boolean
+          staff_user_id?: string | null
+          marketing_photo_consent?: boolean
+          merged_into_client_id?: string | null
+          portal_default_language?: 'NE' | 'EN'
+          preferred_contact_channels?: Array<'Email' | 'SMS' | 'WhatsApp' | 'Push'>
+          professions?: string[]
+          segments?: string[]
+          tags?: string[]
+          government_id_kind?: 'Citizenship' | 'Passport' | null
+          government_id_number?: string | null
+          referred_by_client_id?: string | null
+          source?: string | null
+          website?: string | null
+          deactivated_at?: string | null
+          deactivated_by?: string | null
+          deactivation_reason?: string | null
           created_at?: string
           created_by?: string | null
           updated_at?: string
-          updated_by?: string | null
         }
         Update: Partial<Database['public']['Tables']['clients']['Insert']>
+      }
+
+      client_flags: {
+        Row: {
+          id: string
+          client_uuid: string
+          client_id: string
+          flag_type: ClientFlagType
+          source: FlagSource
+          reason: string | null
+          created_at: string
+          created_by: string | null
+          removed_at: string | null
+          removed_by: string | null
+          removal_reason: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          client_id: string
+          flag_type: ClientFlagType
+          source?: FlagSource
+          reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          removal_reason?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['client_flags']['Insert']>
       }
 
       products: {

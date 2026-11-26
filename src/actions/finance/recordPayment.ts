@@ -1,6 +1,7 @@
 import { createAction, type ActionContext } from '../core'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { idempotentInsert } from '../../lib/dataAccess'
+import { invoiceTargetByNo } from '../../lib/queries/finance'
 import { supabase } from '../../lib/supabase'
 import { toRupees, type Paisa } from '../../lib/money'
 
@@ -191,17 +192,8 @@ type PaymentTarget = {
 }
 
 /**
- * Resolve an invoice number to the FK set a payment row requires.
- *
- * ⚠ **Why this read is here and not in `lib/queries/finance.ts`.** That module
- * owns invoice reads (Law 2's Single Query Rule) and is the correct long-term
- * home. It is outside this task's assigned file list, and another session is
- * live-editing this repo, so adding an export to it would be an edit that
- * session is not expecting — the same trade `queries/finance.ts:1455-1471`
- * records for its own duplicated day-boundary helpers. This is a four-column,
- * single-row lookup with no filters and no money conversion, so nothing about
- * the finance module's masking contract is being re-implemented.
- * TODO(refactor): hoist to `queries/finance.ts` as `invoiceTargetByNo()`.
+ * Resolve an invoice id or number to the FK set a payment row requires via
+ * `queries/finance.ts` (`invoiceTargetByNo`), then validate settlement rules.
  *
  * `branch_id` is the reason a lookup is unavoidable even if a screen did carry
  * uuids: `payments.branch_id` is NOT NULL, `InvoiceListRow` does not carry it,
@@ -222,16 +214,8 @@ async function resolvePaymentTarget(ref: {
   // and "No invoice with id <uuid> exists".
   const label = byId ? `with id ${ref.invoiceId}` : `numbered ${ref.invoiceNo}`
 
-  const base = supabase.from('invoices').select('id, booking_id, client_id, branch_id, invoice_no, voided_at, status, outstanding_amount')
-  const { data, error } = await (byId
-    ? base.eq('id', (ref.invoiceId as string).trim())
-    : base.eq('invoice_no', (ref.invoiceNo as string).trim())
-  ).maybeSingle()
-
-  if (error) {
-    throw new Error(`Could not look up invoice ${label}, so nothing was recorded: ${error.message}`)
-  }
-  if (!data) {
+  const row = await invoiceTargetByNo(ref)
+  if (!row) {
     // Reached by BookingDetail and UnifiedInbox, which hand this modal a
     // BOOKING number as the record id (their own TODO(decision): whether a
     // payment may be taken before an invoice exists is unruled). Saying which
@@ -239,17 +223,6 @@ async function resolvePaymentTarget(ref: {
     throw new Error(
       `No invoice ${label} exists, so this payment has nothing to settle and nothing was recorded.`,
     )
-  }
-
-  const row = data as unknown as {
-    id: string
-    booking_id: string
-    client_id: string
-    branch_id: string
-    invoice_no: string
-    voided_at: string | null
-    status?: string | null
-    outstanding_amount?: number | string | null
   }
 
   /*

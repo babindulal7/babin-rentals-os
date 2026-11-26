@@ -100,12 +100,16 @@ const profile = vi.hoisted(() => ({
   codesQueried: [] as string[],
 }))
 
-vi.mock('../../../lib/queries/clients', () => ({
-  getClientRecord: async (code: string) => {
-    profile.codesQueried.push(code)
-    return profile.value
-  },
-}))
+vi.mock('../../../lib/queries/clients', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../../../lib/queries/clients')>()
+  return {
+    ...real,
+    getClientRecord: async (code: string) => {
+      profile.codesQueried.push(code)
+      return profile.value
+    },
+  }
+})
 
 const { blockClientConfig, blockClient } = await import('../blockClient')
 

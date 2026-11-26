@@ -1121,6 +1121,26 @@ export async function resumeClientPaymentReminders(
   return Boolean(data)
 }
 
+/**
+ * Look up the active `'Blocked'` flag row id for a client, or `null` when
+ * unblocked. Uses the partial unique index `(client_id, flag_type) where
+ * removed_at is null`.
+ */
+export async function liveBlockFlagId(clientId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('client_flags')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('flag_type', 'Blocked')
+    .is('removed_at', null)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Could not read this client's block state, so nothing was changed: ${error.message}`)
+  }
+  return data ? (data as unknown as { id: string }).id : null
+}
+
 export {
   MEMBERSHIP_TIERS,
   TIER_TONE,

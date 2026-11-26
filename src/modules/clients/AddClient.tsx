@@ -20,7 +20,8 @@ import { useViewport } from '../../lib/device'
    unconditional, this field is fixed at +977, and gating it meant an address
    outside Nepal reopened the identical hole. */
 import { PHONE_LOCAL_RE, PHONE_REJECTION, canonicalPhone, phoneLocalDigits } from '../../lib/phone'
-import { sanitizeEmail, sanitizePan, sanitizePhone } from '../../lib/formForgiveness'
+import { PAN_RE, PAN_REJECTION, sanitizePan } from '../../lib/pan'
+import { sanitizeEmail, sanitizePhone } from '../../lib/formForgiveness'
 import { useAuth } from '../../lib/auth'
 import { useNetwork } from '../../lib/network'
 import { newClientUuid } from '../../lib/supabase'
@@ -81,30 +82,7 @@ const SEGMENTS: Segment[] = [
   'Commercial', 'Feature', 'YouTube / Creator', 'Education', 'Other'
 ]
 
-/**
- * PAN/VAT — the database's rule, not a second one.
- *
- * `clients_pan_vat_nine_digits` (`0005_clients.sql:93`) is
- * `check (pan_vat is null or pan_vat ~ '^[0-9]{9}$')`, and
- * `actions/clients/createClient.ts`'s `validate` already mirrors it as
- * `/^[0-9]{9}$/`, and so does `lib/booqable/map/clients.ts`'s
- * `PAN_VAT_FORMAT`, whose own comment says it mirrors the same CHECK. Counting
- * the CHECK itself this is the FOURTH copy of those nine digits — an earlier
- * draft of this note said "third" and had missed the Booqable mapper — and it
- * is deliberate: `validate()` below has to answer PER FIELD and BEFORE Save,
- * and the alternative was to keep letting the CHECK answer afterwards.
- *
- * ⚠ It must never become the looser copy. A client-side rule that admits what
- * the CHECK refuses only moves the refusal later; one that refuses what the
- * CHECK admits blocks a save the database would have taken. Both are worse
- * than no rule at all.
- *
- * TODO(refactor): hoist to a `lib/pan.ts` the way the phone rule lives in
- * `lib/phone.ts`, so the screens and the action read one constant.
- * `createClient.ts` is outside this change's files.
- */
-const PAN_RE = /^[0-9]{9}$/
-const PAN_REJECTION = 'PAN/VAT must be exactly nine digits.'
+/* PAN/VAT rule (`PAN_RE`, `PAN_REJECTION`) lives in `lib/pan.ts` alongside `lib/phone.ts`. */
 
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
 const MAX_FILE_BYTES = 10 * 1024 * 1024

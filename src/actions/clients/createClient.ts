@@ -3,6 +3,7 @@ import { EVENT_TYPES } from '../../events/eventBus'
 import { idempotentInsert } from '../../lib/dataAccess'
 import { supabase } from '../../lib/supabase'
 import { PHONE_STORED_RE, PHONE_REJECTION } from '../../lib/phone'
+import { isValidPan, PAN_REJECTION } from '../../lib/pan'
 
 /**
  * # CREATE_CLIENT — the write
@@ -297,8 +298,8 @@ export const createClientConfig: ActionConfig<CreateClientInput, CreateClientRes
       throw new Error('An Individual cannot carry an organisation type.')
     }
     const pan = input.panVat?.trim()
-    if (pan && !/^[0-9]{9}$/.test(pan)) {
-      throw new Error('PAN/VAT must be exactly nine digits.')
+    if (pan && !isValidPan(pan)) {
+      throw new Error(PAN_REJECTION)
     }
   },
 
@@ -383,7 +384,7 @@ export const createClientConfig: ActionConfig<CreateClientInput, CreateClientRes
 
     let result: Awaited<ReturnType<typeof idempotentInsert>>
     try {
-      result = await idempotentInsert('clients' as never, payload as never, {
+      result = await idempotentInsert('clients', payload, {
         /* 0130 arms Law 6 column grants on `clients` — a bare `RETURNING *`
            names the ungranted money columns (approved_credit_limit,
            payment_terms) and throws 42501 AFTER the row commits. Name the two
@@ -391,18 +392,6 @@ export const createClientConfig: ActionConfig<CreateClientInput, CreateClientRes
         returningColumns: 'id, client_code',
       })
     } catch (err) {
-      /*
-       * `'clients' as never` / `payload as never` — the same cast
-       * `lib/booqable/sync.ts:1772` and `:1790` already make, and for the same
-       * reason: `dataAccess` is generic over `src/types/database.ts`, whose
-       * hand-written `clients` entry describes columns this table does not have
-       * (`client_no`, `full_name`, `mobile`, `address`, `is_blocked`). The
-       * accurate generated types are in `src/types/supabase.ts`.
-       * `ClientInsertPayload` above is what actually typechecks the payload, so
-       * the cast defeats a wrong type rather than a right one.
-       * TODO(refactor): correct the `clients` entry in `src/types/database.ts`
-       * against the live catalog and drop both casts. Out of this task's files.
-       */
       const message = err instanceof Error ? err.message : String(err)
       throw new Error(describeInsertFailure(message, input, clientCode as string))
     }
