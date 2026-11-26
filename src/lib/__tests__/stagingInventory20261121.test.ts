@@ -73,10 +73,10 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
       '0267_database_enforced_aal2_money_roles.sql: absent from pinned inventory',
       '0268_sign_in_events_and_new_device.sql: absent from pinned inventory',
       '0269_mfa_provider_proof_and_session_safety.sql: absent from pinned inventory',
-      '0270_email_rpc_least_privilege_and_disable_mock_payment_sends.sql: absent from pinned inventory',
       '0270_reconcile_sign_in_events_immutability.sql: absent from pinned inventory',
       '0271_payment_allocation_service_only.sql: absent from pinned inventory',
       '0272_partner_stock_read_contract.sql: absent from pinned inventory',
+      '0273_email_rpc_least_privilege_and_disable_mock_payment_sends.sql: absent from pinned inventory',
       '20261124223021_backend_stabilization_search_paths_and_subrental_constraint.sql: absent from pinned inventory',
       '20261124223053_backend_stabilization_targeted_foreign_key_indexes.sql: absent from pinned inventory',
       '20261124223115_backend_stabilization_client_policy_initplans.sql: absent from pinned inventory',
@@ -84,5 +84,5 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     ])
     expect(result.sourceIdentityVerified).toBe(false)
     expect(result.status).toBe('BLOCKED_SOURCE_DRIFT')
-  })
+  }, 65_000)
 })

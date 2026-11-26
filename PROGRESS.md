@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-11-27 — Backend verification follow-up (lane-c/T7-10-backend-verification)
+
+### Did
+- Renumbered the later-merged email RPC hardening migration from 0270 to 0273. Updated its source references and the migration ledger. The preflight still blocks drift from the pinned 21 November inventory.
+- Restricted synthetic booking payment links to the explicit mock data source. Updated confirmation tests to exercise payment-link creation for online requests and preserve booking identity when checkout is held.
+- Gave the staging preflight test time to report its own subprocess timeout under Windows contention.
+
+### Ruled
+- No new product decision. The existing online-request-only link behavior and hosted checkout hold govern the tests.
+
+### Verified
+- The five focused suites passed through the mock-safe `npm test` runner (123/123).
+- `npm run check:pglite` rebuilt 275/275 migrations. `npm run check:lifecycle` passed 102/102 in the same local run. Migration 0273 is WRITTEN and VERIFIED locally. Hosted application and production verification remain pending.
+- The N-7 review passed 17/17 under Node 24.19.0 on the base checkout and under Node 22.22.1 on this worktree.
+- Deno 2.9.6 type-checked all seven Edge Functions. Each returned HTTP 200 with a CORS header for an in-process `OPTIONS` request without credentials or outbound runtime access.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-26T21:41:43.972Z). Suite: NOT VERIFIED — focused or unspecified run: 123/123 passed, 0 failed (recorded 2026-11-26T21:40:53.059Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-26T21:42:16.116Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- The broader local CI sequence is in progress. Hosted Auth/JWT, PostgREST, Storage and Edge Function integration still require hosted acceptance.
+
 ## 2026-11-26 — P0 Main CI Restoration: Rental Submit Idempotency & Law 17 Terminology Repair (Windows Antigravity)
 
 ### Did

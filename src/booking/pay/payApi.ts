@@ -75,8 +75,8 @@ export interface PaymentLinkDetails {
 }
 
 /**
- * Creates a server-calculated payment link for a booking (T7-15).
- * Enforces Law 1 (amount computed on server) and Law 6 (money roles only).
+ * Simulates booking payment links in the isolated mock environment (T7-15).
+ * Hosted link creation remains held.
  */
 export async function createBookingPaymentLink(bookingId: string): Promise<{
   success: boolean
@@ -87,8 +87,7 @@ export async function createBookingPaymentLink(bookingId: string): Promise<{
   booking_id: string
   booking_no: string
 }> {
-  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase || typeof (supabase as { rpc?: unknown })?.rpc !== 'function'
-  if (isMock) {
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
     const token = 'mock-link-' + (bookingId ? bookingId.slice(0, 8) : Date.now().toString())
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
     return {

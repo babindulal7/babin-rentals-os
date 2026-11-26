@@ -130,11 +130,13 @@ describe('useNewRentalSubmit', () => {
     if (scenario === 'request link rejected') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: false, requestId: 'request-1', bookingId: 'test-booking-id-123' })
     if (scenario === 'create retry') vi.mocked(createRental).mockRejectedValueOnce(new Error('Connection interrupted'))
     if (scenario === 'payment hold') vi.mocked(createBookingPaymentLink).mockRejectedValueOnce(new Error('Online payment links are temporarily unavailable.'))
+    const retriesRequestLink = scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected'
+    const hasOnlineRequest = retriesRequestLink || scenario === 'payment hold'
     const overrides: Partial<UseNewRentalSubmitOptions> = scenario === 'blocked' ? { confirmBlocked: true }
       : scenario === 'no session' ? { dispatchContext: () => null }
       : scenario === 'missing client' ? { client: null }
       : scenario === 'draft link retry' ? { draftId: 'draft-1' }
-      : scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected' ? { requestId: 'request-1' } : {}
+      : hasOnlineRequest ? { requestId: 'request-1' } : {}
 
     function TestComponent() {
       submitHook = useNewRentalSubmit({
@@ -206,7 +208,7 @@ describe('useNewRentalSubmit', () => {
         expect(createRental).toHaveBeenCalledTimes(1)
         await act(async () => releaseCreate?.())
       }
-      if (scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected') {
+      if (retriesRequestLink) {
         await act(async () => { await vi.dynamicImportSettled() })
         await vi.waitFor(() => expect(setSaveState).toHaveBeenCalledWith('error'))
         expect(setActionError).toHaveBeenCalledWith(expect.stringContaining('is confirmed, but the online request is not linked'))
@@ -241,27 +243,30 @@ describe('useNewRentalSubmit', () => {
       // Confirmation also awaits the dynamically imported payment-link module.
       await act(async () => { await vi.dynamicImportSettled() })
       await vi.waitFor(() => expect(setConfirmedSuccess).toHaveBeenCalledTimes(1))
-      if (scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected') {
-        expect(confirmBookingRequest).toHaveBeenCalledTimes(2)
+      if (hasOnlineRequest) {
+        expect(confirmBookingRequest).toHaveBeenCalledTimes(retriesRequestLink ? 2 : 1)
         for (const [input] of vi.mocked(confirmBookingRequest).mock.calls) {
           expect(input).toEqual({ requestId: 'request-1', bookingId: 'test-booking-id-123' })
         }
+        expect(createBookingPaymentLink).toHaveBeenCalledExactlyOnceWith('test-booking-id-123')
+      } else {
+        expect(confirmBookingRequest).not.toHaveBeenCalled()
+        expect(createBookingPaymentLink).not.toHaveBeenCalled()
       }
-      expect(createBookingPaymentLink).toHaveBeenCalledExactlyOnceWith('test-booking-id-123')
       // Toast must be dispatched per Law 12
       expect(showSuccessToast).toHaveBeenCalledTimes(1)
       expect(showSuccessToast).toHaveBeenCalledWith('Booking Confirmed', 'Rental 6 is now Booked')
 
-      // Preserve booking identity AND the added secure payment-link fields.
-      // A link is not proof that a payment has been received.
+      // Send payment-link fields only when an online request received a link.
       expect(setSaveState).toHaveBeenCalledWith('saved')
-      expect(setConfirmedSuccess).toHaveBeenCalledTimes(1)
-      expect(setConfirmedSuccess).toHaveBeenCalledWith(expect.objectContaining({
+      expect(setConfirmedSuccess).toHaveBeenCalledWith({
         bookingId: 'test-booking-id-123',
         bookingNo: '6',
-        paymentToken: scenario === 'payment hold' ? undefined : 'test-payment-token',
-        paymentLink: scenario === 'payment hold' ? undefined : `${window.location.origin}/pay/link/test-payment-token`,
-      }))
+        ...(hasOnlineRequest && scenario !== 'payment hold' ? {
+          paymentToken: 'test-payment-token',
+          paymentLink: `${window.location.origin}/pay/link/test-payment-token`,
+        } : {}),
+      })
     } finally {
       await act(async () => {
         root.unmount()

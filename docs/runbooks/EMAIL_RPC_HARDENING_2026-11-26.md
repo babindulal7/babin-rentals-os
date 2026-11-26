@@ -8,7 +8,7 @@ Staging `babin-staging` was queried using read-only SQL. It has `public.build_em
 
 Current `process_due_payment_reminders` in staging inserts `email_log.status='mock_sent'` and changes `payment_reminders.status='sent'` without reaching an email provider. This is a blocking truthfulness defect before customer activation.
 
-## 0270 migration behavior
+## 0273 migration behavior
 
 1. `REVOKE EXECUTE` for ordinary `authenticated`, `anon`, and `PUBLIC` roles on the four privileged RPCs.
 2. Preserve `service_role` access for trusted server-side actors.
