@@ -840,6 +840,8 @@ describe('Law 4 — payments are immutable, and this module offers no way in', (
       'liveInvoices',
       'outstandingInvoices',
       'overdueInvoices',
+      // W18b: Staff can pause/resume client payment reminders (T5-08)
+      'pauseClientReminders',
       // MONEY-05 — the set a PAYMENT may be recorded against, which is
       // `outstandingInvoices` plus 'Draft'. R-02 keeps an invoice in Draft for
       // the whole rental and R-14 leaves it there when a payment lands, so a
@@ -851,6 +853,8 @@ describe('Law 4 — payments are immutable, and this module offers no way in', (
       'paymentsForInvoice',
       'paymentsInPeriod',
       'receivedPayments',
+      // W18b: Staff can pause/resume client payment reminders (T5-08)
+      'resumeClientReminders',
       'setExpenseStatus',
       'todayDate',
       'voidedInvoices',

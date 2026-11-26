@@ -51,6 +51,7 @@ export interface SalesInvoiceItem {
   grandTotal: Paisa
   paidAmount: Paisa
   status: string
+  vatTreatment?: 'standard' | 'non_vat' | undefined
 }
 
 export interface SalesReportData {
@@ -67,6 +68,7 @@ export interface VatMonthlyRow {
   taxableSales: Paisa
   vatAmount: Paisa
   exemptSales: Paisa
+  nonVatSales: Paisa
   grossSales: Paisa
 }
 
@@ -76,6 +78,7 @@ export interface VatTaxReportData {
     taxableTurnover: Paisa
     totalOutputVat: Paisa
     exemptTurnover: Paisa
+    nonVatTurnover: Paisa
     effectiveVatRate: number
     invoicesCount: number
   }
@@ -112,6 +115,7 @@ type InvoiceRow = {
   paid_amount: number | string | null
   outstanding_amount: number | string | null
   voided_at: string | null
+  vat_treatment?: string | null
   clients?: unknown
   bookings?: unknown
 }
@@ -137,7 +141,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
     let query = supabase
     .from('invoices')
     .select(
-      'id, invoice_no, client_id, status, issue_date, due_date, subtotal, discount_amount, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, voided_at, clients!client_id(name, pan_vat), bookings!booking_id(booking_no)',
+      'id, invoice_no, client_id, status, issue_date, due_date, subtotal, discount_amount, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, voided_at, vat_treatment, clients!client_id(name, pan_vat), bookings!booking_id(booking_no)',
     )
     .neq('status', 'Draft')
     .neq('status', 'Void')
@@ -176,6 +180,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
   let outstanding = 0
   let taxable = 0
   let exempt = 0
+  let nonVat = 0
   const statusMap = new Map<string, { count: number; amount: number }>()
   const clientMap = new Map<string, { name: string; count: number; invoiced: number; paid: number }>()
   const monthMap = new Map<string, VatMonthlyRow & { invoicedTotal: number; collectedTotal: number }>()
@@ -196,9 +201,13 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
     paidTotal += paid
     outstanding += money(r.outstanding_amount)
     // An invoice with no VAT charged is exempt (or zero-rated) turnover.
-    const isExempt = vat === 0
+    // Non-VAT bills (D13) are tracked separately — they are not exempt sales.
+    const isNonVat = r.vat_treatment === 'non_vat'
+    const isExempt = vat === 0 && !isNonVat
     if (isExempt) exempt += taxableAmt
-    else taxable += taxableAmt
+    else if (!isNonVat) taxable += taxableAmt
+    // Non-VAT bills: tracked in their own total, not mixed into exempt/zero-rated
+    if (isNonVat) nonVat += taxableAmt
     if (![invoiced, net, vatTotal, discounts, paidTotal, outstanding, taxable, exempt, taxable + exempt].every(Number.isSafeInteger)) {
       throw new Error('Invoice report exceeds safe paisa range; narrow the period')
     }
@@ -222,12 +231,13 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       if (bm) {
         const row =
           monthMap.get(bm.key) ??
-          ({ month: formatAdMonth(new Date(`${r.issue_date.slice(0, 10)}T12:00:00Z`)), bsMonth: bm.label, taxableSales: 0 as Paisa, vatAmount: 0 as Paisa, exemptSales: 0 as Paisa, grossSales: 0 as Paisa, invoicedTotal: 0, collectedTotal: 0 } as VatMonthlyRow & {
+          ({ month: formatAdMonth(new Date(`${r.issue_date.slice(0, 10)}T12:00:00Z`)), bsMonth: bm.label, taxableSales: 0 as Paisa, vatAmount: 0 as Paisa, exemptSales: 0 as Paisa, nonVatSales: 0 as Paisa, grossSales: 0 as Paisa, invoicedTotal: 0, collectedTotal: 0 } as VatMonthlyRow & {
             invoicedTotal: number
             collectedTotal: number
           })
         row.taxableSales = (row.taxableSales + (isExempt ? 0 : taxableAmt)) as Paisa
         row.exemptSales = (row.exemptSales + (isExempt ? taxableAmt : 0)) as Paisa
+        row.nonVatSales = (row.nonVatSales + (isNonVat ? taxableAmt : 0)) as Paisa
         row.vatAmount = (row.vatAmount + vat) as Paisa
         row.grossSales = (row.grossSales + total) as Paisa
         row.invoicedTotal += total
@@ -250,6 +260,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       grandTotal: total,
       paidAmount: paid,
       status: r.status,
+      vatTreatment: r.vat_treatment === 'non_vat' ? 'non_vat' : 'standard',
     })
   }
 
@@ -292,6 +303,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       taxableTurnover: taxable as Paisa,
       totalOutputVat: vatTotal as Paisa,
       exemptTurnover: exempt as Paisa,
+      nonVatTurnover: nonVat as Paisa,
       effectiveVatRate: vatBase > 0 ? Number(((vatTotal / vatBase) * 100).toFixed(1)) : 0,
       invoicesCount: count,
     },

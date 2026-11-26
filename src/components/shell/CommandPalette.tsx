@@ -70,6 +70,7 @@ const NAV_SHORTCUTS: Record<string, { shortcut: string; keywords: string[] }> = 
   '/inventory': { shortcut: 'inv', keywords: ['inv', 'gear', 'stock'] },
   '/clients': { shortcut: 'cl', keywords: ['cl', 'client', 'directory'] },
   '/finance': { shortcut: 'fin', keywords: ['fin', 'money', 'invoices', 'closing'] },
+  '/approvals': { shortcut: 'appr', keywords: ['appr', 'approvals', 'inbox', 'waivers', 'refunds', 'overrides'] },
   '/notes': { shortcut: 'notes', keywords: ['notes', 'internal', 'shift', 'handover', 'dispatch', 'gear', 'alert'] },
   '/tools': { shortcut: 'tools', keywords: ['tools', 'calc', 'pricing'] },
   '/settings': { shortcut: 'set', keywords: ['set', 'settings', 'config'] },
@@ -289,7 +290,8 @@ export const CommandPalette: React.FC = () => {
         background: 'rgba(0, 0, 0, 0.6)',
       }}
     >
-      <div style={{ position: 'fixed', inset: 0 }} onClick={() => setIsOpen(false)} />
+      {/* Pointer-only scrim: keyboard users close with Escape or the Close button. */}
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0 }} onClick={() => setIsOpen(false)} />
 
       <div
         ref={dialogRef}
@@ -448,6 +450,15 @@ export const CommandPalette: React.FC = () => {
                   onClick={() => {
                     item.onSelect()
                     setIsOpen(false)
+                  }}
+                  onKeyDown={(e) => {
+                    // Focus normally stays on the search input (aria-activedescendant); if an
+                    // option itself holds focus, Enter or Space chooses it like a click does.
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      item.onSelect()
+                      setIsOpen(false)
+                    }
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   style={{

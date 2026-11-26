@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { IconPhoto, IconX, IconUser, IconClock, IconSignature } from '@tabler/icons-react'
 import { BsAdDate } from './BsAdDate'
 
@@ -24,6 +24,24 @@ export const EvidenceThumbnail: React.FC<EvidenceThumbnailProps> = ({
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  // The zoom view is a modal dialog: Escape closes it, focus moves into it, and focus
+  // returns to the thumbnail afterwards so keyboard users are not left behind the scrim.
+  useEffect(() => {
+    if (!isOpen) return undefined
+    const trigger = triggerRef.current
+    closeRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      trigger?.focus()
+    }
+  }, [isOpen])
 
   const sizePx = {
     sm: 48,
@@ -36,6 +54,7 @@ export const EvidenceThumbnail: React.FC<EvidenceThumbnailProps> = ({
   return (
     <>
       <div
+        ref={triggerRef}
         role="button"
         tabIndex={0}
         aria-label={`View evidence: ${evidence.title}`}
@@ -124,12 +143,21 @@ export const EvidenceThumbnail: React.FC<EvidenceThumbnailProps> = ({
             WebkitBackdropFilter: 'blur(12px)',
           }}
         >
+          {/* Pointer-only scrim: keyboard users close with Escape or the Close button. */}
           <div
+            aria-hidden="true"
             style={{ position: 'fixed', inset: 0 }}
+            role="button"
+            tabIndex={-1}
+            aria-label="Close image preview"
             onClick={() => setIsOpen(false)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setIsOpen(false) }}
           />
 
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={evidence.title}
             style={{
               position: 'relative',
               zIndex: 10,
@@ -172,6 +200,7 @@ export const EvidenceThumbnail: React.FC<EvidenceThumbnailProps> = ({
                 </span>
               </div>
               <button
+                ref={closeRef}
                 type="button"
                 aria-label="Close evidence viewer"
                 onClick={() => setIsOpen(false)}

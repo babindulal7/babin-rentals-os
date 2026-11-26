@@ -20,18 +20,18 @@ const signed = (p: Paisa) => (p < 0 ? `− ${formatMoney(Math.abs(p) as Paisa)}`
 interface StatementLine {
   label: string
   amount: Paisa | null
-  note?: string
+  note?: string | undefined
 }
 
 function statement(s: CashFlowSummary): StatementLine[] {
   return [
-    { label: 'Opening cash', amount: null, note: 'No bank balance is recorded' },
+    { label: 'Opening cash', amount: s.openingCash, note: s.openingCash === null ? 'No bank balance is recorded' : undefined },
     { label: 'Cash in — rental collections', amount: s.collected },
     { label: 'Cash out — refunds', amount: -s.refunds as Paisa },
     { label: 'Cash out — expenses paid', amount: -s.expensesPaid as Paisa },
     { label: 'Net operating cash', amount: s.netOperatingCash },
     { label: 'Cash out — equipment purchase', amount: null, note: 'Capital spend is not recorded' },
-    { label: 'Closing cash', amount: null, note: 'Needs the opening balance' },
+    { label: 'Closing cash', amount: s.closingCash, note: s.closingCash === null ? 'Needs the opening balance' : undefined },
   ]
 }
 

@@ -73,6 +73,8 @@ export type ActionContext = {
   role: SystemRole;
   /** Law 6 / rbac's offline degradation: several approvals are refused offline. */
   isOnline?: boolean;
+  /** Target user ID for actions on behalf of another user (e.g., revoke another's token). */
+  targetUserId?: string;
 };
 
 export type ActionConfig<Input, Output> = {
@@ -388,6 +390,18 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canRescheduleDeliveryJob(ctx.role);
     case 'delivery.view':
       return rbac.canViewDayRoute(ctx.role);
+    case 'delivery.setRoutePosition':
+      return rbac.canSetDeliveryRoutePosition(ctx.role);
+    case 'delivery.setClientMapPin':
+      return rbac.canSetClientMapPin(ctx.role);
+
+    // Calendar feed tokens (T4-10, migration 0209)
+    case 'calendar_feed.create':
+      return rbac.canCreateCalendarFeedToken(ctx.role);
+    case 'calendar_feed.revoke':
+      return rbac.canRevokeCalendarFeedToken(ctx.role, ctx.targetUserId, ctx.userId);
+    case 'calendar_feed.view':
+      return rbac.canViewCalendarFeedTokenStatus(ctx.role, ctx.targetUserId, ctx.userId);
 
     // Delivery zones (T4-07, migration 0189)
     case 'delivery_zone.create':
@@ -396,6 +410,18 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canReadDeliveryZones(ctx.role);
     case 'delivery_zone.manage':
       return rbac.canManageDeliveryZones(ctx.role);
+
+    // Delivery proof (T4-03, migration 0211)
+    case 'delivery.proof':
+      return rbac.canAttachDeliveryProof(ctx.role);
+
+    // Problem reports (T4-11, migration 0210)
+    case 'problem_report.create':
+      return rbac.canCreateProblemReport(ctx.role);
+    case 'problem_report.read':
+      return rbac.canReadProblemReports(ctx.role);
+    case 'problem_report.manage':
+      return rbac.canManageProblemReports(ctx.role);
 
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,

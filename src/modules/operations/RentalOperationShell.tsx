@@ -8,6 +8,7 @@ import { Badge } from '../../components/ui/Badge'
 import { ErrorBanner } from '../../components/ui/StateViews'
 import { StickyFloorBar } from './StickyFloorBar'
 import { useViewport } from '../../lib/device'
+import { useTranslation } from '../../lib/i18n'
 import type { BookingStatus, JobName } from '../../lib/workflow'
 
 interface WorkspaceActions {
@@ -68,6 +69,13 @@ const JOB_TITLES: Record<JobName, string> = {
   Reset: 'Cleaning & Reset',
 }
 
+const JOB_TITLE_KEYS: Record<JobName, string> = {
+  Pack: 'operations.job.packTitle',
+  Handover: 'operations.job.handoverTitle',
+  Return: 'operations.job.returnTitle',
+  Reset: 'operations.job.resetTitle',
+}
+
 interface ShellContextValue {
   registerActions: (actions: WorkspaceActions) => void
   inShell: true
@@ -103,6 +111,7 @@ export function RentalOperationShell({
   const navigate = useNavigate()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
+  const { t } = useTranslation()
   const [actions, setActions] = useState<WorkspaceActions | null>(null)
 
   const handleBack = () => {
@@ -122,6 +131,7 @@ export function RentalOperationShell({
   )
 
   const currentJobIndex = JOB_ORDER.indexOf(job)
+  const jobTitle = t(JOB_TITLE_KEYS[job], JOB_TITLES[job])
 
   const ctxValue = useMemo(
     () => ({ registerActions: handleRegisterActions, inShell: true as const }),
@@ -142,10 +152,10 @@ export function RentalOperationShell({
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <Icon name="chevron_left" size={15} />
-            <span>Booking</span>
+            <span>{t('operations.col.booking', 'Booking')}</span>
           </Button>
         }
-        title={`${JOB_TITLES[job]} · ${bookingNo}`}
+        title={`${jobTitle} · ${bookingNo}`}
         description={
           clientName
             ? `${clientName}${deliveryType ? ` · ${deliveryType}` : ''}`
@@ -232,16 +242,16 @@ export function RentalOperationShell({
 
         {pickupAtAd && returnAtAd && (
           <div style={{ marginLeft: 'auto', fontSize: 'var(--t-meta)', color: 'var(--text2)', display: 'flex', gap: 10 }}>
-            <span>Pickup: <strong style={{ color: 'var(--booking-date-text)' }}>{formatAd(new Date(pickupAtAd))}</strong></span>
+            <span>{t('delivery.pickup', 'Pickup')}: <strong style={{ color: 'var(--booking-date-text)' }}>{formatAd(new Date(pickupAtAd))}</strong></span>
             <span>·</span>
-            <span>Return: <strong style={{ color: 'var(--booking-date-text)' }}>{formatAd(new Date(returnAtAd))}</strong></span>
+            <span>{t('delivery.return', 'Return')}: <strong style={{ color: 'var(--booking-date-text)' }}>{formatAd(new Date(returnAtAd))}</strong></span>
           </div>
         )}
       </div>
 
       {/* ── Inline Errors and Blockers ── */}
       {dispatchError && (
-        <ErrorBanner title="Operation was not recorded" message={dispatchError} />
+        <ErrorBanner title={t('operations.errorTitle', 'Operation was not recorded')} message={dispatchError} />
       )}
 
       {heldNotice}
@@ -263,7 +273,7 @@ export function RentalOperationShell({
         >
           <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="alert_triangle" size={16} />
-            <span>Operation blocked</span>
+            <span>{t('operations.blocker.held', 'Operation blocked')}</span>
           </div>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {blockers.map((b, i) => (
@@ -302,7 +312,7 @@ export function RentalOperationShell({
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
           >
             <Icon name="chevron_left" size={15} />
-            <span>Back</span>
+            <span>{t('action.back', 'Back')}</span>
           </Button>
           {progress && (
             <span
@@ -314,9 +324,9 @@ export function RentalOperationShell({
                 gap: 6,
               }}
             >
-              {progress.current} / {progress.total} items
+              {progress.current} / {progress.total} {t('operations.col.items', 'items')}
               {progress.label && <span>· {progress.label}</span>}
-              {progress.complete && <span style={{ color: 'var(--st-success-fg)' }}>✓ Complete</span>}
+              {progress.complete && <span style={{ color: 'var(--st-success-fg)' }}>✓ {t('status.completed', 'Complete')}</span>}
             </span>
           )}
           <Button

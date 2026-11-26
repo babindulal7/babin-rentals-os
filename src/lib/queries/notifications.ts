@@ -44,7 +44,7 @@ interface NotificationDbRow {
 }
 
 // In-memory mock notification store for tests and mock mode
-let mockNotifications: AppNotification[] = [
+const INITIAL_MOCK_NOTIFICATIONS: AppNotification[] = [
   {
     id: 'notif-001',
     clientUuid: '10000000-0000-4000-8000-000000000001',
@@ -83,7 +83,85 @@ let mockNotifications: AppNotification[] = [
     readAt: null,
     createdAt: new Date().toISOString(),
   },
+  {
+    id: 'notif-003',
+    clientUuid: '10000000-0000-4000-8000-000000000003',
+    notificationNo: 'NOTIF-20261028-0003',
+    userId: '00000000-0000-4000-8000-00000000e001', // Owner
+    recipientRole: 'Owner',
+    type: 'online_payment',
+    title: 'Payment received',
+    message: 'Received Rs 15,000 for BK-0012',
+    body: 'Received Rs 15,000 for BK-0012',
+    channel: 'In-App',
+    severity: 'Information',
+    entityType: 'payment',
+    entityId: 'pay-001',
+    linkUrl: '/rentals/BK-0012',
+    isRead: false,
+    readAt: null,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'notif-004',
+    clientUuid: '10000000-0000-4000-8000-000000000004',
+    notificationNo: 'NOTIF-20261028-0004',
+    userId: '00000000-0000-4000-8000-00000000e001', // Owner
+    recipientRole: 'Owner',
+    type: 'damage_case',
+    title: 'Damage case opened',
+    message: 'Damage case opened for BK-0010: Sony FX3 body scratched',
+    body: 'Damage case opened for BK-0010: Sony FX3 body scratched',
+    channel: 'In-App',
+    severity: 'Warning',
+    entityType: 'booking',
+    entityId: 'bk-0010',
+    linkUrl: '/rentals/BK-0010',
+    isRead: false,
+    readAt: null,
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 'notif-005',
+    clientUuid: '10000000-0000-4000-8000-000000000005',
+    notificationNo: 'NOTIF-20261028-0005',
+    userId: '00000000-0000-4000-8000-00000000e004', // Coordinator
+    recipientRole: 'Coordinator',
+    type: 'booking_request',
+    title: 'New booking request',
+    message: 'Online booking request received for BK-0014',
+    body: 'Online booking request received for BK-0014',
+    channel: 'In-App',
+    severity: 'Information',
+    entityType: 'booking',
+    entityId: 'bk-0014',
+    linkUrl: '/rentals/BK-0014',
+    isRead: false,
+    readAt: null,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'notif-006',
+    clientUuid: '10000000-0000-4000-8000-000000000006',
+    notificationNo: 'NOTIF-20261028-0006',
+    userId: '00000000-0000-4000-8000-00000000e005', // Warehouse
+    recipientRole: 'Warehouse',
+    type: 'prep_ready',
+    title: 'Gear prep required',
+    message: 'Equipment prep checklist ready for BK-0012 (3 items)',
+    body: 'Equipment prep checklist ready for BK-0012 (3 items)',
+    channel: 'In-App',
+    severity: 'Information',
+    entityType: 'booking',
+    entityId: 'bk-0012',
+    linkUrl: '/rentals/BK-0012',
+    isRead: false,
+    readAt: null,
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+  },
 ]
+
+let mockNotifications: AppNotification[] = [...INITIAL_MOCK_NOTIFICATIONS]
 
 function mapDbRow(row: NotificationDbRow): AppNotification {
   const msg = row.message ?? row.body ?? ''
@@ -112,9 +190,9 @@ function mapDbRow(row: NotificationDbRow): AppNotification {
  * Fetch notifications for current authenticated staff member from notifications_v.
  */
 export async function fetchNotifications(options?: {
-  unreadOnly?: boolean
-  limit?: number
-  userId?: string
+  unreadOnly?: boolean | undefined
+  limit?: number | undefined
+  userId?: string | undefined
 }): Promise<AppNotification[]> {
   if (IS_MOCK) {
     let list = [...mockNotifications]
@@ -156,7 +234,7 @@ export async function fetchNotifications(options?: {
 /**
  * Get count of unread notifications for current user.
  */
-export async function getUnreadNotificationCount(userId?: string): Promise<number> {
+export async function getUnreadNotificationCount(userId?: string | undefined): Promise<number> {
   if (IS_MOCK) {
     const list = userId
       ? mockNotifications.filter((n) => n.userId === userId && !n.isRead)
@@ -164,17 +242,62 @@ export async function getUnreadNotificationCount(userId?: string): Promise<numbe
     return list.length
   }
 
-  const { count, error } = await supabase
-    .from('notifications_v')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_read', false)
+  try {
+    if (!supabase || typeof supabase.from !== 'function') {
+      return 0
+    }
+    const { count, error } = await supabase
+      .from('notifications_v')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_read', false)
 
-  if (error) {
-    console.warn('Failed to get unread notification count:', error.message)
+    if (error) {
+      console.warn('Failed to get unread notification count:', error.message)
+      return 0
+    }
+
+    return count ?? 0
+  } catch {
     return 0
   }
+}
 
-  return count ?? 0
+/**
+ * Subscribe to realtime notification updates.
+ * Returns unsubscribe callback.
+ */
+export function subscribeToNotificationChanges(
+  callback: () => void,
+  userId?: string | undefined,
+): () => void {
+  try {
+    if (IS_MOCK || !supabase || typeof supabase.channel !== 'function') {
+      return () => {}
+    }
+
+    const channel = supabase
+      .channel(`realtime:notifications:${userId ?? 'all'}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          callback()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      try {
+        if (typeof supabase.removeChannel === 'function') {
+          void supabase.removeChannel(channel)
+        }
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    return () => {}
+  }
 }
 
 /**
@@ -395,47 +518,15 @@ export async function notifyStaff(params: {
 }
 
 /**
+ * Returns a copy of current mock notifications for synchronous initial state.
+ */
+export function getMockNotifications(): AppNotification[] {
+  return mockNotifications.map((n) => ({ ...n }))
+}
+
+/**
  * Resets in-memory mock notifications for test isolation.
  */
 export function _resetMockNotifications(): void {
-  mockNotifications = [
-    {
-      id: 'notif-001',
-      clientUuid: '10000000-0000-4000-8000-000000000001',
-      notificationNo: 'NOTIF-20261028-0001',
-      userId: '00000000-0000-4000-8000-00000000e006',
-      recipientRole: 'Accounts',
-      type: 'online_payment',
-      title: 'Payment received',
-      message: 'Received Rs 15,000 for BK-0012',
-      body: 'Received Rs 15,000 for BK-0012',
-      channel: 'In-App',
-      severity: 'Information',
-      entityType: 'payment',
-      entityId: 'pay-001',
-      linkUrl: '/rentals/BK-0012',
-      isRead: false,
-      readAt: null,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'notif-002',
-      clientUuid: '10000000-0000-4000-8000-000000000002',
-      notificationNo: 'NOTIF-20261028-0002',
-      userId: '00000000-0000-4000-8000-00000000e005',
-      recipientRole: 'Warehouse',
-      type: 'online_payment',
-      title: 'Payment confirmed',
-      message: 'Payment confirmed for BK-0012',
-      body: 'Payment confirmed for BK-0012',
-      channel: 'In-App',
-      severity: 'Information',
-      entityType: 'payment',
-      entityId: 'pay-001',
-      linkUrl: '/rentals/BK-0012',
-      isRead: false,
-      readAt: null,
-      createdAt: new Date().toISOString(),
-    },
-  ]
+  mockNotifications = INITIAL_MOCK_NOTIFICATIONS.map((n) => ({ ...n }))
 }

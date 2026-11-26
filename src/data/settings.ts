@@ -728,6 +728,7 @@ export const SYSTEM_QUICK_ACTIONS: QuickAction[] = [
     dest: NO('The search index is server side; nothing is connected to rebuild.'),
   },
   { label: 'View audit logs', icon: 'file', dest: TO('/admin/audit') },
+  { label: 'View problem reports', icon: 'alert_triangle', dest: TO('/admin/problem-reports') },
   { label: 'System health check', icon: 'activity', dest: TO('/system') },
   { label: 'Update system', icon: 'download', dest: NO('Releases are deployed from the build pipeline, not from this page.') },
 ]

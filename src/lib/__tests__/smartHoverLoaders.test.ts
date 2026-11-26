@@ -33,7 +33,7 @@ function draftData(): RentalDraftData {
     lines: Array.from({ length: 12 }, (_, index) => ({ id: `line-${index}`, name: `Gear ${index + 1}`,
       serial: '', category: 'Camera', ratePaisa: 10000, days: 2, qty: 1, discountPct: 0, location: '', committedTo: '' })),
     crew: [{ crewId: 'crew-1', name: 'Operator', role: 'Operator', phone: '', days: 3,
-      dayRatePaisa: 20000, overtimePaisa: 1000, accommodationPaisa: 0, mealsPaisa: 0 }],
+      dayRatePaisa: 20000, overtimeDays: 0, accommodationPaisa: 0, mealsPaisa: 0 }],
     deliveryChargePaisa: 99900, fuelChargePaisa: 0, vehicle: '', numberPlate: '', driverContact: '',
     discountPct: 0, vatOn: false, vatRatePercent: 13, advancePaisa: 50000,
   }
@@ -48,7 +48,7 @@ describe('saved draft Intel', () => {
     const preview = await loadRentalPreview(UUID, { role: 'Owner' })
     expect(preview.equipment).toHaveLength(12)
     expect(preview.rentalNo).toBe('Draft #3')
-    expect(preview.rentalTotalPaisa).toBe(301000)
+    expect(preview.rentalTotalPaisa).toBe(300000)
     expect(preview.isDraft).toBe(true)
     expect(Object.values(preview.readiness).every(value => value === null)).toBe(true)
     expect(preview).not.toHaveProperty('payments')
@@ -78,11 +78,11 @@ describe('saved draft Intel', () => {
   it('does not double-charge included gear or subtract advance from rental total', () => {
     const data = draftData()
     data.lines[0]!.isIncluded = true
-    expect(calculateDraftTotal(data)).toBe(281000)
+    expect(calculateDraftTotal(data)).toBe(280000)
     data.advancePaisa = 900000
-    expect(calculateDraftTotal(data)).toBe(281000)
+    expect(calculateDraftTotal(data)).toBe(280000)
     data.vatOn = true
-    expect(calculateDraftTotal(data)).toBe(317500)
+    expect(calculateDraftTotal(data)).toBe(316400)
   })
 })
 

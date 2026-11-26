@@ -4,6 +4,7 @@ import { createRental, deliveryTypeFromLabel, type BookingLineType } from '../..
 import { convertDraft, saveDraft as persistRentalDraft, type RentalDraftData } from '../../../actions/rentals/saveDraft'
 import { transportInstructions } from '../../../lib/bookingTransportForm'
 import { bookingDiscountRows } from '../../../lib/bookingDiscountRows'
+import type { ClientActiveMembership } from '../../../lib/queries/membership'
 import { toRupees, type Paisa } from '../../../lib/money'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import { planCreationUnits, type CreationUnitPlan } from '../../../lib/queries/availability'
@@ -29,6 +30,7 @@ export interface UseNewRentalSubmitOptions {
   showSuccessToast?: (title: string, message?: string) => void
 
   client: ClientRecord | null | undefined
+  clientMembership?: ClientActiveMembership | null | undefined
   lines: Line[]
   equipmentLines: Line[]
   project: string
@@ -122,6 +124,7 @@ export function useNewRentalSubmit({
   setConfirmedSuccess,
   showSuccessToast,
   client,
+  clientMembership,
   lines,
   equipmentLines,
   project,
@@ -235,12 +238,23 @@ export function useNewRentalSubmit({
       const pickupTime = nptClock(pickupAt)
       const returnTime = nptClock(returnAt)
 
+      const hasPriorityBooking =
+        clientMembership?.perks?.some((p) => p.toLowerCase().includes('priority booking')) ?? false
+      const cleanedProject = project.trim().replace(/^'|'$/g, '')
+      const finalProject = hasPriorityBooking
+        ? cleanedProject
+          ? cleanedProject.startsWith('[Priority]')
+            ? cleanedProject
+            : `[Priority] ${cleanedProject}`
+          : '[Priority Booking]'
+        : cleanedProject || null
+
       const created = await createRental(
         {
           clientUuid: pressKey,
           clientId: clientDbId,
           branchId,
-          project: project.trim() ? project.replace(/^'|'$/g, '') : null,
+          project: finalProject,
           projectType: kind.trim() !== '' ? kind : null,
           projectTypeOther: kind === 'Other' && kindOther.trim() !== '' ? kindOther.trim() : null,
           ...(draftBookingNo ? { bookingNo: draftBookingNo } : {}),
@@ -271,7 +285,7 @@ export function useNewRentalSubmit({
                   phone: c.phone,
                   dayRate: toRupees(c.dayRatePaisa),
                   days: days || 1,
-                  overtime: toRupees(c.overtimePaisa),
+                  overtime: toRupees(((c.dayRatePaisa * (c.overtimeDays ?? 0)) as Paisa)),
                   accommodation: toRupees(c.accommodationPaisa),
                   meals: toRupees(c.mealsPaisa),
                 })),
@@ -337,6 +351,7 @@ export function useNewRentalSubmit({
     },
     [
       client,
+      clientMembership,
       pickupAt,
       returnAt,
       lines,

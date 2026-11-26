@@ -8,6 +8,8 @@ on:
   push:
     branches: ['**']
   pull_request:
+  # Manual "Run workflow" button / `gh workflow run ci.yml --ref <branch>`.
+  workflow_dispatch:
 
 # A second push to the same branch cancels the first — CI is a gate, not an
 # archive, and only the tip of a branch needs to be green.
@@ -21,10 +23,17 @@ permissions:
 jobs:
   verify:
     name: typecheck · test · build
-    runs-on: ubuntu-latest
-    # Full mock suite + PGlite + build use ~15m; coverage needs additional time.
+    # Native Windows x64 self-hosted runner on the owner's PC (default labels).
+    # GitHub-hosted minutes are exhausted; if this runner is offline the job waits
+    # in the queue — do NOT switch this back to a paid hosted runner to get green.
+    runs-on: [self-hosted, Windows, X64]
+    # This job executes on the owner's own computer, so never run code from a
+    # forked pull request here. Pushes and same-repository PRs only.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Full mock suite + PGlite + build use ~15m on a fast host; coverage needs additional time.
+    # Measured on this runner (2 Nov): `npm ci` ~10-22m, typecheck ~3-9m, whole job ~48m.
     # Do not weaken or skip any security, lifecycle, build, or coverage gates.
-    timeout-minutes: 35
+    timeout-minutes: 120
 
     steps:
       - name: Checkout

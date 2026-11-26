@@ -30,7 +30,7 @@ Babin approves the glossary **in one sitting**; every later wave must use these 
 **Done when** — Babin's approval recorded (date + "approved" per term) — target 6 Dec 2026. **Recorded 1 Nov 2026.**
 **Needs** — none.
 
-### T6-02 · String catalogue and lint            status: todo · size: L · lane B
+### T6-02 · String catalogue and lint            status: done · merged on main (0e801c6d) · size: L · lane B
 **What** — Move visible strings out of components into keyed catalogues (`src/i18n/en/*.json`
 source, `src/i18n/ne/*.json` translations), one file per module, keys like
 `rentals.bookingDetail.recordPayment`. Extend `scripts/check-ui-copy.mjs` so new raw JSX text in
@@ -45,7 +45,7 @@ a column only if it does not).
 report prints per module.
 **Needs** — T6-01 (keys for glossary terms).
 
-### T6-03 · Review sheets            status: todo · size: S · lane B
+### T6-03 · Review sheets            status: done · merged on main (bfe8939a) · size: S · lane B
 **What** — For each wave, generate a review sheet Babin can work through on a phone: one row per
 string — key, screen, English, Nepali draft, a screenshot link for context, and an "OK / fix"
 column. Approved rows are imported back by a script that refuses any row not marked OK.
@@ -55,7 +55,7 @@ column. Approved rows are imported back by a script that refuses any row not mar
 **Done when** — a round trip on 20 strings works; the import refuses unapproved rows.
 **Needs** — T6-02.
 
-### T6-04 · Wave 1 — the floor            status: todo · size: L · lane B + Babin
+### T6-04 · Wave 1 — the floor            status: done — awaiting merge (lane-b/T6-04-wave-1-the-floor) · size: L · lane B + Babin
 **What** — Convert and draft: shell (header, nav, bottom bar, scanner), sign-in, Today, Operations,
 Pack, Handover, Return, Reset, Evidence, delivery (driver view). Babin approves via T6-03.
 **Done when** — 100% approved for these screens; floor layout check passes on the iPad and iPhone

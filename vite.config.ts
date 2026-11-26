@@ -74,6 +74,7 @@ export default defineConfig({
           '**/*-vietnamese-*',
           '**/*-latin-ext-*',
         ],
+        importScripts: ['/push-worker.js'],
         navigationPreload: true,
         runtimeCaching: [
           {

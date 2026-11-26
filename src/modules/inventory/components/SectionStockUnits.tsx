@@ -107,7 +107,7 @@ export function SectionStockUnits() {
                         <th style={{ ...th, width: 132 }}>Status</th>
                         <th style={{ ...th, width: 128 }}>Condition</th>
                         <th style={{ ...th, width: 152 }}>Purchase Date</th>
-                        <th style={{ ...th, width: 40 }} />
+                        <th style={{ ...th, width: 40 }}><span className="sr-only">Remove unit</span></th>
                       </tr>
                     </thead>
                     <tbody>

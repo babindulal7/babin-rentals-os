@@ -304,6 +304,8 @@ function ClientDetailView() {
    * money gate's.
    */
   const canChangeTier = canChangeMembership(role)
+  /** Staff can pause/resume automatic payment reminders (W18b). */
+  const canManageReminders = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'].includes(role)
   /*
     Spec 8.2 draws three layouts and this file had no width read at all — both
     of its tables fell back to a horizontal scrollbar on a phone, which the
@@ -369,6 +371,15 @@ function ClientDetailView() {
   const blockDialogMode: 'block' | 'unblock' = blockMode ?? lastBlockMode.current
   /** Law 12 — a refused block stays on screen, in the dialog holding the reason. */
   const [blockError, setBlockError] = useState<string | null>(null)
+
+  /* ── Pause / Resume Payment Reminders — W18b, T5-08 ──────────────────── */
+  const [pauseRemindersMode, setPauseRemindersMode] = useState<'pause' | 'resume' | null>(null)
+  const [pauseReason, setPauseReason] = useState('')
+  const [pauseBusy, setPauseBusy] = useState(false)
+  const [pauseError, setPauseError] = useState<string | null>(null)
+  const lastPauseMode = useRef<'pause' | 'resume'>('pause')
+  if (pauseRemindersMode !== null) lastPauseMode.current = pauseRemindersMode
+  const pauseDialogMode: 'pause' | 'resume' = pauseRemindersMode ?? lastPauseMode.current
   /**
    * **Law 8** — one key per press, reused by every retry of that press. Minted
    * when the dialog opens (the point `ClientsDirectory` mints its own), so
@@ -666,6 +677,41 @@ function ClientDetailView() {
     }
   }
 
+  async function confirmPauseRemindersChange() {
+    if (!client || pauseRemindersMode === null) return
+    const pausing = pauseRemindersMode === 'pause'
+    const reason = pauseReason.trim()
+    if (pausing && !reason) return
+
+    setPauseBusy(true)
+    setPauseError(null)
+    try {
+      const { pauseClientReminders, resumeClientReminders } = await import('../../lib/queries/finance')
+      const targetId = client.dbId ?? client.id
+      if (pausing) {
+        await pauseClientReminders(targetId, reason)
+      } else {
+        await resumeClientReminders(targetId)
+      }
+      setDraft((d) => (d ? {
+        ...d,
+        remindersPaused: pausing,
+        remindersPausedReason: pausing ? reason : null,
+      } : d))
+      profile.refetch()
+      showSuccessToast(
+        pausing ? 'Payment reminders paused' : 'Payment reminders resumed',
+        client.name,
+      )
+      setPauseRemindersMode(null)
+      setPauseReason('')
+    } catch (err) {
+      setPauseError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setPauseBusy(false)
+    }
+  }
+
   const creditAvailablePaisa =
     client.creditLimitPaisa !== undefined && client.creditUsedPaisa !== undefined
       ? (Math.max(0, client.creditLimitPaisa - client.creditUsedPaisa) as Paisa)
@@ -730,6 +776,19 @@ function ClientDetailView() {
             : []),
         ]
       : []),
+    ...(canManageReminders
+      ? [
+          {
+            label: client.remindersPaused ? 'Resume Payment Reminders' : 'Pause Payment Reminders',
+            icon: 'bell' as const,
+            onClick: () => {
+              setPauseRemindersMode(client.remindersPaused ? 'resume' : 'pause')
+              setPauseReason('')
+              setPauseError(null)
+            },
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -758,6 +817,14 @@ function ClientDetailView() {
                   {(client.isStaff || client.isStaffClient) && <Tone text="Staff" entity icon="users" />}
                   {client.isVip && <Tone text="VIP" entity />}
                   {client.isBlocked && <Tone text="Blocked" tone="danger" icon="alert_triangle" />}
+                  {client.remindersPaused && (
+                    <Tone
+                      text="Reminders Paused"
+                      tone="progress"
+                      icon="clock"
+                      {...(client.remindersPausedReason ? { reason: client.remindersPausedReason } : {})}
+                    />
+                  )}
                   {creditStop?.onStop && (
                     <Tone text="On Stop" tone="danger" icon="lock" reason={creditStop.reasons.join(' ')} />
                   )}
@@ -812,6 +879,18 @@ function ClientDetailView() {
                 // operator would read as the recorded reason.
                 (client.blockReason ?? 'The reason is recorded on the flag but is not carried by this view.')
               : 'Contact a manager for details.'
+          }
+        />
+      )}
+
+      {/* W18b, T5-08 — If payment reminders are paused, display warning banner */}
+      {client.remindersPaused && !client.isBlocked && (
+        <ErrorBanner
+          title="Payment reminders paused."
+          message={
+            client.remindersPausedReason
+              ? `Reason: ${client.remindersPausedReason}. Automatic payment reminder emails are not being sent for this client.`
+              : 'Automatic payment reminder emails are not being sent for this client.'
           }
         />
       )}
@@ -1740,6 +1819,82 @@ function ClientDetailView() {
                   </span>
                 )}
               </label>
+            </div>
+          </Modal>
+
+          {/*
+            ── W18b, T5-08 — pause/resume payment reminders dialog ─────────
+          */}
+          <Modal
+            isOpen={pauseRemindersMode !== null}
+            onClose={() => {
+              if (!pauseBusy) setPauseRemindersMode(null)
+            }}
+            title={pauseDialogMode === 'resume' ? `Resume payment reminders for ${client.name}?` : `Pause payment reminders for ${client.name}?`}
+            subtitle={
+              pauseDialogMode === 'resume'
+                ? 'Payment reminder cadence will resume for any completed rentals with an outstanding balance.'
+                : 'All pending payment reminders will be cancelled and automatic reminder emails will stop while paused.'
+            }
+            footer={
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, width: '100%' }}>
+                <Button variant="secondary" onClick={() => setPauseRemindersMode(null)} disabled={pauseBusy}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={confirmPauseRemindersChange}
+                  disabled={pauseBusy || (pauseRemindersMode === 'pause' && pauseReason.trim().length === 0)}
+                >
+                  {pauseBusy ? 'Saving…' : pauseDialogMode === 'resume' ? 'Resume Reminders' : 'Pause Reminders'}
+                </Button>
+              </div>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+              {pauseError && (
+                <ErrorBanner
+                  title={pauseDialogMode === 'resume' ? 'Reminders were not resumed' : 'Reminders were not paused'}
+                  message={pauseError}
+                />
+              )}
+              {pauseDialogMode === 'pause' && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--t-meta)' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text2)' }}>
+                    Reason for pausing (required)
+                  </span>
+                  <textarea
+                    value={pauseReason}
+                    onChange={(e) => setPauseReason(e.target.value)}
+                    rows={3}
+                    placeholder="e.g. Client requested extension until end of month; verbal agreement with owner"
+                    style={{
+                      padding: 10,
+                      borderRadius: 'var(--r-input)',
+                      border: '1px solid var(--border)',
+                      background: 'var(--card2)',
+                      color: 'var(--text)',
+                      fontSize: 'var(--t-meta)',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                    }}
+                  />
+                  {pauseReason.trim().length === 0 && (
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 'var(--sp-xs)',
+                        fontSize: 'var(--t-th)',
+                        color: 'var(--text2)',
+                      }}
+                    >
+                      <Icon name="info" size={12} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span>A reason is required to pause payment reminders (W18b).</span>
+                    </span>
+                  )}
+                </label>
+              )}
             </div>
           </Modal>
 

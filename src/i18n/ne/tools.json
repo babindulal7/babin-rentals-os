@@ -1,0 +1,18 @@
+{
+  "tools.landing.title": "औजार",
+  "tools.landing.subtitle": "एकीकृत कार्यशाला",
+  "tools.landing.calculatorsGroup": "क्यालकुलेटरहरू",
+  "tools.landing.commercialGroup": "व्यापारिक उपयोगिताहरू",
+  "tools.landing.cinematographyGroup": "सिनेमाटोग्राफी",
+  "tools.landing.depreciationLabel": "ह्रासकट्टी",
+  "tools.landing.depreciationHint": "किताबी दृश्य · IRD समूह दृश्य",
+  "tools.landing.pricingLabel": "मूल्य निर्धारण",
+  "tools.landing.pricingHint": "दर, दिन, छुट — कोटेसन परीक्षण",
+  "tools.landing.lateFeeLabel": "ढिलाइ शुल्क",
+  "tools.landing.lateFeeHint": "मानक नीति क्यालकुलेटर",
+  "tools.lateFee.ruleDescription": "30 मिनेटसम्म निःशुल्क। 2 घण्टाभन्दा कम: आधा दिन। 2 घण्टादेखि: पूरै दिन, र थप प्रत्येक 24 घण्टाको लागि अर्को दिन शुल्क लाग्नेछ।",
+  "tools.lateFee.estimateTitle": "ढिलाइ शुल्क अनुमान",
+  "tools.lateFee.dailyRateLabel": "दैनिक भाडा दर (NPR)",
+  "tools.lateFee.minutesLabel": "निर्धारित फिर्ता पछिको मिनेट",
+  "tools.lateFee.enterDailyRatePrompt": "शुल्क गणना गर्न दैनिक दर प्रविष्ट गर्नुहोस्।"
+}

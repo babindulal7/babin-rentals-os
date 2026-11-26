@@ -11,7 +11,7 @@ import { RecordActions } from '../RecordWorkspace'
 const state = vi.hoisted(() => ({ viewport:'desktop',mock:false }))
 vi.mock('../../../lib/device', () => ({useViewport:()=>state.viewport}))
 vi.mock('../../../lib/auth', () => ({useAuth:()=>({user:{name:'Operator',role:'Owner'},logout:vi.fn(),lockNow:vi.fn(),hasPin:false})}))
-vi.mock('../../../lib/supabase', () => ({get IS_MOCK(){return state.mock}}))
+vi.mock('../../../lib/supabase', () => ({get IS_MOCK(){return state.mock}, supabase: { channel: vi.fn(() => ({ on: vi.fn().mockReturnThis(), subscribe: vi.fn() })), removeChannel: vi.fn() }}))
 vi.mock('../../../lib/syncContext', () => ({useSync:()=>({status:'synced',pendingCount:0})}))
 vi.mock('../../shell/CommandPalette', () => ({openCommandPalette:vi.fn()}))
 vi.mock('../creation/GlobalAddMenu', () => ({GlobalAddMenu:()=> <button>Global Add</button>}))

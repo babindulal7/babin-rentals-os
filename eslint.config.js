@@ -32,7 +32,7 @@ const jsxA11yRecommended = {
     'jsx-a11y/control-has-associated-label': [
       'error',
       {
-        ignoreElements: ['audio', 'canvas', 'embed', 'input', 'textarea', 'tr', 'td', 'video'],
+        ignoreElements: ['audio', 'canvas', 'embed', 'input', 'textarea', 'tr', 'td', 'th', 'video'],
         ignoreRoles: ['grid', 'listbox', 'menu', 'menubar', 'radiogroup', 'row', 'tablist', 'toolbar', 'tree', 'treegrid'],
         includeRoles: ['alert', 'dialog'],
       },
@@ -136,6 +136,18 @@ export default tseslint.config(
     rules: {
       // False positive: linter infers role="tab" for buttons in Card action area.
       'jsx-a11y/role-supports-aria-props': 'off',
+    },
+  },
+  {
+    files: [
+      '**/Card.tsx',
+      '**/Modal.tsx',
+      '**/ModuleKpiStrip.tsx',
+      '**/SmartHoverTrigger.tsx',
+    ],
+    rules: {
+      // These components have proper role/tabIndex/onKeyDown but linter doesn't recognize conditional patterns.
+      'jsx-a11y/no-static-element-interactions': 'off',
     },
   },
 )

@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { AUDIT_LOG_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
+import { AUDIT_LOG_PATH, PROBLEM_REPORTS_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
 import Sidebar from './components/shell/Sidebar'
 import BottomBar, { BAR_BOX } from './components/shell/BottomBar'
 import HeaderBar from './components/shell/Header'
@@ -10,7 +10,7 @@ import ScannerFab from './components/shell/ScannerFab'
 import { ErrorBoundary } from './components/shell/ErrorBoundary'
 import { LoadingSkeleton, RestrictedState } from './components/ui/StateViews'
 import { Button } from './components/ui/Page'
-import { NAV, isMoneySurface, isStaffSurface, FLOOR_ROUTE_SUFFIXES } from './data/nav'
+import { NAV, isMoneySurface, isStaffSurface, FLOOR_ROUTE_SUFFIXES, defaultNavTarget } from './data/nav'
 import { ToastProvider } from './components/ui/Toast'
 import { SyncProvider } from './lib/syncContext'
 import { CommandPalette } from './components/shell/CommandPalette'
@@ -64,6 +64,7 @@ const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
 const AuditSettings     = lazy(() => import('./modules/admin/AuditSettings'))
 const ActivityLog       = lazy(() => import('./modules/admin/ActivityLog'))
 const AuditLog          = lazy(() => import('./modules/admin/AuditLog'))
+const ProblemReports    = lazy(() => import('./modules/admin/ProblemReports'))
 const NumberingSequences = lazy(() => import('./modules/admin/NumberingSequences'))
 const CashFlowReport    = lazy(() => import('./modules/reports/CashFlowReport'))
 const WorkingCapital    = lazy(() => import('./modules/reports/WorkingCapitalReport'))
@@ -89,6 +90,7 @@ const WarrantyTracker   = lazy(() => import('./modules/inventory/WarrantyTracker
 const QrLabels          = lazy(() => import('./modules/inventory/QrLabels'))
 const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage'))
 const RiderDeliveryPage = lazy(() => import('./modules/operations/RiderDeliveryPage'))
+const ApprovalsInbox    = lazy(() => import('./modules/approvals/ApprovalsInbox'))
 
 function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
   const { search, hash } = useLocation()
@@ -152,7 +154,7 @@ export default function App() {
         {/* Public Rider Link route (T4-08, W49): unauthenticated, token-hashed job view */}
         <Route path="/rider/:token" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
         <Route path="/rider" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
-        <Route path="/" element={<Navigate to={user ? "/today" : "/login"} replace />} />
+        <Route path="/" element={<Navigate to={user ? defaultNavTarget(user.role) : '/login'} replace />} />
 
         {/*
           v2.0 §5.1 removed Reports from the sidebar — it is a Finance tab
@@ -201,6 +203,17 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Today' }]} search="Search booking no, client, equipment…">
               <Today />
+            </Shell>
+          }
+        />
+
+        <Route
+          path="/approvals"
+          element={
+            <Shell crumbs={[{ label: 'Approvals' }]}>
+              <Suspense fallback={AuthFallback}>
+                <ApprovalsInbox />
+              </Suspense>
             </Shell>
           }
         />
@@ -849,6 +862,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Backup & Restore' }]}>
               <BackupRestore />
+            </Shell>
+          }
+        />
+
+        <Route
+          path={PROBLEM_REPORTS_PATH}
+          element={
+            <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Problem Reports' }]}>
+              <ProblemReports />
             </Shell>
           }
         />

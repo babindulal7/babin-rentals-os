@@ -6,6 +6,7 @@ import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import { dbRejectsRole } from './CrewSearch'
 import type { EquipmentAvailabilitySource } from './itemCatalogue'
 import { PRODUCT_ID_RE } from './newRentalUtils'
+import type { ClientActiveMembership } from '../../../lib/queries/membership'
 
 /**
  * One reason Confirm Booking is refused, in the shape the rail's blocking-
@@ -122,6 +123,8 @@ export interface RentalAlertsInput {
   lines: readonly { productId?: string | null | undefined; id?: string | undefined; name: string }[]
   equipmentLines: readonly { productId?: string | null | undefined; id?: string | undefined; name: string }[]
   pricing: PricingPipelineResult
+  clientMembership?: ClientActiveMembership | null | undefined
+  monthlyBookingsCount?: number | undefined
 }
 
 export interface RentalAlertsResult {
@@ -187,6 +190,26 @@ export function deriveRentalAlertsAndNotices(input: RentalAlertsInput): RentalAl
       ? [{ text: `Deposit ${formatMoney(input.depositPendingPaisa)} pending`, severity: 'Warning' as const, action: 'Receive Deposit' }]
       : []),
     ...(input.canBookingMoney && input.outstandingPaisa > 0 ? [{ text: 'Rental outstanding', severity: 'Warning' as const, action: 'Receive Payment' }] : []),
+    ...(input.clientMembership?.monthlyBookingLimit != null &&
+    (input.monthlyBookingsCount ?? 0) >= input.clientMembership.monthlyBookingLimit
+      ? [
+          {
+            text: `Monthly booking limit reached for ${input.clientMembership.level} (${input.monthlyBookingsCount ?? 0}/${input.clientMembership.monthlyBookingLimit} bookings this month)`,
+            severity: 'Warning' as const,
+            action: 'Review Limit',
+          },
+        ]
+      : []),
+    ...(input.clientMembership?.simultaneousRentalLimit != null &&
+    (input.client?.currentRentalsCount ?? 0) >= input.clientMembership.simultaneousRentalLimit
+      ? [
+          {
+            text: `Simultaneous rental limit reached for ${input.clientMembership.level} (${input.client?.currentRentalsCount ?? 0}/${input.clientMembership.simultaneousRentalLimit} active rentals)`,
+            severity: 'Warning' as const,
+            action: 'Review Limit',
+          },
+        ]
+      : []),
   ]
   const critical = alerts.filter((a) => a.severity === 'Critical')
 
@@ -207,9 +230,13 @@ export function deriveRentalAlertsAndNotices(input: RentalAlertsInput): RentalAl
   ]
   const confirmBlocked = blockingNotices.length > 0
 
-  // Warnings the confirm panel shows without blocking. Only the ID/PAN notice
-  // for now; deposit and outstanding warnings keep their existing surfaces.
-  const advisories = alerts.filter((a) => a.text === MISSING_GOV_ID_TEXT)
+  // Warnings the confirm panel shows without blocking. ID/PAN notice and membership limits.
+  const advisories = alerts.filter(
+    (a) =>
+      a.text === MISSING_GOV_ID_TEXT ||
+      a.text.includes('Monthly booking limit reached') ||
+      a.text.includes('Simultaneous rental limit reached'),
+  )
   return { alerts, critical, advisories, blockingNotices, confirmBlocked }
 }
 

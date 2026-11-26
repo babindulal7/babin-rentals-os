@@ -36,7 +36,7 @@ describe('quote editor round trips', () => {
     const draft = quoteToDraft(snapshot)
     draft.lines[0]!.lineNote = 'Updated setup'
     draft.lines[0]!.serviceBasis = 'Per day'
-    draft.crew = [{ crewId: 'bc1d18b8-b9c7-4831-9595-934735248f31', name: 'New crew', role: 'Camera Assistant', phone: '', dayRatePaisa: 10000, overtimePaisa: 0, accommodationPaisa: 0, mealsPaisa: 0 }]
+    draft.crew = [{ crewId: 'bc1d18b8-b9c7-4831-9595-934735248f31', name: 'New crew', role: 'Camera Assistant', phone: '', dayRatePaisa: 10000, overtimeDays: 0, accommodationPaisa: 0, mealsPaisa: 0 }]
     const payload = quoteUpdatePayload(draft, snapshot, rupees(750))
     expect(payload.lines[0]).toMatchObject({ line_note: 'Updated setup', service_basis: 'Per day' })
     expect(payload.crew[0]).toMatchObject({ id: null, crew_member_id: draft.crew[0]!.crewId, days: 4 })

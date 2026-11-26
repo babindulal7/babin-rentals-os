@@ -390,6 +390,12 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+[functions.send-email]
+verify_jwt = true
+
+[functions.morning-digest]
+verify_jwt = true
+
 [analytics]
 # Disabled 23 Aug 2026: logflare/vector are dead weight for local wiring work
 # and their health checks time out on this machine's cold WSL2 first boots.

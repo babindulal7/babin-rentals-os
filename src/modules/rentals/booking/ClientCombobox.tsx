@@ -624,9 +624,10 @@ function ClientListbox({
 
   // Portal to document.body to avoid any ancestor overflow clipping
   return createPortal(
+    // The inner <ul role="listbox"> is the one listbox; nesting a second listbox here is
+    // invalid ARIA. This wrapper only positions the popup and keeps focus in the input.
     <div
-      role="listbox"
-      tabIndex={-1}
+      role="presentation"
       style={{
         ...placement,
         position: 'fixed',

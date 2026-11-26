@@ -20,6 +20,7 @@ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
 import LegacyExportCard from './LegacyExportCard'
+import RoleTaskCockpit from './RoleTaskCockpit'
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -111,7 +112,7 @@ const QUICK_PERIOD_LABELS: Record<'en' | 'ne', Record<QuickPeriod, string>> = {
   ne: {
     Today: 'आज',
     Tomorrow: 'भोलि',
-    'Next 7 Days': 'यो हप्ता (७ दिन)',
+    'Next 7 Days': 'आगामी 7 दिन',
   },
 }
 
@@ -655,6 +656,8 @@ export default function Today() {
           />
         </div>
       </div>
+
+      <RoleTaskCockpit />
 
       <LegacyExportCard />
 

@@ -571,7 +571,7 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
                   <table className="client-import-preview" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760 }}>
                     <thead>
                       <tr style={{ background: 'var(--th-bg)' }}>
-                        <th style={{ ...th, width: 30 }} />
+                        <th style={{ ...th, width: 30 }}><span className="sr-only">Include row</span></th>
                         <th style={th}>Row</th>
                         <th style={th}>Name</th>
                         <th style={th}>Phone</th>

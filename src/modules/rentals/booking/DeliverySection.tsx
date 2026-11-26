@@ -216,7 +216,9 @@ export function DeliverySection({
                     <option value="">Select zone</option>
                     {zones.map((zone) => (
                       <option key={zone.id} value={zone.name}>
-                        {zone.name} — {formatMoney(zone.fee_paisa as unknown as Paisa)}
+                        {zone.fee_paisa === null
+                          ? zone.name
+                          : `${zone.name} — ${formatMoney(zone.fee_paisa as Paisa)}`}
                       </option>
                     ))}
                   </Select>

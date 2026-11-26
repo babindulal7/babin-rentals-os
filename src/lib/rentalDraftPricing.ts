@@ -21,7 +21,7 @@ export function calculateDraftTotal(data: RentalDraftData): Paisa {
     bundleSubtotalPaisa: sum(['Bundle']),
     subRentalSubtotalPaisa: sum(['Sub-rental']),
     servicesSubtotalPaisa: sum(['Service', 'Manual item']),
-    crewSubtotalPaisa: data.crew.reduce((total, crew) => total + crew.dayRatePaisa * (crew.days ?? days) + crew.overtimePaisa + crew.accommodationPaisa + crew.mealsPaisa, 0) as Paisa,
+    crewSubtotalPaisa: data.crew.reduce((total, crew) => total + crew.dayRatePaisa * ((crew.days ?? days) + (crew.overtimeDays ?? 0)) + crew.accommodationPaisa + crew.mealsPaisa, 0) as Paisa,
     deliveryChargePaisa: ((data.deliveryType === 'Babin Delivery' ? data.deliveryChargePaisa : 0) + (data.returnPickupChargePaisa ?? 0)) as Paisa,
     fuelChargePaisa: data.fuelChargePaisa as Paisa,
     discounts: { manualDiscountPercent: data.discountPct, isStudentBundle: data.lines.some(line => /student|college/i.test(`${line.bundleName ?? ''} ${line.category}`)) },

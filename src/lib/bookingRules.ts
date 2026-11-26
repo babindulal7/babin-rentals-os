@@ -6,15 +6,11 @@ import { readLocal, writeLocal } from './safeStorage'
  * Item becomes tappable and opens the override dialog instead of staying
  * dead.
  *
- * Every other Settings.tsx toggle is local component state today — no
- * settings-persistence layer exists in this build (confirmed: `Switch` there
- * holds its own `useState` and never propagates outward). Standing up a real
- * backend connection as a side effect of shipping this one toggle would be
- * new infrastructure this redesign did not ask for, so this mirrors
- * `lib/collapse.ts`'s existing localStorage pattern instead — real enough
- * that the setting actually gates the chip (Settings and New Rental are
- * different routes, never mounted together, so no cross-tab sync is needed),
- * without inventing a database column no migration has approved.
+ * T1-16 removes the other six non-persisted Settings switches. This legacy
+ * toggle is still explicitly **device-only**, backed by localStorage rather
+ * than a shared database policy. T2-23 replaces it with per-product rules.
+ * It only changes the Add Item override UI and never overrides server-side
+ * reservation checks.
  *
  * TODO(decision) — PLAN.md §4: should this toggle be global, or restricted to
  * Owner/Admin? A global switch means a Coordinator can overbook once an

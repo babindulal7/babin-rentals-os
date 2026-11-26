@@ -67,15 +67,16 @@ function downloadSampleCsv() {
 export interface ProductsImportCenterProps {
   embedded?: boolean
   onDone?: () => void
+  onDepositSetup?: () => void
 }
 
-export default function ProductsImportCenter({ embedded = false, onDone }: ProductsImportCenterProps = {}) {
+export default function ProductsImportCenter({ embedded = false, onDone, onDepositSetup }: ProductsImportCenterProps = {}) {
   const { user } = useAuth()
   if (!user || !canImportProducts(user.role)) return <RestrictedState />
-  return <ProductImportForm key={user.id} embedded={embedded} {...(onDone ? { onDone } : {})} />
+  return <ProductImportForm key={user.id} embedded={embedded} {...(onDone ? { onDone } : {})} {...(onDepositSetup ? { onDepositSetup } : {})} />
 }
 
-function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterProps = {}) {
+function ProductImportForm({ embedded = false, onDone, onDepositSetup }: ProductsImportCenterProps = {}) {
   const { user } = useAuth()
   const online = useNetwork()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -333,6 +334,12 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
         title="Import equipment catalogue"
         description="Upload a CSV, map its columns, review the dry-run, then import. Existing products are never overwritten — a duplicate blocks the commit."
       />
+      {onDepositSetup && (
+        <Card title="Update deposits for existing products">
+          <p>Use Deposit setup to download product rules, check a CSV for changes, and apply the reviewed updates.</p>
+          <Button variant="secondary" onClick={onDepositSetup}>Open Deposit setup</Button>
+        </Card>
+      )}
 
       {!online && (
         <Card title="Connect to import">
@@ -354,6 +361,8 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
         }
       >
         <div
+          role="group"
+          aria-label="CSV upload — drop a file here or use Choose file"
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)
@@ -365,6 +374,7 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
             const file = e.dataTransfer.files[0]
             if (file) handleFile(file)
           }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('csv-file-input')?.click() } }}
           style={{
             border: `2px dashed ${dragOver ? 'var(--nav-active-accent)' : 'var(--border)'}`,
             borderRadius: 'var(--r-card)',

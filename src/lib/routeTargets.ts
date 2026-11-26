@@ -1,6 +1,7 @@
 /** Canonical navigation paths shared by route declarations and contextual actions. */
 export const PRODUCTIONS_HUB_PATH = '/rentals/productions'
 export const AUDIT_LOG_PATH = '/admin/audit-log'
+export const PROBLEM_REPORTS_PATH = '/admin/problem-reports'
 
 export type FinanceTabSlug = 'closing' | 'invoices' | 'payments' | 'expenses' | 'documents' | 'reports'
 

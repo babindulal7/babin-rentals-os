@@ -20,7 +20,9 @@ vi.mock('../../../events/eventBus', () => ({
 describe('updateDeliveryZone', () => {
   // Plain { data, error } replies, typed loosely as in the other action tests.
   const mockRpc = vi.mocked(supabase.rpc) as unknown as ReturnType<typeof vi.fn>;
-  const coordinatorContext = { userId: 'user-123', role: 'Coordinator' as const };
+  // T4-07: zone writes are Owner/Admin/Manager only. Coordinator used to pass.
+  const managerContext = { userId: 'user-123', role: 'Manager' as const };
+  const coordinatorContext = { userId: 'coordinator-123', role: 'Coordinator' as const };
   const ownerContext = { userId: 'owner-123', role: 'Owner' as const };
   const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
@@ -33,6 +35,12 @@ describe('updateDeliveryZone', () => {
     await expect(updateDeliveryZone({ zoneId: 'zone-uuid' })).rejects.toThrow(
       'was called without a session context'
     );
+  });
+
+  it('throws ActionPermissionError for Coordinator role', async () => {
+    await expect(
+      updateDeliveryZone({ zoneId: 'zone-uuid', name: 'Updated' }, coordinatorContext)
+    ).rejects.toThrow(ActionPermissionError);
   });
 
   it('throws ActionPermissionError for Warehouse role', async () => {
@@ -49,40 +57,40 @@ describe('updateDeliveryZone', () => {
 
   it('throws validation error for missing zoneId', async () => {
     await expect(
-      updateDeliveryZone({ zoneId: '' }, coordinatorContext)
+      updateDeliveryZone({ zoneId: '' }, managerContext)
     ).rejects.toThrow('Zone ID is required');
   });
 
   it('throws validation error for invalid UUID format', async () => {
     await expect(
-      updateDeliveryZone({ zoneId: 'not-a-uuid' }, coordinatorContext)
+      updateDeliveryZone({ zoneId: 'not-a-uuid' }, managerContext)
     ).rejects.toThrow('Invalid zone ID format');
   });
 
   it('throws validation error for empty name', async () => {
     await expect(
-      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', name: '' }, coordinatorContext)
+      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', name: '' }, managerContext)
     ).rejects.toThrow('Zone name cannot be empty');
   });
 
   it('throws validation error for negative fee', async () => {
     await expect(
-      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', feePaisa: -100 }, coordinatorContext)
+      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', feePaisa: -100 }, managerContext)
     ).rejects.toThrow('Zone fee cannot be negative');
   });
 
   it('throws validation error for non-integer fee', async () => {
     await expect(
-      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', feePaisa: 350000.5 }, coordinatorContext)
+      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', feePaisa: 350000.5 }, managerContext)
     ).rejects.toThrow('Zone fee must be an integer');
   });
 
-  it('updates zone successfully for Coordinator', async () => {
+  it('updates zone successfully for Manager', async () => {
     mockRpc.mockResolvedValue({ data: true, error: null } as any);
 
     const result = await updateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000', name: 'Updated Zone', feePaisa: 400000 },
-      coordinatorContext
+      managerContext
     );
 
     expect(result).toEqual({ updated: true });
@@ -111,7 +119,7 @@ describe('updateDeliveryZone', () => {
 
     const result = await updateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000', name: 'Updated' },
-      coordinatorContext
+      managerContext
     );
 
     expect(result).toEqual({ updated: false });
@@ -121,7 +129,7 @@ describe('updateDeliveryZone', () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found' } } as any);
 
     await expect(
-      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', name: 'Updated' }, coordinatorContext)
+      updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', name: 'Updated' }, managerContext)
     ).rejects.toThrow('Failed to update delivery zone: Zone not found');
   });
 });

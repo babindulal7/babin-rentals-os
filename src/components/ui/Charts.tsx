@@ -408,6 +408,8 @@ export function GroupedBars({
               {g.values.map((v, si) => (
                 <div
                   key={si}
+                  role="img"
+                  aria-label={`${g.label} · ${series[si]} · ${format(v)}`}
                   title={`${g.label} · ${series[si]} · ${format(v)}`}
                   onMouseEnter={() => setHover([gi, si])}
                   onMouseLeave={() => setHover(null)}

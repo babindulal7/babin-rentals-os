@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
 import { rowsOf, type ReportFilterOptions } from './reportSupport'
+import { fetchLatestOpeningBalance } from './openingBalances'
 
 /**
  * Cash Flow and Working Capital — read from the ledgers, never from a seed.
@@ -52,9 +53,10 @@ export interface CashFlowSummary {
   invoiced: Paisa
   /** collected ÷ invoiced; null when nothing was invoiced. */
   collectionRatePct: number | null
-  /** No bank balance is recorded anywhere, so these have no source. */
-  openingCash: null
-  closingCash: null
+  /** Opening cash balance for the period (from opening_balances table). Null if not set. */
+  openingCash: Paisa | null
+  /** Closing cash = opening + netOperatingCash. Null if opening is not set. */
+  closingCash: Paisa | null
   capitalSpend: null
   runwayMonths: null
 }
@@ -107,6 +109,12 @@ export async function getCashFlowSummary(options: ReportFilterOptions = {}): Pro
     byCat.set(name, (byCat.get(name) ?? 0) + money(e.amount))
   }
 
+  // Fetch opening balance for the period (T3-07)
+  const asOfDate = options.to ?? new Date().toISOString().slice(0, 10)
+  const openingBalance = await fetchLatestOpeningBalance('cash', null, asOfDate).catch(() => null)
+  const openingCash = openingBalance?.amountPaisa ?? null
+  const closingCash = openingCash !== null ? (openingCash + (collected - refunds - expensesPaid)) as Paisa : null
+
   return {
     collected,
     refunds,
@@ -117,8 +125,8 @@ export async function getCashFlowSummary(options: ReportFilterOptions = {}): Pro
     depositsReleased: sum(movements.filter((m) => m.movement_type === 'Released'), (m) => money(m.amount)),
     invoiced,
     collectionRatePct: invoiced > 0 ? Math.round((collected / invoiced) * 100) : null,
-    openingCash: null,
-    closingCash: null,
+    openingCash,
+    closingCash,
     capitalSpend: null,
     runwayMonths: null,
   }

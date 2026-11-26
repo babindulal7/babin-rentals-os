@@ -347,7 +347,7 @@ export default function TimesheetTab() {
                     <th style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text2)', textAlign: 'right' }}>Pay</th>
                   )}
                   <th style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text2)' }}>Approval</th>
-                  <th style={{ width: 32 }} />
+                  <th style={{ width: 32 }}><span className="sr-only">Timesheet details</span></th>
                 </tr>
               </thead>
               <tbody>

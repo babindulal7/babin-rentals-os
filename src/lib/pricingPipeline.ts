@@ -53,6 +53,8 @@ export interface PromoCodeDefinition {
 
 export interface DiscountDetails {
   membershipPercent?: number | undefined
+  membershipBundlePercent?: number | undefined
+  membershipPlanName?: string | undefined
   durationPercent?: number | undefined
   bundleSavingPercent?: number | undefined
   womenDopEligible?: boolean | undefined
@@ -64,6 +66,8 @@ export interface DiscountDetails {
   isStaffClient?: boolean | undefined
   staffDiscountPercent?: number | undefined
   staffDiscountRemoved?: boolean | undefined
+  equipmentSubtotalPaisa?: Paisa | undefined
+  bundleSubtotalPaisa?: Paisa | undefined
 }
 
 /* RULING 2026-10-07: the hard-coded PROMO_CODES demo table is deleted. A code exists only as a
@@ -219,9 +223,18 @@ export function evaluateDiscounts(
     }
     if (discounts.membershipPercent && discounts.membershipPercent > 0) {
       sources.push({
-        name: 'Membership Discount',
+        name: discounts.membershipPlanName ? `${discounts.membershipPlanName} Membership Discount` : 'Membership Discount',
         discountSource: 'Membership',
         percent: discounts.membershipPercent,
+        applied: false,
+        exclusionReason: 'Student bundles do not stack with membership discounts',
+      })
+    }
+    if (discounts.membershipBundlePercent && discounts.membershipBundlePercent > 0) {
+      sources.push({
+        name: discounts.membershipPlanName ? `${discounts.membershipPlanName} Bundle Discount` : 'Membership Bundle Discount',
+        discountSource: 'Membership',
+        percent: discounts.membershipBundlePercent,
         applied: false,
         exclusionReason: 'Student bundles do not stack with membership discounts',
       })
@@ -293,13 +306,68 @@ export function evaluateDiscounts(
         })
       }
     }
-    if (discounts.membershipPercent && discounts.membershipPercent > 0) {
-      sources.push({
-        name: 'Membership Discount',
-        discountSource: 'Membership',
-        percent: discounts.membershipPercent,
-        applied: true,
-      })
+    // Normal discount stacking: member individual % on items, bundle % on bundles (21 Jul lock)
+    const hasSubtotals =
+      discounts.equipmentSubtotalPaisa !== undefined || discounts.bundleSubtotalPaisa !== undefined
+    const eqSub = discounts.equipmentSubtotalPaisa ?? 0
+    const bdSub = discounts.bundleSubtotalPaisa ?? 0
+
+    if (hasSubtotals) {
+      if (
+        discounts.membershipPercent &&
+        discounts.membershipPercent > 0 &&
+        discounts.membershipBundlePercent &&
+        discounts.membershipBundlePercent > 0 &&
+        eqSub > 0 &&
+        bdSub > 0
+      ) {
+        const gearSub = eqSub + bdSub
+        const eqDisc = eqSub * (discounts.membershipPercent / 100)
+        const bdDisc = bdSub * (discounts.membershipBundlePercent / 100)
+        const effectivePct = Number((((eqDisc + bdDisc) / gearSub) * 100).toFixed(2))
+        sources.push({
+          name: discounts.membershipPlanName
+            ? `${discounts.membershipPlanName} Membership (${discounts.membershipPercent}% items, ${discounts.membershipBundlePercent}% bundles)`
+            : `Membership Discount (${discounts.membershipPercent}% items, ${discounts.membershipBundlePercent}% bundles)`,
+          discountSource: 'Membership',
+          percent: effectivePct,
+          applied: true,
+        })
+      } else {
+        if (eqSub > 0 && discounts.membershipPercent && discounts.membershipPercent > 0) {
+          sources.push({
+            name: discounts.membershipPlanName ? `${discounts.membershipPlanName} Membership Discount` : 'Membership Discount',
+            discountSource: 'Membership',
+            percent: discounts.membershipPercent,
+            applied: true,
+          })
+        }
+        if (bdSub > 0 && discounts.membershipBundlePercent && discounts.membershipBundlePercent > 0) {
+          sources.push({
+            name: discounts.membershipPlanName ? `${discounts.membershipPlanName} Bundle Discount` : 'Membership Bundle Discount',
+            discountSource: 'Membership',
+            percent: discounts.membershipBundlePercent,
+            applied: true,
+          })
+        }
+      }
+    } else {
+      if (discounts.membershipPercent && discounts.membershipPercent > 0) {
+        sources.push({
+          name: discounts.membershipPlanName ? `${discounts.membershipPlanName} Membership Discount` : 'Membership Discount',
+          discountSource: 'Membership',
+          percent: discounts.membershipPercent,
+          applied: true,
+        })
+      }
+      if (discounts.membershipBundlePercent && discounts.membershipBundlePercent > 0) {
+        sources.push({
+          name: discounts.membershipPlanName ? `${discounts.membershipPlanName} Bundle Discount` : 'Membership Bundle Discount',
+          discountSource: 'Membership',
+          percent: discounts.membershipBundlePercent,
+          applied: true,
+        })
+      }
     }
     if (discounts.durationPercent && discounts.durationPercent > 0) {
       sources.push({
@@ -432,7 +500,17 @@ export function calculatePricingPipeline(input: PricingPipelineInput): PricingPi
   ) as Paisa
 
   // 6 - 7: Eligible discounts and 25% cap
-  const discounts = evaluateDiscounts(input.discounts, grossSubtotalPaisa, input.bookingDateAd)
+  const discounts = evaluateDiscounts(
+    input.discounts
+      ? {
+          equipmentSubtotalPaisa,
+          bundleSubtotalPaisa,
+          ...input.discounts,
+        }
+      : undefined,
+    grossSubtotalPaisa,
+    input.bookingDateAd,
+  )
 
   // 8: Taxable subtotal
   const taxableSubtotalPaisa = Math.max(0, grossSubtotalPaisa - discounts.discountPaisa) as Paisa

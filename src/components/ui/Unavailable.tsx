@@ -112,6 +112,7 @@ export function Unavailable({
   return (
     <span
       ref={wrapperRef}
+      role="button"
       aria-disabled
       aria-label={reason}
       tabIndex={0}

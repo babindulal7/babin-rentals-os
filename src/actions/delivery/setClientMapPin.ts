@@ -17,7 +17,7 @@ export type SetClientMapPinOutput = {
 
 export const setClientMapPin = createAction<SetClientMapPinInput, SetClientMapPinOutput>({
   name: 'setClientMapPin',
-  permissions: ['delivery.reschedule'],
+  permissions: ['delivery.setClientMapPin'],
   implemented: true,
   validate: (input) => {
     if (!input.clientId || typeof input.clientId !== 'string') {

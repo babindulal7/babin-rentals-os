@@ -26,3 +26,16 @@ test('permits CSS hooks and comparison operands without permitting visible devel
   assert.equal(copyViolations('sample.tsx', '<div>{items.map(item => { const pending = item.state === "todo"; return <p>{pending ? "Required" : "Ready"}</p> })}</div>').length, 0)
   assert.equal(copyViolations('sample.tsx', '<p>{ready ? "Ready" : "TODO"}</p>').length, 1)
 })
+
+test('rejects raw JSX text in converted modules (T6-02)', () => {
+  const convertedPath = 'src/modules/tools/LateFeeCalculator.tsx'
+  // Raw English text in converted module is an i18n violation
+  const rawSource = 'export default function View() { return <div><p>Raw text in converted module</p></div> }'
+  const violations = copyViolations(convertedPath, rawSource)
+  assert.ok(violations.length > 0)
+  assert.ok(violations[0].text.includes('[i18n]'))
+
+  // Using translation keys via {t(...)} passes cleanly
+  const compliantSource = 'export default function View() { return <div><p>{t("tools.lateFee.ruleDescription")}</p></div> }'
+  assert.equal(copyViolations(convertedPath, compliantSource).length, 0)
+})

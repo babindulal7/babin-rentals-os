@@ -202,7 +202,7 @@ export function useNewRentalDraft({
       crew: crew.map((member) => ({
         ...member,
         dayRatePaisa: Number(member.dayRatePaisa),
-        overtimePaisa: Number(member.overtimePaisa),
+        overtimeDays: Number(member.overtimeDays ?? 0),
         accommodationPaisa: Number(member.accommodationPaisa),
         mealsPaisa: Number(member.mealsPaisa),
       })),

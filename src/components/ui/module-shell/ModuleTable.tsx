@@ -178,7 +178,9 @@ export const ModuleTable: React.FC<ModuleTableProps> = ({
 
                     {/* Col 6: Pinned Row Action + Overflow */}
                     <td>
-                      <div className="module-table__actions" onClick={(e) => e.stopPropagation()}>
+                      {/* Containment only: a click here must not also open the row. The row's own key
+                          handler already ignores keys that come from these buttons. */}
+                      <div className="module-table__actions" role="presentation" onClick={(e) => e.stopPropagation()}>
                         {row.primaryAction && (
                           <button
                             type="button"

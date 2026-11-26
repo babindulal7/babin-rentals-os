@@ -64,6 +64,25 @@ export const BS_MONTHS = [
   'Chaitra',
 ] as const
 
+/**
+ * Approved Nepali BS month spellings in Devanagari (T6-01 / T6-02).
+ * Digits in dates always stay Latin (S11, R-21).
+ */
+export const BS_MONTHS_NE = [
+  'बैशाख',
+  'जेठ',
+  'असार',
+  'श्रावण',
+  'भदौ',
+  'असोज',
+  'कार्तिक',
+  'मंसिर',
+  'पौष',
+  'माघ',
+  'फागुन',
+  'चैत',
+] as const
+
 export interface BsDate {
   year: number
   /** 1-based, indexes `BS_MONTHS`. */
@@ -244,10 +263,19 @@ export function hasBs(ad: Date): boolean {
   return toBs(ad) !== null
 }
 
-/** "16 Shrawan" — compact day/month labels; legacy suffix options stay source-compatible. */
-export function formatBs(bs: BsDate, _opts: { suffix?: boolean } = {}): string {
-  const name = BS_MONTHS[bs.month - 1] ?? ''
+/** "16 Shrawan" (EN) or "16 श्रावण" (NE) — compact day/month labels; numbers stay Latin. */
+export function formatBs(bs: BsDate, opts: { suffix?: boolean; lang?: 'en' | 'ne' } = {}): string {
+  const months = opts.lang === 'ne' ? BS_MONTHS_NE : BS_MONTHS
+  const name = months[bs.month - 1] ?? ''
   return `${bs.day} ${name}`
+}
+
+/**
+ * Returns the BS month name in the requested language.
+ */
+export function formatBsMonth(bsMonth: number, lang: 'en' | 'ne' = 'en'): string {
+  const months = lang === 'ne' ? BS_MONTHS_NE : BS_MONTHS
+  return months[bsMonth - 1] ?? ''
 }
 
 /**
@@ -258,7 +286,7 @@ export function formatBs(bs: BsDate, _opts: { suffix?: boolean } = {}): string {
  * missing BS label is a gap in this file's table, not a gap in the date, and
  * showing "—" where "25 Aug 2026" is known would hide a date the app holds.
  */
-export function formatBsOrAd(ad: Date, opts: { suffix?: boolean } = {}): string {
+export function formatBsOrAd(ad: Date, opts: { suffix?: boolean; lang?: 'en' | 'ne' } = {}): string {
   const bs = toBs(ad)
   return bs ? formatBs(bs, opts) : formatAd(ad)
 }

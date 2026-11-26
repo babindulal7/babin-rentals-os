@@ -53,19 +53,38 @@ Deno.serve(async (req: Request) => {
 
     const tokenHash = await sha256Hex(token.trim())
 
+    function handleRpcError(error: { code?: string; message: string; details?: string }) {
+      // R4: Map 42501 or invalid/expired/revoked link messages to generic rider-safe message.
+      // Log specific reason server-side without leaking token, hash, phone or name.
+      console.warn(`[rider-link] RPC refused: code=${error.code || 'unknown'} message=${error.message}`)
+
+      const isRefusal = error.code === '42501' ||
+        error.message.includes('Link not found') ||
+        error.message.includes('revoked') ||
+        error.message.includes('expired') ||
+        error.message.includes('already been completed') ||
+        error.message.includes('permission denied')
+
+      if (isRefusal) {
+        return new Response(
+          JSON.stringify({ error: 'This link is no longer valid.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     if (action === 'get_job') {
       const { data, error } = await supabase.rpc('get_rider_job_by_token', {
         p_token_hash: tokenHash,
       })
 
       if (error) {
-        const status = error.message.includes('expired') || error.message.includes('revoked') || error.message.includes('already been completed')
-          ? 410
-          : 404
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+        return handleRpcError(error)
       }
 
       return new Response(
@@ -80,10 +99,7 @@ Deno.serve(async (req: Request) => {
       })
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+        return handleRpcError(error)
       }
 
       return new Response(
@@ -110,10 +126,7 @@ Deno.serve(async (req: Request) => {
       })
 
       if (error) {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+        return handleRpcError(error)
       }
 
       return new Response(

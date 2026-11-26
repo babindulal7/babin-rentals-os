@@ -4,6 +4,7 @@ import Icon from '../ui/Icon'
 import { bottomBarSlots, permittedNav, activeNavTo } from '../../data/nav'
 import type { BottomBarSlot } from '../../data/nav'
 import { useAuth } from '../../lib/auth'
+import { useTranslation } from '../../lib/i18n'
 import { toggleScanner } from './ScannerFab'
 import MoreSheet from './MoreSheet'
 
@@ -143,6 +144,20 @@ const slotStyle = {
 
 const labelStyle = { fontSize: 'var(--t-th)', whiteSpace: 'nowrap' as const }
 
+const NAV_LABEL_KEYS: Record<string, string> = {
+  '/rentals/new': 'nav.newRental',
+  '/today': 'nav.today',
+  '/operations': 'nav.operations',
+  '/rentals': 'nav.rentals',
+  '/calendar': 'nav.calendar',
+  '/crew': 'nav.crewAssist',
+  '/inventory': 'nav.inventory',
+  '/clients': 'nav.clients',
+  '/finance': 'nav.finance',
+  '/tools': 'nav.tools',
+  '/settings': 'nav.settings',
+}
+
 function Slot({
   slot,
   activeTo,
@@ -154,6 +169,8 @@ function Slot({
   moreOpen: boolean
   onMore: () => void
 }) {
+  const { t } = useTranslation()
+
   if (slot.kind === 'scan') {
     return (
       <button
@@ -163,7 +180,7 @@ function Slot({
            see it reopened by the click — a button that never appears to work. */
         data-scanner
         onClick={toggleScanner}
-        aria-label="Scan equipment"
+        aria-label={t('nav.scanAria', 'Scan equipment')}
         className="tap press"
         style={{ ...slotStyle, color: 'var(--text2)' }}
       >
@@ -184,7 +201,7 @@ function Slot({
         >
           <Icon name="barcode" size={20} />
         </span>
-        <span style={{ ...labelStyle, fontWeight: 600 }}>Scan</span>
+        <span style={{ ...labelStyle, fontWeight: 600 }}>{t('nav.scan', 'Scan')}</span>
       </button>
     )
   }
@@ -199,13 +216,15 @@ function Slot({
         style={{ ...slotStyle, color: moreOpen ? 'var(--nav-active-accent)' : 'var(--text2)' }}
       >
         <Icon name="more_vert" size={20} fill={moreOpen} />
-        <span style={{ ...labelStyle, fontWeight: moreOpen ? 700 : 500 }}>More</span>
+        <span style={{ ...labelStyle, fontWeight: moreOpen ? 700 : 500 }}>{t('nav.more', 'More')}</span>
       </button>
     )
   }
 
   const { section } = slot
   const on = section.to === activeTo
+  const navKey = NAV_LABEL_KEYS[section.to]
+  const displayLabel = navKey ? t(navKey, section.label) : section.label
 
   return (
     <Link
@@ -214,7 +233,7 @@ function Slot({
       style={{ ...slotStyle, color: on ? 'var(--nav-active-accent)' : 'var(--text2)' }}
     >
       <Icon name={section.icon} size={20} fill={on} />
-      <span style={{ ...labelStyle, fontWeight: on ? 700 : 500 }}>{section.label}</span>
+      <span style={{ ...labelStyle, fontWeight: on ? 700 : 500 }}>{displayLabel}</span>
     </Link>
   )
 }

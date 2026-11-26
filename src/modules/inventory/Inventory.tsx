@@ -1859,6 +1859,12 @@ export default function Inventory() {
         <Suspense fallback={<LoadingSkeleton type="card" label="Loading catalogue import…" />}>
           <ProductsImportCenter
             embedded
+            onDepositSetup={() => {
+              const p = new URLSearchParams(params)
+              p.delete('tab')
+              setParams(p, { replace: true })
+              setTab('Deposit Setup')
+            }}
             onDone={() => {
               const p = new URLSearchParams(params)
               p.delete('tab')
@@ -2259,8 +2265,9 @@ export default function Inventory() {
                       <thead>
                         <tr style={{ background: 'var(--th-bg)' }}>
                           <th style={{ ...th, width: 44 }}>
-                            <label className="data-table-selection-hit">
+                            <label htmlFor="inventory-select-all" className="data-table-selection-hit">
                             <input
+                              id="inventory-select-all"
                               type="checkbox"
                               aria-label="Select every model on this page"
                               checked={allOnPageSelected}
@@ -2269,7 +2276,7 @@ export default function Inventory() {
                             />
                             </label>
                           </th>
-                          <th style={{ ...th, width: 26 }} />
+                          <th style={{ ...th, width: 26 }}><span className="sr-only">Expand or collapse row</span></th>
                           <th style={th}>
                             <button
                               type="button"
