@@ -6,6 +6,7 @@
 - Claimed and wrote migration 20261126153000. It locks the booking then booking line and refuses a quantity pickup movement that would exceed the booked quantity. It leaves idempotent client UUID retries to the existing uniqueness constraint.
 - Extended the guard to include serialized movements and limit corrections to the original movement on the same booking line. Added an invoker-security pickup-total view for the later screen/action repair; it exposes physical counts under the source tables' RLS.
 - Connected the Handover checklist to net pickup totals for quantity lines. It separates a recorded partial quantity from the remaining quantity and refuses to load if totals cannot be read or exceed the booking; mock mode derives the same view from movements.
+- Changed Handover to commit movements before marking a line complete, calculate completion from the cumulative net total, refuse changed quantity retries, and fail closed instead of queuing key custody writes.
 
 **Ruled**
 - Custody writes are fail-closed and the booked quantity is the upper bound.
@@ -14,6 +15,7 @@
 - Added a lifecycle regression that first failed on the previous source because excess pickup was accepted. The revised migration applied in PGlite (275/275), and lifecycle passed 102/102. The regression covers an excess pickup, a later session collecting the remainder, an exact retry and a subsequent excess pickup.
 - A new regression first demonstrated that a serialized movement bypassed the original guard. The revised lifecycle checks serialized over-pickup, same-line correction, correction limits and the warehouse-visible net pickup total; client-role visibility and migration rebuild are also checked locally.
 - Focused mock-mode tests passed 33/33 across the pickup-total query, quantity row construction and existing Handover workspaces. The full browser path and handover action are not yet verified.
+- The focused floor-verb suite passed 108/108, including later-session completion, changed and exact retries, and a refused movement leaving no completed line. These use mocked reads and writes; they do not prove a real Postgres or browser flow.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -31,7 +33,7 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Implement cumulative handover-line completion and retry handling in the action, then verify the full pickup flow and database correction edge cases. Verify concurrent sessions on real PostgreSQL, full local gates and disposable Playwright. The screen requires the new view. Migration is WRITTEN and locally VERIFIED in PGlite, not verified for real PostgreSQL concurrency or applied to staging or production.
+- Resolve recovery when a pickup movement commits but the subsequent line update fails: the screen already marks the quantity recorded, so it cannot currently resubmit that line. Verify the full pickup flow, database correction edge cases, concurrent sessions on real PostgreSQL, full local gates and disposable Playwright. The screen requires the new view. Migration is WRITTEN and locally VERIFIED in PGlite, not verified for real PostgreSQL concurrency or applied to staging or production.
 
 ## 2026-11-26 — Partial pickup Playwright locator repair (Lane A)
 

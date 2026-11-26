@@ -5,6 +5,7 @@ import { applyBookingTransition } from '../../lib/bookingTransition'
 import { logAuditEvent } from '../../lib/audit'
 import { captureError } from '../../lib/monitoring'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
+import { fetchHandoverPickupTotals } from '../../lib/queries/handoverPickupTotals'
 import { JOBS, type BookingStatus, type JobName } from '../../lib/workflow'
 import type { ActionContext } from '../core'
 import type {
@@ -1233,10 +1234,10 @@ export async function runFloorVerb(
   // setting. Revert: restore `generateClientUuid()` here.
   const sessionId = resumed?.id ?? (await operationSessionId(booking.id, operation, nextSessionNo))
 
-  // Return receipts are immutable. An exact retry may finish an open session,
+  // Pickup and return receipts are immutable. An exact retry may finish an open session,
   // but a changed count needs an explicit correction instead of silently
   // leaving the old receipt behind while rewriting its line state.
-  const resumedReturnMovements = job === 'Return' && resumed !== null
+  const resumedReturnMovements = (job === 'Return' || job === 'Handover') && resumed !== null
     ? await readSessionMovements(sessionId, lines.map((line) => line.bookingLineId))
     : null
   if (resumedReturnMovements !== null) {
@@ -1245,13 +1246,14 @@ export async function runFloorVerb(
       if (prior && scannedUnits(line).length === 0) {
         if (prior.qty !== movedQty(line, requiredByLine.get(line.bookingLineId) ?? 0)) {
           throw new Error(
-            `Return: booking line ${line.bookingLineId} already recorded ${prior.qty} in this session. ` +
+            `${job}: booking line ${line.bookingLineId} already recorded ${prior.qty} in this session. ` +
               'A changed quantity requires an explicit correction; retry with the recorded quantity. Nothing was written.',
           )
         }
-        if (prior.resultingState !== returnMovementState(line)) {
+        const requestedState = job === 'Return' ? returnMovementState(line) : MOVEMENT_STATE.Handover
+        if ((line.outcome ?? 'done') !== 'done' || prior.resultingState !== requestedState) {
           throw new Error(
-            `Return: booking line ${line.bookingLineId} already has a recorded receipt condition. ` +
+            `${job}: booking line ${line.bookingLineId} already has a recorded receipt condition. ` +
               'A changed condition or outcome requires an explicit correction. Nothing was written.',
           )
         }
@@ -1277,7 +1279,7 @@ export async function runFloorVerb(
       created_by: ctx.userId,
     } satisfies Database['public']['Tables']['operation_sessions']['Insert']
     try {
-      const inserted = await idempotentInsert('operation_sessions', sessionPayload, job === 'Return' ? { queueOnFailure: false } : undefined)
+      const inserted = await idempotentInsert('operation_sessions', sessionPayload, job === 'Return' || job === 'Handover' ? { queueOnFailure: false } : undefined)
       const insertedRow: unknown = inserted.data
       const insertedId = insertedRow && typeof insertedRow === 'object' && 'id' in insertedRow ? insertedRow.id : null
       if (job === 'Return' && insertedId !== sessionId) {
@@ -1298,14 +1300,14 @@ export async function runFloorVerb(
       await idempotentInsert('operation_sessions', {
         ...sessionPayload,
         delivery_method: 'Customer Pickup' as DeliveryMethod,
-      })
+      }, { queueOnFailure: false })
     }
   } else {
     // A resumed Handover session re-checks the receiver: the facts from THIS
     // pass are the current ones, so they are written over the earlier pass.
     const facts = operation === 'Handover' ? gateOneFacts(input) : {}
     if (Object.keys(facts).length > 0) {
-      await safeUpdate('operation_sessions', sessionId, { ...facts, updated_at: occurredAt }, actionUuid)
+      await safeUpdate('operation_sessions', sessionId, { ...facts, updated_at: occurredAt }, actionUuid, { queueOnFailure: false })
     }
   }
   if (resumed !== null && input.notes !== undefined) {
@@ -1313,7 +1315,8 @@ export async function runFloorVerb(
     // insert to ride in on and would otherwise be dropped on the floor. Appended
     // rather than written over: both passes' words are the operator's own.
     const merged = [resumed.notes, input.notes].filter((n) => n !== null && n !== '').join('\n')
-    await safeUpdate('operation_sessions', sessionId, { notes: merged, updated_at: occurredAt }, actionUuid)
+    await safeUpdate('operation_sessions', sessionId, { notes: merged, updated_at: occurredAt }, actionUuid,
+      job === 'Handover' || job === 'Return' ? { queueOnFailure: false } : undefined)
   }
 
   /* 5 — the line rows and their movements. */
@@ -1334,9 +1337,7 @@ export async function runFloorVerb(
     const priorId = existing.get(line.bookingLineId)?.id ?? null
 
     if (job === 'Pack') await writePackingLine(sessionId, line, required, moved, ctx, occurredAt, priorId, actionUuid)
-    else if (job === 'Handover')
-      await writeHandoverLine(sessionId, line, required, moved, ctx, occurredAt, priorId, actionUuid)
-    else {
+    else if (job === 'Return') {
       const returnLineId = await writeReturnLine(
         sessionId,
         line,
@@ -1355,6 +1356,16 @@ export async function runFloorVerb(
     // or one nothing moved on, produces no movement row.
     if ((line.outcome ?? 'done') === 'done' && moved > 0) {
       movements += await writeMovements(job, sessionId, line, moved, ctx, occurredAt, priorMovements.get(line.bookingLineId))
+    }
+
+    if (job === 'Handover') {
+      // Only committed movements can make the line terminal. This read also
+      // includes earlier sessions and compensating movements, without counting
+      // an idempotent retry a second time.
+      const totals = await fetchHandoverPickupTotals([line.bookingLineId])
+      const picked = totals.get(line.bookingLineId) ?? 0
+      if (picked > required) throw new Error('Recorded pickup quantity exceeds the booking; ask a manager to review it.')
+      await writeHandoverLine(sessionId, line, required, picked, ctx, occurredAt, priorId, actionUuid)
     }
 
     /* The per-unit state (0002:225-262) — the row Booking Detail's Packed /
@@ -1520,7 +1531,7 @@ export async function runFloorVerb(
       sessionId,
       { state: 'Completed', completed_at: occurredAt, completed_by: ctx.userId, updated_at: occurredAt },
       actionUuid,
-      job === 'Return' ? { queueOnFailure: false } : undefined,
+      job === 'Return' || job === 'Handover' ? { queueOnFailure: false } : undefined,
     )
   }
 
@@ -1677,7 +1688,11 @@ async function writeHandoverLine(
   if (priorId !== null) {
     // `first_session_id` is deliberately not in the update: the first session
     // that touched this line is a fact the second session must not overwrite.
-    await safeUpdate('handover_lines', priorId, { ...fields, updated_at: at }, actionUuid)
+    await safeUpdate('handover_lines', priorId, {
+      ...fields,
+      ...(state === 'Picked Up' ? {} : { completed_session_id: null, picked_up_at: null }),
+      updated_at: at,
+    }, actionUuid, { queueOnFailure: false })
     return
   }
   await idempotentInsert('handover_lines', {
@@ -1686,7 +1701,7 @@ async function writeHandoverLine(
     first_session_id: sessionId,
     created_by: ctx.userId,
     ...fields,
-  })
+  }, { queueOnFailure: false })
 }
 
 /**
@@ -1786,8 +1801,7 @@ async function writeMovements(
        immutable receipt; subsequent partial Returns use a new session. */
     if (prior?.qtyRow) {
       /* `session_line_movements` is append-only (its Update type is `never`),
-         so Return refuses a changed count before any write above. Pack and
-         Handover retain their existing line-state correction behavior. */
+         so Handover and Return refuse a changed count before any write above. */
       return 0
     }
     await idempotentInsert('session_line_movements', {
@@ -1798,7 +1812,7 @@ async function writeMovements(
       resulting_item_state: resulting,
       moved_at: at,
       created_by: ctx.userId,
-    }, job === 'Return' ? { queueOnFailure: false } : undefined)
+    }, job === 'Return' || job === 'Handover' ? { queueOnFailure: false } : undefined)
     return 1
   }
 
@@ -1817,7 +1831,7 @@ async function writeMovements(
       resulting_item_state: resulting,
       moved_at: at,
       created_by: ctx.userId,
-    }, job === 'Return' ? { queueOnFailure: false } : undefined)
+    }, job === 'Return' || job === 'Handover' ? { queueOnFailure: false } : undefined)
     written += 1
   }
   return written
@@ -2086,7 +2100,7 @@ async function writeUnitStates(
     if (outcome === 'missing') return u.unit_state !== 'Returned'
     return true
   })
-  await Promise.all(targets.map((u) => safeUpdate('booking_line_units', u.id, patch, actionUuid, job === 'Return' ? { queueOnFailure: false } : undefined)))
+  await Promise.all(targets.map((u) => safeUpdate('booking_line_units', u.id, patch, actionUuid, job === 'Return' || job === 'Handover' ? { queueOnFailure: false } : undefined)))
 }
 
 /* ── The reset queue: raised at Return, completed at Reset ──────────────── */

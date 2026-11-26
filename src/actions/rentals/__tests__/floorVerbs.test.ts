@@ -908,6 +908,51 @@ describe('Handover', () => {
     expect(result.sessionClosed).toBe(true)
   })
 
+  it('marks a line complete only after its committed movements reach the booked quantity across sessions', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'morning', session_no: 1, state: 'Completed' }]]
+    db.state.responses['handover_lines'] = [
+      [{ id: 'hl-1', booking_line_id: LINE_A, state: 'Remaining' }],
+      [{ id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' }],
+    ]
+    db.state.responses['handover_pickup_totals'] = [[{ booking_line_id: LINE_A, picked_qty: 2 }]]
+    await handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
+    const movement = writes.state.ops.findIndex((op) => op.table === 'session_line_movements')
+    const line = writes.state.ops.findIndex((op) => op.table === 'handover_lines')
+    expect(movement).toBeGreaterThanOrEqual(0)
+    expect(line).toBeGreaterThan(movement)
+    expect(opsOn('handover_lines')[0]?.payload).toMatchObject({ state: 'Picked Up', qty_required: 2 })
+  })
+
+  it('refuses a changed quantity when retrying a session with an immutable pickup receipt', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
+    db.state.responses['session_line_movements'] = [[{ id: 'movement', booking_line_id: LINE_A,
+      unit_id: null, serial: null, qty: 1, resulting_item_state: 'Picked Up' }]]
+    await expect(handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 2 }] }, OWNER))
+      .rejects.toThrow(/already recorded 1/)
+    expect(writes.state.ops).toHaveLength(0)
+  })
+
+  it('retries the recorded quantity without adding another movement', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
+    db.state.responses['session_line_movements'] = [[{ id: 'movement', booking_line_id: LINE_A,
+      unit_id: null, serial: null, qty: 1, resulting_item_state: 'Picked Up' }]]
+    db.state.responses['handover_pickup_totals'] = [[{ booking_line_id: LINE_A, picked_qty: 2 }]]
+    db.state.responses['handover_lines'] = [
+      [{ id: 'hl-1', booking_line_id: LINE_A, state: 'Remaining' }],
+      [{ id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' }],
+    ]
+    await handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
+    expect(insertsOn('session_line_movements')).toHaveLength(0)
+    expect(opsOn('handover_lines')[0]?.payload['state']).toBe('Picked Up')
+  })
+
+  it('does not write a completed line if the pickup movement is refused', async () => {
+    writes.state.refuseInsertOn = 'session_line_movements'
+    await expect(handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 2 }] }, OWNER))
+      .rejects.toThrow(/Gate Check Failure/)
+    expect(opsOn('handover_lines')).toHaveLength(0)
+  })
+
   it('opens the evening collection beside the completed morning one, never inside it', async () => {
     // Where Pack resumes an unfinished session, Handover does not: 0003:129 makes
     // the morning collection 1 and the evening 2, and a Completed session is
