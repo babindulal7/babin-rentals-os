@@ -15,6 +15,10 @@ let mockIdDocA: any = null
 let mockCollectorsA: any[] = []
 let mockCollateralHeld = false
 const reportActions = vi.fn()
+vi.mock('../../../lib/queries/handoverPickupTotals', () => ({
+  fetchHandoverPickupTotals: async () => new Map(),
+  fetchResumableHandoverSession: async () => null,
+}))
 
 vi.mock('../../../lib/queries/clients', () => ({
   fetchClientIdDocument: vi.fn().mockImplementation(async (clientId: string) => {

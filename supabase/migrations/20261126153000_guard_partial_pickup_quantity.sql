@@ -26,6 +26,24 @@ select m.booking_line_id,
 revoke all on public.handover_pickup_totals from public, anon;
 grant select on public.handover_pickup_totals to authenticated;
 
+-- Only an open session with an unreversed pickup can be finished without new
+-- marks. Aggregation keeps the query bounded to one row per session.
+create view public.handover_resumable_sessions
+with (security_invoker = true) as
+select s.id as session_id, s.booking_id
+  from public.operation_sessions s
+  join public.session_line_movements m on m.session_id = s.id
+  left join lateral (
+    select coalesce(sum(reversal.qty), 0) as reversed_qty
+      from public.session_line_movements reversal where reversal.reverses_movement_id = m.id
+  ) r on true
+ where s.operation = 'Handover' and s.state = 'In Progress'
+   and m.resulting_item_state = 'Picked Up' and m.reverses_movement_id is null
+ group by s.id, s.booking_id
+having sum(m.qty - r.reversed_qty) > 0;
+revoke all on public.handover_resumable_sessions from public, anon;
+grant select on public.handover_resumable_sessions to authenticated;
+
 create function public.guard_quantity_pickup_total()
 returns trigger
 language plpgsql

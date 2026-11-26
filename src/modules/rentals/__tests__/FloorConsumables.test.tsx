@@ -26,6 +26,10 @@ beforeAll(async () => {
 })
 
 const B_TEST_ID = '22222222-2222-4222-8222-222222222222'
+vi.mock('../../../lib/queries/handoverPickupTotals', () => ({
+  fetchHandoverPickupTotals: async () => new Map(),
+  fetchResumableHandoverSession: async () => null,
+}))
 
 let mockUser = {
   id: 'u-warehouse-1',

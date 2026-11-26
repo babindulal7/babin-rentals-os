@@ -52,8 +52,14 @@ let returnAtAd: string | null = '2026-07-19T00:15:00.000Z'
 /** Resolves/rejects the pending `handoverRental`, so a dispatch can be held open. */
 let settleDispatch: { resolve: (v: unknown) => void; reject: (e: unknown) => void } | null = null
 let savedEvidenceCount = 0
+let resumableSession: string | null = null
+let lastDispatch: unknown = null
 vi.mock('../../../lib/queries/operationEvidence', () => ({
   fetchOperationEvidence: async () => ({ files: savedEvidenceCount, filesByUnit: {} }),
+}))
+vi.mock('../../../lib/queries/handoverPickupTotals', () => ({
+  fetchHandoverPickupTotals: async () => new Map(),
+  fetchResumableHandoverSession: async () => resumableSession,
 }))
 
 vi.mock('../../../lib/auth', () => ({
@@ -120,8 +126,9 @@ vi.mock('../../../lib/queries/bookings', () => ({
 }))
 
 vi.mock('../../../actions/rentals/index', () => ({
-  handoverRental: () =>
+  handoverRental: (input: unknown) =>
     new Promise((resolve, reject) => {
+      lastDispatch = input
       settleDispatch = { resolve, reject }
     }),
 }))
@@ -189,6 +196,8 @@ afterEach(async () => {
   returnAtAd = '2026-07-19T00:15:00.000Z'
   settleDispatch = null
   savedEvidenceCount = 0
+  resumableSession = null
+  lastDispatch = null
   navigate = null
 })
 
@@ -220,11 +229,13 @@ const checkbox = (ariaLabel: string) =>
     ?.querySelector<HTMLInputElement>('input[type="checkbox"]')
 
 /** Every §11.1 gate cleared, so `Complete Handover` becomes pressable. */
-async function passAllGates() {
+async function passAllGates(markItems = true) {
   await tick(checkbox('Government ID Verified'))
   await tick(checkbox('Booking Authorization Verified'))
-  await tick(checkbox('Mark Sony FX3 · unit 1 picked up'))
-  await tick(checkbox('Mark Sony FX3 · unit 2 picked up'))
+  if (markItems) {
+    await tick(checkbox('Mark Sony FX3 · unit 1 picked up'))
+    await tick(checkbox('Mark Sony FX3 · unit 2 picked up'))
+  }
   for (const b of enabled('Mark Cleared →')) await click(b)
   for (const b of enabled('Mark Cleared →')) await click(b)
   for (const b of enabled('Capture')) await click(b)
@@ -236,6 +247,20 @@ async function passAllGates() {
 /* ── HO-12a ──────────────────────────────────────────────────────────────── */
 
 describe('HO-12 — the bulk control says what it does, and moves only Ready rows', () => {
+  it('recognizes items already recorded in an interrupted session', async () => {
+    resumableSession = 'open-session'
+    await mount()
+    expect(text()).toContain('Items Recorded This Session')
+    expect(text()).not.toContain('Nothing has been scanned or marked in this session yet')
+  })
+  it('sends the open session id when finishing without new item marks', async () => {
+    resumableSession = 'open-session'
+    await mount()
+    await passAllGates(false)
+    await click(button('Complete Session'))
+    await flush()
+    expect(lastDispatch).toMatchObject({ bookingId: B901, lines: [], resumeSessionId: 'open-session' })
+  })
   it.each([1440, 390])('bulk pickup at %ipx leaves identity, signatures and evidence unverified', async (width) => {
     await mount('/rentals/B-901/handover', width)
     expect(button('Quick Dispatch')).toBeUndefined()

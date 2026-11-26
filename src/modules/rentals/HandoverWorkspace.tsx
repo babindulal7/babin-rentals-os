@@ -32,7 +32,7 @@ import { rentalDaysBetween } from '../../lib/rentalDays'
 import { newClientUuid } from '../../lib/supabase'
 import { hasHeldCollateral } from '../../lib/queries/collateral'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
-import { fetchHandoverPickupTotals } from '../../lib/queries/handoverPickupTotals'
+import { fetchHandoverPickupTotals, fetchResumableHandoverSession } from '../../lib/queries/handoverPickupTotals'
 import type { FloorLineInput } from '../../actions/rentals/floorVerb'
 import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { deliveryTypeLabel } from '../../lib/format'
@@ -508,6 +508,7 @@ export default function HandoverWorkspace({
   /* ── the read — fetchFloorBooking, same cancellation rule as BookingDetail ── */
   const [floor, setFloor] = useState<FloorBooking | null>(null)
   const [pickupTotals, setPickupTotals] = useState<ReadonlyMap<string, number>>(new Map())
+  const [resumableSession, setResumableSession] = useState<string | null>(null)
   const [floorLoading, setFloorLoading] = useState(true)
   const [floorError, setFloorError] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
@@ -518,12 +519,16 @@ export default function HandoverWorkspace({
     fetchFloorBooking(id)
       .then(async (b) => {
         const quantityLines = b ? handoverLines(b.lines).filter((line) => line.unitsPresence === 'present' && line.units.length === 0) : []
-        const totals = await fetchHandoverPickupTotals(quantityLines.map((line) => line.id))
+        const [totals, resumable] = await Promise.all([
+          fetchHandoverPickupTotals(quantityLines.map((line) => line.id)),
+          b ? fetchResumableHandoverSession(b.id) : Promise.resolve(null),
+        ])
         if (quantityLines.some((line) => (totals.get(line.id) ?? 0) > line.qty)) {
           throw new Error('Previous pickup quantities exceed the booking. Ask a manager to review the movements.')
         }
         if (cancelled) return
         setPickupTotals(totals)
+        setResumableSession(resumable)
         setFloor(b)
         setFloorLoading(false)
       })
@@ -830,7 +835,7 @@ export default function HandoverWorkspace({
   const receiverDirectlyVerified = govIdVerified && bookingAuthVerified
   const gate1Overridden = gate1OverrideReason.trim().length >= 10
   const receiverPassing = receiverDirectlyVerified || gate1Overridden
-  const itemsPassing = touchedCount > 0 && shortReasons.length === 0
+  const itemsPassing = (touchedCount > 0 || resumableSession !== null) && shortReasons.length === 0
   const paymentPassing = paymentVerified
   const depositPassing = depositReceived || collateralHeld
   const driverNeeded = driverSignatureRequired(floor?.deliveryType ?? null)
@@ -859,7 +864,7 @@ export default function HandoverWorkspace({
     },
     {
       n: 2,
-      label: 'Items Scanned This Session',
+      label: resumableSession && touchedCount === 0 ? 'Items Recorded This Session' : 'Items Scanned This Session',
       passing: itemsPassing,
       blocking: itemsPassing
         ? null
@@ -1327,6 +1332,7 @@ export default function HandoverWorkspace({
           {
             bookingId: floor.id,
             lines: payload,
+            ...(payload.length === 0 && resumableSession ? { resumeSessionId: resumableSession } : {}),
             clientUuid: completionKey,
             occurredAt: new Date().toISOString(),
             // HO-02 — gate 1's two facts ride the session

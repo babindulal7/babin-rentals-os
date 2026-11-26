@@ -1,5 +1,15 @@
 import { supabase } from '../supabase'
 
+/** The open handover only qualifies when it still has a recorded pickup. */
+export async function fetchResumableHandoverSession(bookingId: string): Promise<string | null> {
+  const { data, error } = await supabase.from('handover_resumable_sessions')
+    .select('session_id').eq('booking_id', bookingId).maybeSingle()
+  if (error) throw new Error(`Could not check the open handover session: ${error.message}`)
+  if (data === null) return null
+  if (!data || typeof data.session_id !== 'string') throw new Error('Could not verify the open handover session.')
+  return data.session_id
+}
+
 /** Read net physical pickups for the supplied booking lines, including corrections. */
 export async function fetchHandoverPickupTotals(lineIds: readonly string[]): Promise<Map<string, number>> {
   const result = new Map<string, number>()

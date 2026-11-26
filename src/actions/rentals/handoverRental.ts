@@ -32,6 +32,8 @@ export type HandoverRentalInput = {
    * list — a handover session with no lines would claim gear left the building.
    */
   lines?: FloorLineInput[];
+  /** Finish this open session only if it already has an unreversed pickup. */
+  resumeSessionId?: string;
   /** Law 8 — the action key, minted where the user acted. */
   clientUuid?: string;
   /** Free text onto `operation_sessions.notes`. */
@@ -74,6 +76,7 @@ export const handoverRental = createAction<HandoverRentalInput, FloorVerbResult>
     validateFloorVerb('Handover', {
       bookingRef: input.bookingId,
       ...(input.lines === undefined ? {} : { lines: input.lines }),
+      ...(input.resumeSessionId === undefined ? {} : { resumeSessionId: input.resumeSessionId }),
       ...(input.gate1OverrideReason === undefined ? {} : { gate1OverrideReason: input.gate1OverrideReason }),
     }),
 
@@ -83,6 +86,7 @@ export const handoverRental = createAction<HandoverRentalInput, FloorVerbResult>
       {
         bookingRef: input.bookingId,
         ...(input.lines === undefined ? {} : { lines: input.lines }),
+        ...(input.resumeSessionId === undefined ? {} : { resumeSessionId: input.resumeSessionId }),
         ...(input.clientUuid === undefined ? {} : { clientUuid: input.clientUuid }),
         ...(input.notes === undefined ? {} : { notes: input.notes }),
         ...(input.overrideReason === undefined ? {} : { overrideReason: input.overrideReason }),

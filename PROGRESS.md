@@ -8,6 +8,7 @@
 - Connected the Handover checklist to net pickup totals for quantity lines. It separates a recorded partial quantity from the remaining quantity and refuses to load if totals cannot be read or exceed the booking; mock mode derives the same view from movements.
 - Changed Handover to commit movements before marking a line complete, calculate completion from the cumulative net total, refuse changed quantity retries, and fail closed instead of queuing key custody writes.
 - Added a database trigger that creates or updates the handover-line projection in the pickup movement transaction, including correction handling. The action rereads a newly created projection before updating it; mock mode mirrors the projection.
+- Added a recovery path for an open handover with an unreversed recorded pickup: staff may finish it without marking another item, and the action rechecks the matching session and pickup before writing.
 
 **Ruled**
 - Custody writes are fail-closed and the booked quantity is the upper bound.
@@ -19,6 +20,8 @@
 - The focused floor-verb suite passed 108/108, including later-session completion, changed and exact retries, and a refused movement leaving no completed line. These use mocked reads and writes; they do not prove a real Postgres or browser flow.
 - PGlite rebuilt 275/275 migrations and passed 102/102 lifecycle checks with assertions for atomic line creation, completion and reopening on correction. Focused action, query and workspace suites passed 129/129. The migration rebuild and lifecycle result do not prove real PostgreSQL concurrency or hosted role behavior.
 - A separate mock-store integration check passed for a partial movement followed by completion of the same quantity line.
+- PGlite lifecycle passed 102/102 with the resumable-session view checked for an open pickup, a fully reversed pickup, a completed session and client-role visibility. Focused action and workspace tests passed 139/139, including empty-session refusal and interrupted-session recovery. End-to-end browser recovery remains unverified.
+- A focused workspace test also cleared the other gates and verified the recovery dispatch sends the open session ID with no new lines.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -29,14 +32,14 @@
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
 | Lifecycle | steps green / total | not measured — current receipt required | — |
 | Overall | structural mean of five | not measured | — |
-Migrations 275 files · check:pglite Historical, incomplete or failed receipt (2026-11-26T10:03:05.792Z); current source NOT VERIFIED. Suite: not run this session (static inspection; pass --tests to execute suite).
+Migrations 275 files · check:pglite Historical, incomplete or failed receipt (2026-11-26T10:10:12.690Z); current source NOT VERIFIED. Suite: not run this session (static inspection; pass --tests to execute suite).
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-26T10:03:08.850Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-26T10:11:37.501Z); current source NOT VERIFIED.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Resolve finishing an interrupted open session when every item is already recorded: the screen currently requires a new item mark and the action refuses an empty input. Verify serialized-unit duplication, the full pickup flow, database correction edge cases, concurrent sessions on real PostgreSQL, full local gates and disposable Playwright. The screen requires the new view. Migration is WRITTEN and locally VERIFIED in PGlite, not verified for real PostgreSQL concurrency or applied to staging or production.
+- Verify interrupted-session recovery through the browser, serialized-unit duplication, the full pickup flow, database correction edge cases, concurrent sessions on real PostgreSQL, full local gates and disposable Playwright. The screen requires the new views. Migration is WRITTEN and locally VERIFIED in PGlite, not verified for real PostgreSQL concurrency or applied to staging or production.
 
 ## 2026-11-26 — Partial pickup Playwright locator repair (Lane A)
 

@@ -2572,6 +2572,18 @@ STEPS.push({
         'warehouse reads the partial pickup quantity')
       assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Remaining',
         'the movement transaction creates a remaining handover line')
+      assertEq(await as('Warehouse', () => one('select session_id from handover_resumable_sessions where booking_id=$1', [id])), handover,
+        'an open session with a recorded pickup is resumable')
+      assertEq(Number(await as('Client', () => one('select count(*) from handover_resumable_sessions where booking_id=$1', [id]))), 0,
+        'client cannot inspect resumable staff sessions')
+      await q('savepoint pickup_correction_probe')
+      const firstPickup = await one('select id from session_line_movements where session_id=$1 and booking_line_id=$2', [handover,line.id])
+      await as('Warehouse', () => q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,reverses_movement_id,moved_at,created_by)
+        values(gen_random_uuid(),$1,$2,1,'Picked Up',$3,now(),$4)`, [handover,line.id,firstPickup,U.Warehouse]))
+      assertEq(Number(await as('Warehouse', () => one('select count(*) from handover_resumable_sessions where booking_id=$1', [id]))), 0,
+        'a fully reversed pickup does not make a session resumable')
+      await q('rollback to savepoint pickup_correction_probe')
+      await q('release savepoint pickup_correction_probe')
       assertEq(Number(await as('Client', () => one('select count(*) from handover_pickup_totals where booking_line_id=$1', [line.id]))), 0,
         'client cannot read staff pickup movements through the view')
       assertEq(await stageOf('qty-ok'), 'Packed', 'partial quantity handover has not advanced the stage')
@@ -2595,6 +2607,8 @@ STEPS.push({
           values($1,$2,$3,$4,'Picked Up',now(),$5) on conflict(client_uuid) do nothing`,
           [remainingKey,nextHandover,line.id,line.qty - 1,U.Warehouse])
       })
+      assertEq(await as('Warehouse', () => one('select session_id from handover_resumable_sessions where booking_id=$1', [id])), nextHandover,
+        'only the open session is resumable')
       assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Picked Up',
         'the final movement atomically completes the handover line')
       await reject('Warehouse', 'later session cannot pick up the same quantity again',

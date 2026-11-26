@@ -956,6 +956,23 @@ describe('Handover', () => {
     expect(opsOn('handover_lines')[0]?.payload['state']).toBe('Picked Up')
   })
 
+  it('finishes an open handover that already has a saved pickup without adding a movement', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
+    db.state.responses['handover_resumable_sessions'] = [[{ session_id: 'open-session' }]]
+    db.state.responses['handover_lines'] = [[{ id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' }]]
+    const result = await handoverRental({ bookingId: 'B-715', lines: [], resumeSessionId: 'open-session' }, OWNER)
+    expect(insertsOn('session_line_movements')).toHaveLength(0)
+    expect(result.sessionClosed).toBe(true)
+  })
+
+  it('refuses an empty handover if its open session has no saved pickup', async () => {
+    db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
+    db.state.responses['handover_resumable_sessions'] = [[]]
+    await expect(handoverRental({ bookingId: 'B-715', lines: [], resumeSessionId: 'open-session' }, OWNER))
+      .rejects.toThrow(/no recorded pickup/)
+    expect(writes.state.ops).toHaveLength(0)
+  })
+
   it('does not write a completed line if the pickup movement is refused', async () => {
     writes.state.refuseInsertOn = 'session_line_movements'
     await expect(handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 2 }] }, OWNER))

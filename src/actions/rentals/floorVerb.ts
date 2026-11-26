@@ -5,7 +5,7 @@ import { applyBookingTransition } from '../../lib/bookingTransition'
 import { logAuditEvent } from '../../lib/audit'
 import { captureError } from '../../lib/monitoring'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
-import { fetchHandoverPickupTotals } from '../../lib/queries/handoverPickupTotals'
+import { fetchHandoverPickupTotals, fetchResumableHandoverSession } from '../../lib/queries/handoverPickupTotals'
 import { JOBS, type BookingStatus, type JobName } from '../../lib/workflow'
 import type { ActionContext } from '../core'
 import type {
@@ -361,6 +361,8 @@ export interface FloorVerbInput {
   bookingRef: string
   /** Pack / Handover / Return. Required — an empty list is refused. */
   lines?: readonly FloorLineInput[]
+  /** Finish an existing handover with recorded pickup movements, without new marks. */
+  resumeSessionId?: string
   /** Reset only: `cleaning_queue_entries.unit_id` for each item that was reset. */
   unitIds?: readonly string[]
   /** Reset only: `booking_lines.id` for each quantity line that was reset. */
@@ -957,7 +959,7 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
   }
 
   const lines = input.lines ?? []
-  if (lines.length === 0) {
+  if (lines.length === 0 && !(job === 'Handover' && input.resumeSessionId)) {
     throw new Error(
       `${job} needs the booking lines it resolved — an empty list would open a session claiming work on nothing.`,
     )
@@ -1169,6 +1171,12 @@ export async function runFloorVerb(
    *     returns the payload instead of a server-assigned row. */
   const latest = originalReturnSession ?? await readLatestSession(booking.id, operation)
   const resumed = latest !== null && latest.state === 'In Progress' ? latest : null
+  if (lines.length === 0) {
+    const eligible = job === 'Handover' ? await fetchResumableHandoverSession(booking.id) : null
+    if (!resumed || !input.resumeSessionId || resumed.id !== input.resumeSessionId || eligible !== resumed.id) {
+      throw new Error('The handover session has no recorded pickup available to finish. Nothing was written.')
+    }
+  }
 
   /* 4a — a Packing session that cannot be resumed is the only one this booking
    *      will ever get, already spent.

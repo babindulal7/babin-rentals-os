@@ -153,6 +153,15 @@ for (const booking of store['bookings'] ?? []) {
 /** Views are computed on read so they always reflect the latest base rows. */
 function read(table: string): Row[] {
   if (table === 'client_directory_v') return clientDirectory(store)
+  if (table === 'handover_resumable_sessions') {
+    const movements = store['session_line_movements'] ?? []
+    return (store['operation_sessions'] ?? []).filter((session) => {
+      if (session['operation'] !== 'Handover' || session['state'] !== 'In Progress') return false
+      return movements.filter((m) => m['session_id'] === session['id'] && m['resulting_item_state'] === 'Picked Up' && m['reverses_movement_id'] == null)
+        .some((m) => Number(m['qty']) > movements.filter((r) => r['reverses_movement_id'] === m['id'])
+          .reduce((sum, r) => sum + Number(r['qty']), 0))
+    }).map((session) => ({ session_id: session['id'], booking_id: session['booking_id'] }))
+  }
   if (table === 'handover_pickup_totals') {
     const sessions = new Map((store['operation_sessions'] ?? []).map((session) => [session['id'], session]))
     const movements = store['session_line_movements'] ?? []
