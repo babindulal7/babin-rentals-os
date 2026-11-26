@@ -37,6 +37,8 @@ begin
     from public.payment_reminders pr
     join public.bookings b on b.id = pr.booking_id
     where pr.status = 'pending'
+      and pr.channel = 'whatsapp_draft'
+      -- Do not let unsendable email reminders crowd out WhatsApp draft tasks.
       and pr.due_at <= now()
     order by pr.due_at asc
     limit p_limit
