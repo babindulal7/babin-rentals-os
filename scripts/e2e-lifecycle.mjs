@@ -2569,10 +2569,30 @@ STEPS.push({
           values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`, [handover,line.id,U.Warehouse])
       })
       assertEq(await stageOf('qty-ok'), 'Packed', 'partial quantity handover has not advanced the stage')
+      await reject('Warehouse', 'quantity pickup cannot exceed the booked quantity',
+        `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+         values(gen_random_uuid(),$1,$2,$3,'Picked Up',now(),$4)`,
+        [handover,line.id,line.qty,U.Warehouse], /pickup.*quantity|quantity.*pickup/i)
       const request = { booking_id:id, client_uuid:crypto.randomUUID(), action:'revert', target_stage:'Booked', reason:'Attempt after partial quantity pickup' }
       await reject('Manager','partial quantity custody cannot be reverted','select manage_rental_lifecycle($1::jsonb)',[JSON.stringify(request)],/custody cannot be reverted/i)
       await reject('Manager','partial quantity custody cannot be cancelled','select cancel_booking($1::jsonb)',
         [JSON.stringify({ booking_id:id, client_uuid:crypto.randomUUID(), reason:'Attempt cancellation after partial pickup' })],/pickup has already occurred/i)
+      const nextHandover = crypto.randomUUID()
+      const remainingKey = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await q(`update operation_sessions set state='Completed' where id=$1`, [handover])
+        await q(`insert into operation_sessions(id,client_uuid,booking_id,operation,session_no,state,delivery_method,warehouse_staff_id,created_by)
+          values($1,gen_random_uuid(),$2,'Handover',2,'In Progress','Client Pickup',$3,$3)`, [nextHandover,id,U.Warehouse])
+        await q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+          values($1,$2,$3,$4,'Picked Up',now(),$5)`, [remainingKey,nextHandover,line.id,line.qty - 1,U.Warehouse])
+        await q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+          values($1,$2,$3,$4,'Picked Up',now(),$5) on conflict(client_uuid) do nothing`,
+          [remainingKey,nextHandover,line.id,line.qty - 1,U.Warehouse])
+      })
+      await reject('Warehouse', 'later session cannot pick up the same quantity again',
+        `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+         values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`,
+        [nextHandover,line.id,U.Warehouse], /pickup.*quantity|quantity.*pickup/i)
     })
     await undone(async () => {
       assertEq(await stageOf('a'), 'Closed', 'closed archive fixture')

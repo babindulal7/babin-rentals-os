@@ -128,6 +128,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0261 | T9-02 | external-holds-and-double-booking-prevention | lane-a/T9-02-cutover-holds-prevention | verified (check:pglite 259/259 + check:lifecycle 99/99 Step L98) |
 | 0262 | T7-14 | online-booking-away-mode | feat/t7-14-away-switch-20261122 | VERIFIED locally in PGlite (check:pglite 260/260, check:lifecycle 100/100 L99, test:away-mode-db-gate 25/25); UI wired; no staging/production apply authorized |
 
-| 20261126153000 | #443 | guard-partial-pickup-quantity | lane-a/fix-partial-pickup-quantity-20261126 | claimed; not written or applied |
+| 20261126153000 | #443 | guard-partial-pickup-quantity | lane-a/fix-partial-pickup-quantity-20261126 | written, verified locally (PGlite and lifecycle); not applied |
 
 ## Expected migrations (not yet claimed)
