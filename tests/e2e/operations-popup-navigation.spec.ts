@@ -83,8 +83,8 @@ test.describe('Operations popup persisted-stage navigation', () => {
 
 test.describe('Operations packing confirmation and duplicate-submit protection', () => {
   test.skip(!disposable, 'Synthetic local CI only')
-  for (const partial of [false, true]) test(partial ? 'partial pickup finishes in two sessions without dispatching a quantity line twice' : 'packing and handover persist once, with evidence, signatures and discard protection', async ({ page }, testInfo) => {
-    test.setTimeout(partial ? 300_000 : 180_000)
+  for (const partial of [false, true]) test(partial ? 'partial pickup finishes in two sessions without dispatching a quantity line twice' : 'full rental lifecycle persists from packing and signed handover through return, reset and close', async ({ page }, testInfo) => {
+    test.setTimeout(300_000)
     const email = process.env.E2E_OWNER_EMAIL
     const password = process.env.E2E_OWNER_PASSWORD
     const key = process.env.E2E_LOCAL_ANON_KEY
@@ -332,6 +332,112 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
         expect(await handoverSessions()).toHaveLength(2)
         expect(await reservations()).toEqual(before)
         expect(await sessions()).toHaveLength(1)
+      }
+
+      // Extend the already proven full quantity handover, independently of the
+      // two-session partial-pickup test. No direct database writes after setup.
+      if (!partial) {
+        const returns = async () => {
+          const result = await api.from('operation_sessions').select('id,state').eq('booking_id', id).eq('operation', 'Return')
+          expect(result.error).toBeNull()
+          return result.data ?? []
+        }
+        const queue = async () => {
+          const result = await api.from('cleaning_queue_entries').select('id,booking_line_id,state,completed_at,cleaned_by,qc_by').eq('booking_id', id)
+          expect(result.error).toBeNull()
+          return result.data ?? []
+        }
+        expect(await stage()).toBe('On Rent')
+        expect(await returns()).toHaveLength(0)
+        const held = await reservations()
+        expect(held).toHaveLength(1)
+        expect(held[0]?.released_at).toBeNull()
+        await page.getByRole('button', { name: 'Return & Inspect', exact: true }).filter({ visible: true }).first().click()
+        const confirmReturn = popup.getByRole('button', { name: 'Confirm Return session', exact: true })
+        await expect(confirmReturn).toBeDisabled()
+        await popup.getByRole('button', { name: 'Mark Returned', exact: true }).click()
+        const received = popup.getByRole('spinbutton', { name: 'Received quantity for Disposable Operations Cable', exact: true })
+        await expect(received).toHaveValue('2')
+        await expect(confirmReturn).toBeDisabled()
+        await received.fill('3')
+        await popup.getByRole('radiogroup', { name: 'Condition of Disposable Operations Cable', exact: true }).getByRole('radio', { name: 'Good', exact: true }).click()
+        await expect(confirmReturn).toBeDisabled()
+        expect(await returns()).toHaveLength(0)
+        expect(await reservations()).toEqual(held)
+        await received.fill('2')
+        await expect(confirmReturn).toBeEnabled({ timeout: 30_000 })
+        await confirmReturn.click({ clickCount: 2 })
+        await expect.poll(stage, { timeout: 30_000 }).toBe('Returned')
+        await expect.poll(async () => (await returns()).map(r => r.state), { timeout: 30_000 }).toEqual(['Completed'])
+        const returnId = (await returns())[0]!.id
+        const inspected = await api.from('return_lines').select('state,condition,inspection_state,inspected_by,inspected_at').eq('session_id', returnId)
+        expect(inspected.error).toBeNull()
+        expect(inspected.data).toHaveLength(1)
+        expect(inspected.data?.[0]).toMatchObject({ state: 'Returned', condition: 'Good', inspection_state: 'Inspected' })
+        expect(inspected.data?.[0]?.inspected_by).toBeTruthy()
+        expect(inspected.data?.[0]?.inspected_at).toBeTruthy()
+        const returned = await api.from('session_line_movements').select('qty,resulting_item_state').eq('session_id', returnId)
+        expect(returned.error).toBeNull()
+        expect(returned.data?.every(row => row.resulting_item_state === 'Returned')).toBe(true)
+        expect(returned.data?.reduce((sum, row) => sum + Number(row.qty), 0)).toBe(2)
+        const afterReturn = await reservations()
+        expect(afterReturn).toHaveLength(held.length)
+        expect(afterReturn.every(row => Boolean(row.released_at))).toBe(true)
+        await page.reload()
+        expect(await stage()).toBe('Returned')
+        expect(await returns()).toHaveLength(1)
+        const queued = await queue()
+        expect(queued).toHaveLength(1)
+        expect(queued[0]?.completed_at).toBeNull()
+
+        // Cleaning and QC are separate from inventory release and financial closure.
+        await page.getByRole('button', { name: 'Operations', exact: true }).click()
+        await page.getByRole('menuitem', { name: 'Cleaning & Reset', exact: true }).click()
+        const confirmReset = popup.getByRole('button', { name: 'Confirm Reset', exact: true })
+        await expect(confirmReset).toBeDisabled()
+        await popup.getByRole('checkbox', { name: 'Select Disposable Operations Cable', exact: true }).check()
+        await popup.getByRole('button', { name: 'Clean 1 selected → QC', exact: true }).click()
+        await expect(confirmReset).toBeDisabled()
+        const selfQc = popup.getByRole('checkbox', { name: 'Batch: I am alone on shift', exact: true })
+        await expect(selfQc).toBeVisible()
+        await selfQc.check()
+        await popup.getByRole('textbox', { name: 'Batch QC reason', exact: true }).fill('Synthetic sole operator QC')
+        await popup.getByRole('button', { name: 'Pass QC for All 1 Selected', exact: true }).click()
+        await expect(confirmReset).toBeEnabled({ timeout: 30_000 })
+        await confirmReset.click()
+        await expect.poll(async () => (await queue()).map(row => Boolean(row.completed_at)), { timeout: 30_000 }).toEqual([true])
+        const reset = (await queue())[0]!
+        expect(reset.id).toBe(queued[0]?.id)
+        expect(reset.cleaned_by).toBeTruthy()
+        expect(reset.qc_by).toBeTruthy()
+        expect(await stage()).toBe('Returned')
+        expect(await reservations()).toEqual(afterReturn)
+        await page.reload()
+
+        // Verify settlement prerequisites without mutating ledger or overriding gates.
+        const invoices = await api.from('invoices').select('id,status,paid_amount,outstanding_amount').eq('booking_id', id)
+        expect(invoices.error).toBeNull()
+        expect(invoices.data).toHaveLength(1)
+        expect(invoices.data?.[0]?.status).toBe('Paid')
+        expect(Number(invoices.data?.[0]?.outstanding_amount)).toBe(0)
+        const deposits = await api.from('security_deposits').select('received_amount,refunded_amount,applied_amount').eq('booking_id', id)
+        expect(deposits.error).toBeNull()
+        expect(deposits.data?.reduce((sum, row) => sum + Number(row.received_amount) - Number(row.refunded_amount) - Number(row.applied_amount), 0)).toBe(0)
+        await page.getByRole('button', { name: 'Close Rental', exact: true }).filter({ visible: true }).first().click()
+        await expect.poll(stage, { timeout: 30_000 }).toBe('Closed')
+        const closure = await api.from('bookings').select('closed_at').eq('id', id).single()
+        expect(closure.error).toBeNull()
+        expect(closure.data?.closed_at).toBeTruthy()
+        const closeTransitions = await api.from('booking_stage_transitions').select('id').eq('booking_id', id).eq('from_stage', 'Returned').eq('to_stage', 'Closed')
+        expect(closeTransitions.error).toBeNull()
+        expect(closeTransitions.data).toHaveLength(1)
+        const finalInvoices = await api.from('invoices').select('id,status,paid_amount,outstanding_amount').eq('booking_id', id)
+        expect(finalInvoices.error).toBeNull()
+        expect(finalInvoices.data).toEqual(invoices.data)
+        await page.reload()
+        expect(await stage()).toBe('Closed')
+        expect(await returns()).toHaveLength(1)
+        expect(await reservations()).toEqual(afterReturn)
       }
     } finally {
       await api.auth.signOut({ scope: 'local' })
