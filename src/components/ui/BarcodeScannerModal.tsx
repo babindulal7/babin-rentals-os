@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { BrowserMultiFormatReader, BrowserCodeReader, type IScannerControls } from '@zxing/browser'
+import type { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser'
 import { Modal } from './Modal'
 import { Button } from './Page'
 import Icon from './Icon'
@@ -126,6 +126,7 @@ export function BarcodeScannerModal({
   const inputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
+  const releaseCameraStreams = useRef<(() => void) | null>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
   const videoTrackRef = useRef<MediaStreamTrack | null>(null)
   const lastScannedCodeRef = useRef<{ code: string; timestamp: number } | null>(null)
@@ -236,7 +237,8 @@ export function BarcodeScannerModal({
     videoTrackRef.current = null
     setTorchOn(false)
     setHasTorch(false)
-    BrowserCodeReader.releaseAllStreams()
+    releaseCameraStreams.current?.()
+    releaseCameraStreams.current = null
   }, [])
 
   // Manage ZXing camera stream lifecycle
@@ -251,18 +253,20 @@ export function BarcodeScannerModal({
     let isMounted = true
     setCameraError(null)
 
-    if (!codeReaderRef.current) {
-      codeReaderRef.current = new BrowserMultiFormatReader()
-    }
-
     if (videoRef.current) {
-      codeReaderRef.current
-        .decodeFromVideoDevice(undefined, videoRef.current, (result) => {
-          if (result && isMounted) {
-            processCode(result.getText(), true)
-          }
+      import('@zxing/browser')
+        .then(({ BrowserMultiFormatReader, BrowserCodeReader }) => {
+          if (!isMounted || !videoRef.current) return
+          releaseCameraStreams.current = () => BrowserCodeReader.releaseAllStreams()
+          codeReaderRef.current ??= new BrowserMultiFormatReader()
+          return codeReaderRef.current.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
+            if (result && isMounted) {
+              processCode(result.getText(), true)
+            }
+          })
         })
         .then((controls) => {
+          if (!controls) return
           if (!isMounted) {
             controls.stop()
             return

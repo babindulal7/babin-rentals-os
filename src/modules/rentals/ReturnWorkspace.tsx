@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
@@ -12,7 +12,7 @@ import { STATUS, jobStateChip } from '../../lib/status'
 import type { StatusKey } from '../../lib/status'
 import { statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
-import { BarcodeScannerModal } from '../../components/ui/BarcodeScannerModal'
+const BarcodeScannerModal = lazy(() => import('../../components/ui/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })))
 import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useFloorViewport } from '../operations/floorPanelContext'
@@ -2628,16 +2628,20 @@ export default function ReturnWorkspace({
               </div>
             )}
 
-            <BarcodeScannerModal
-              isOpen={showScanner}
-              onClose={() => setShowScanner(false)}
-              mode="return"
-              bookingId={id}
-              items={scannableUnits}
-              onItemScanned={(item) => {
-                receive(item.id, 'scan')
-              }}
-            />
+            {showScanner && (
+              <Suspense fallback={null}>
+                <BarcodeScannerModal
+                  isOpen={showScanner}
+                  onClose={() => setShowScanner(false)}
+                  mode="return"
+                  bookingId={id}
+                  items={scannableUnits}
+                  onItemScanned={(item) => {
+                    receive(item.id, 'scan')
+                  }}
+                />
+              </Suspense>
+            )}
 
             {activeSigningRole && (
               <SignOnGlassModal

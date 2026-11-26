@@ -161,9 +161,8 @@ export default defineConfig(({ mode }) => ({
               return 'vendor-charts'
             }
           }
-          if (id.includes('/src/lib/pdf/')) {
-            return 'app-pdf'
-          }
+          // Leave PDF code in the graph of the routes and actions that use it.
+          // A manual chunk here can pull in shared dependencies and preload the generator at startup.
           if (id.includes('glossary.ne.json')) {
             return 'app-i18n'
           }

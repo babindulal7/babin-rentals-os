@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
@@ -24,7 +24,8 @@ import type { StatusKey } from '../../lib/status'
 import { statusToken, FLAGS } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
-import { BarcodeScannerModal, type ScanOutcome } from '../../components/ui/BarcodeScannerModal'
+import type { ScanOutcome } from '../../components/ui/BarcodeScannerModal'
+const BarcodeScannerModal = lazy(() => import('../../components/ui/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })))
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { toBs, formatBs, formatAd, formatAdDateTime } from '../../lib/bs'
@@ -2609,14 +2610,18 @@ export default function HandoverWorkspace({
               ("marked — recorded at session close") and emits no domain
               events — the action layer emits them after the write lands.
             */}
-            <BarcodeScannerModal
-              isOpen={showScanner}
-              onClose={() => setShowScanner(false)}
-              mode="handover"
-              bookingId={id}
-              items={scannableUnits}
-              onItemScanned={(item) => pick(item.id, 'scan')}
-            />
+            {showScanner && (
+              <Suspense fallback={null}>
+                <BarcodeScannerModal
+                  isOpen={showScanner}
+                  onClose={() => setShowScanner(false)}
+                  mode="handover"
+                  bookingId={id}
+                  items={scannableUnits}
+                  onItemScanned={(item) => pick(item.id, 'scan')}
+                />
+              </Suspense>
+            )}
 
             {showDriverModal && floor && (
               <DriverHandoverModal

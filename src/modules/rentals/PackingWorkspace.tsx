@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
@@ -14,7 +14,8 @@ import { PageBody } from '../../components/ui/PageBody'
 import { STATUS, jobStateChip } from '../../lib/status'
 import { statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
-import { BarcodeScannerModal, type ScanOutcome } from '../../components/ui/BarcodeScannerModal'
+import type { ScanOutcome } from '../../components/ui/BarcodeScannerModal'
+const BarcodeScannerModal = lazy(() => import('../../components/ui/BarcodeScannerModal').then(m => ({ default: m.BarcodeScannerModal })))
 import { Input } from '../../components/ui/Input'
 import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { useFloorViewport } from '../operations/floorPanelContext'
@@ -39,6 +40,7 @@ import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } fr
 import { rentalDaysBetween } from '../../lib/rentalDays'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import { useFloorPresence } from '../../lib/floorPresence'
+import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
 import { useBarcodeBurst } from '../../lib/barcodeBurst'
 import {
   playScanSuccess,
@@ -47,8 +49,6 @@ import {
   unlockAudioContext,
 } from '../../lib/acousticFeedback'
 import { getCinemaKitDependencies, evaluateKitCompleteness } from '../../lib/kitBuildVerification'
-import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
-import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import { AddConsumableModal } from './booking/AddConsumableModal'
 import type { SystemRole } from '../../types/database'
@@ -606,6 +606,7 @@ export default function PackingWorkspace({
     if (!floor) return
     setPrinting(true)
     try {
+      const { buildPackingListPdfItems } = await import('../../lib/pdf/generatePdf')
       const items = buildPackingListPdfItems(floor.lines)
       const result = await exportPackingListPdf({
         bookingNo: floor.bookingNo,
@@ -2460,18 +2461,22 @@ export default function PackingWorkspace({
               />
             )}
 
-            <BarcodeScannerModal
-              isOpen={showScanner}
-              onClose={() => setShowScanner(false)}
-              mode="pack"
-              bookingId={id}
-              items={scannableUnits}
-              /* PK-09 — the modal shows THIS answer: one scan, one verdict,
-                 in the place the operator is looking. Returning it is what
-                 stops the modal beeping success over a "already packed" the
-                 rail behind it recorded. */
-              onItemScanned={(item) => pack(item.id, 'scan')}
-            />
+            {showScanner && (
+              <Suspense fallback={null}>
+                <BarcodeScannerModal
+                  isOpen={showScanner}
+                  onClose={() => setShowScanner(false)}
+                  mode="pack"
+                  bookingId={id}
+                  items={scannableUnits}
+                  /* PK-09 — the modal shows THIS answer: one scan, one verdict,
+                     in the place the operator is looking. Returning it is what
+                     stops the modal beeping success over a "already packed" the
+                     rail behind it recorded. */
+                  onItemScanned={(item) => pack(item.id, 'scan')}
+                />
+              </Suspense>
+            )}
 
             {showAddConsumable && floor && user && (
               <AddConsumableModal
