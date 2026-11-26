@@ -132,6 +132,30 @@ describe('productAvailabilityFor', () => {
     expect(answer.heldBy).toEqual([])
   })
 
+  it('counts a usable returned unit as free while its cleaning/QC task remains pending', () => {
+    const pool = [unit('EQ-1', { state: 'Cleaning', openCleaning: { bookingNo: 'B-715', requiresClean: true } })]
+    const answer = productAvailabilityFor(PRODUCT, pool, [], IN_THREE_WEEKS, RULES)
+    expect(answer.unitsFree).toBe(1)
+    expect(pool[0]?.openCleaning).not.toBeNull()
+  })
+
+  it('only counts released usable units in a partial-return candidate pool', () => {
+    const pool = [
+      unit('EQ-A', { openCleaning: { bookingNo: 'B-715', requiresClean: true } }),
+      unit('EQ-B', { state: 'On Rent' }),
+      unit('EQ-C', { condition: 'Damaged' }),
+      unit('EQ-D', { condition: 'Lost' }),
+      unit('EQ-E', { state: 'Maintenance' }),
+      unit('EQ-F', { retiredAt: '2026-09-01T00:00:00Z' }),
+    ]
+    const holds = [hold('EQ-B', IN_THREE_WEEKS.fromAd, IN_THREE_WEEKS.toAd, 'B-715')]
+    const answer = productAvailabilityFor(PRODUCT, pool, holds, IN_THREE_WEEKS, RULES)
+    expect(answer.unitsOwned).toBe(5)
+    expect(answer.unitsFree).toBe(1)
+    expect(answer.unitsHeld).toBe(1)
+    expect(answer.heldBy).toEqual(['B-715'])
+  })
+
   /**
    * A unit On Rent *today* is deliberately NOT in `DISQUALIFYING_UNIT_STATES`
    * (§4.30(c) spells out why), so the date check is the only thing that can

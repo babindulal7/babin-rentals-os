@@ -122,7 +122,7 @@ describe('rentalOperationsWorkflow engine', () => {
       expect(res.stageKey).toBe('reset_completed')
       expect(res.primaryAction.label).toBe('View Summary')
       expect(res.primaryAction.job).toBeNull()
-      expect(res.stageHint).toBe('Reset completed · All gear available')
+      expect(res.stageHint).toBe('Cleaning, QC and reset completed')
       expect(res.operationsMenu[3]?.state).toBe('completed')
     })
 
