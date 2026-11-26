@@ -12,6 +12,8 @@
 - The locator clicked the intended label in a local Chrome fixture at 375, 820 and 1440 px, with the chosen checkbox checked and the other checkbox unchanged. The staging guard tests passed 3/3. The fixture checks selector semantics and does not exercise the full application.
 - GitHub run 45713152538 failed three partial pickup tests on PR #487, with 66 tests passing. It ran on e65c1fbc before this repair.
 - Full ordered local gates passed all 18 steps, including typecheck, lint, API guards, 8,204 tests, 274 migrations, financial integrity, security, 102 lifecycle steps, server contracts, partial returns, progress and receipt checks, shell and copy lint, contrast, build and full coverage.
+- GitHub disposable run 45790361517 on 3b4568b2 passed 66 browser tests and failed the partial pickup test on desktop, iPad and mobile. The corrected label click succeeded. After reload, the previously picked-up quantity line was enabled where the test expected it to be checked and disabled.
+- The handover checklist currently gives quantity rows no prior state, while `writeHandoverLine` records line state and `writeMovements` checks existing movements only within the current session. A safe repair needs to account for prior sessions and partial quantities, with database-level protection against duplicate custody movements.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -29,7 +31,7 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Run the complete disposable Supabase Playwright suite against this fix on a Docker-capable machine or GitHub runner. GitHub CI and merge remain pending.
+- Repair and verify prior-session quantity pickup handling, then rerun the full disposable Supabase Playwright suite. GitHub CI and merge remain pending.
 
 ## 2026-11-25 — Playwright E2E foundation against staging (branch test/playwright-e2e)
 
