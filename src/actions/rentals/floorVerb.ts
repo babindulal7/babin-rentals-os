@@ -1376,7 +1376,9 @@ export async function runFloorVerb(
     /* The per-unit state (0002:225-262) — the row Booking Detail's Packed /
        Missing / Returned counters and Handover's "recorded by an earlier
        session" read from. Nothing wrote it before this call; see writeUnitStates. */
-    await writeUnitStates(job, sessionId, line, required, moved, ctx, occurredAt, actionUuid)
+    if (job !== 'Handover' || (line.outcome ?? 'done') === 'missing') {
+      await writeUnitStates(job, sessionId, line, required, moved, ctx, occurredAt, actionUuid)
+    }
   }
 
   /* 5b — the reset queue, which nothing in this codebase used to fill.

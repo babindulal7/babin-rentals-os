@@ -102,6 +102,17 @@ try {
   assert.equal(Number(afterMissingRace.picked_qty), 2)
   assert.equal(afterMissingRace.state, 'Picked Up')
   console.log('PASS PostgreSQL 17: stale Missing update rejected after final pickup')
+
+  const serial = await makePickupFixture({ q, ownerId, warehouseId, branchId, clientId, serialised: true })
+  const serialMove = (await q("insert into session_line_movements(client_uuid,session_id,booking_line_id,unit_id,qty,resulting_item_state,moved_at,created_by) values($1,$2,$3,$4,1,'Picked Up',now(),$5) returning id", [randomUUID(),serial.sessionId,serial.lineId,serial.assetId,warehouseId])).rows[0].id
+  let serialState = (await q('select unit_state, handover_session_id from booking_line_units where id=$1', [serial.unitId])).rows[0]
+  assert.equal(serialState.unit_state, 'Picked Up')
+  assert.equal(serialState.handover_session_id, serial.sessionId)
+  await q("insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,reverses_movement_id,moved_at,created_by) values($1,$2,$3,1,'Picked Up',$4,now(),$5)", [randomUUID(),serial.sessionId,serial.lineId,serialMove,warehouseId])
+  serialState = (await q('select unit_state, handover_session_id from booking_line_units where id=$1', [serial.unitId])).rows[0]
+  assert.equal(serialState.unit_state, 'Ready')
+  assert.equal(serialState.handover_session_id, null)
+  console.log('PASS PostgreSQL 17: serial pickup and correction atomically update the assigned unit')
 } finally {
   await first.query('rollback').catch(() => {})
   if (pending) await pending

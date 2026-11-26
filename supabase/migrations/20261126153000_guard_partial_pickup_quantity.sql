@@ -190,6 +190,7 @@ declare
   v_required integer;
   v_picked bigint;
   v_state public.handover_line_state;
+  v_unit uuid;
 begin
   if NEW.reverses_movement_id is null then
     if NEW.resulting_item_state is distinct from 'Picked Up'::public.item_quantity_state
@@ -199,14 +200,37 @@ begin
     v_line := NEW.booking_line_id;
     v_session := NEW.session_id;
     v_actor := NEW.created_by;
+    v_unit := NEW.unit_id;
   else
-    select m.booking_line_id, m.session_id, m.created_by
-      into v_line, v_session, v_actor
+    select m.booking_line_id, m.session_id, m.created_by, m.unit_id
+      into v_line, v_session, v_actor, v_unit
       from public.session_line_movements m
       join public.operation_sessions s on s.id = m.session_id
      where m.id = NEW.reverses_movement_id and m.reverses_movement_id is null
        and m.resulting_item_state = 'Picked Up' and s.operation = 'Handover';
     if v_line is null then return NEW; end if;
+  end if;
+  -- A serial movement and its assigned unit state must commit together. Do
+  -- not infer individual units from an unscanned quantity movement.
+  if v_unit is not null then
+    if NEW.reverses_movement_id is null then
+      update public.booking_line_units
+         set unit_state = 'Picked Up', handover_session_id = NEW.session_id
+       where booking_line_id = v_line and asset_id = v_unit and released_at is null
+         and return_session_id is null and unit_state in ('Ready', 'Missing', 'Picked Up');
+    elsif not exists (
+      select 1 from public.session_line_movements m
+      join public.operation_sessions s on s.id = m.session_id
+      where m.booking_line_id = v_line and m.unit_id = v_unit and s.operation = 'Handover'
+        and m.resulting_item_state = 'Picked Up' and m.reverses_movement_id is null
+        and m.qty > coalesce((select sum(r.qty) from public.session_line_movements r
+          where r.reverses_movement_id = m.id), 0)
+    ) then
+      update public.booking_line_units
+         set unit_state = 'Ready', handover_session_id = null
+       where booking_line_id = v_line and asset_id = v_unit and released_at is null
+         and return_session_id is null and unit_state = 'Picked Up' and handover_session_id = v_session;
+    end if;
   end if;
   select qty into v_required from public.booking_lines where id = v_line;
   select coalesce((select picked_qty from public.handover_pickup_totals where booking_line_id = v_line), 0)

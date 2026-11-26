@@ -243,6 +243,24 @@ function applyTriggers(table: string, row: Row): void {
     const lineId = original['booking_line_id']
     const line = (store['booking_lines'] ?? []).find((item) => item['id'] === lineId)
     if (!line) return
+    const unitId = original['unit_id']
+    if (unitId != null) {
+      const movements = store['session_line_movements'] ?? []
+      const stillPicked = movements.some((m) => m['booking_line_id'] === lineId && m['unit_id'] === unitId &&
+        m['resulting_item_state'] === 'Picked Up' && m['reverses_movement_id'] == null &&
+        (store['operation_sessions'] ?? []).some((s) => s['id'] === m['session_id'] && s['operation'] === 'Handover') &&
+        Number(m['qty']) > movements.filter((r) => r['reverses_movement_id'] === m['id']).reduce((sum, r) => sum + Number(r['qty']), 0))
+      for (const unit of store['booking_line_units'] ?? []) {
+        if (unit['booking_line_id'] !== lineId || unit['asset_id'] !== unitId || unit['released_at'] != null || unit['return_session_id'] != null) continue
+        const unitPatch: Row | null = row['reverses_movement_id'] == null
+          ? { unit_state: 'Picked Up', handover_session_id: row['session_id'] }
+          : !stillPicked && unit['unit_state'] === 'Picked Up' && unit['handover_session_id'] === original['session_id']
+            ? { unit_state: 'Ready', handover_session_id: null } : null
+        if (!unitPatch) continue
+        Object.assign(unit, unitPatch)
+        overlay.updates.push({ table: 'booking_line_units', id: unit['id'], patch: unitPatch })
+      }
+    }
     const total = read('handover_pickup_totals').find((item) => item['booking_line_id'] === lineId)
     const picked = Number(total?.['picked_qty'] ?? 0)
     const complete = picked === Number(line['qty'])
