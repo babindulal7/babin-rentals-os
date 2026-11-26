@@ -1,6 +1,7 @@
 name: Playwright disposable cloud auth
 
 on:
+  workflow_dispatch:
   push:
     branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125, integration/payment-expense-verification-20261125, fix/payment-database-hold-20261125, integration/combined-launch-candidate-20261125, integration/custody-qc-signed-handover-20261126, test/partial-pickup-second-session-443-20261126]
     # Re-run the real disposable auth gate on application and migration changes too.
@@ -9,7 +10,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: playwright-disposable-cloud
+  group: ${{ github.ref == 'refs/heads/test/partial-pickup-second-session-443-20261126' && 'playwright-disposable-partial-pickup-487' || 'playwright-disposable-cloud' }}
   cancel-in-progress: false
 
 jobs:
