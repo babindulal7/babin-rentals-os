@@ -1,0 +1,5 @@
+# Cloudflare Workers: SPA fallback comes from wrangler assets.not_found_handling.
+# Keep this legacy Pages-specific file in source/build output but do not upload
+# or evaluate it as Workers Static Assets redirects: its /* -> /index.html rule
+# has triggered Cloudflare error 100324 (infinite loop).
+_redirects
