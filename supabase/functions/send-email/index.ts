@@ -208,7 +208,7 @@ export function renderEmailHtml(payload: EmailPayloadData, language = 'en'): str
         </div>
         <div class="footer">
           <p style="margin: 0;">Sent automatically from <strong>no-reply@babinrentals.com</strong>.</p>
-          <p style="margin: 4px 0 0;">Babin Rentals OS · New Baneshwor, Kathmandu · +977-1-4780000</p>
+          <p style="margin: 4px 0 0;">Babin Rentals OS · Boudha, Kathmandu, Nepal · babinrentals.com</p>
         </div>
       </div>
     </body>
@@ -409,7 +409,7 @@ export async function handleSendEmail(req: Request): Promise<Response> {
     const { data: logId, error: logError } = await adminClient.rpc('record_email_send', {
       p_template_id: templateId,
       p_recipient_email: targetEmail,
-      p_recipient_user_id: recipientUserId || user.id,
+      p_recipient_user_id: recipientUserId || null,
       p_entity_type: entityType || null,
       p_entity_id: entityId || null,
       p_status: dispatchStatus,
