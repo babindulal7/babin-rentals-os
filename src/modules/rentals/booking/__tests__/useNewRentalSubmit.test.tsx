@@ -261,7 +261,7 @@ describe('useNewRentalSubmit', () => {
         bookingNo: '6',
         paymentToken: scenario === 'payment hold' ? undefined : 'test-payment-token',
         paymentLink: scenario === 'payment hold' ? undefined : `${window.location.origin}/pay/link/test-payment-token`,
-      })
+      }))
     } finally {
       await act(async () => {
         root.unmount()
