@@ -5,6 +5,7 @@ import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { paymentGlance, paymentDetailGroups } from '../lib/intel/paymentIntel'
+import type { PaymentListRow } from '../lib/queries/finance'
 import { checkKitCompatibility, hasModelToken } from '../lib/intel/kitSafetyRules'
 import { addEquipmentIntelNote, configureIntelField } from '../actions/intel/writeIntel'
 import { ActionPermissionError } from '../actions/core'
@@ -86,28 +87,34 @@ describe('BSEC-23 (P1 Batch 8): AI & Rental Intelligence — Role Access, RLS, P
   })
 
   it('BSEC-23-01: enforces money-blind intel rendering and visibility tiers by role', async () => {
-    const samplePayment = {
+    const samplePayment: PaymentListRow = {
       id: 'pay-1',
       paymentNo: 'PAY-2027-0001',
       bookingId: 'bk-1',
       bookingNo: '230101',
+      invoiceId: null,
+      invoiceNo: null,
       clientId,
       clientName: 'Test Client',
-      amount: 150000,
-      paymentType: 'Advance',
-      status: 'Settled',
+      amount: 150000 as PaymentListRow['amount'],
+      paymentType: 'Advance Payment',
+      status: 'Received',
       paymentDateAd: '2027-02-10T10:00:00Z',
       channelGroup: 'Bank',
+      bankName: null,
       transactionRef: 'TXN-1',
-    } as Parameters<typeof paymentGlance>[0]
+      notes: null,
+      receivedById: ownerId,
+      createdAtAd: '2027-02-10T10:00:00Z',
+    }
 
-    const floorGlance = paymentGlance(samplePayment, { role: 'Warehouse', canViewMoney: false })
-    expect(floorGlance.lines.join(' ')).not.toContain('1,500')
-    const floorGroups = paymentDetailGroups(samplePayment, { role: 'Warehouse', canViewMoney: false })
+    const floorGlance = paymentGlance(samplePayment, { role: 'Warehouse' })
+    expect((floorGlance.lines ?? []).join(' ')).not.toContain('1,500')
+    const floorGroups = paymentDetailGroups(samplePayment, { role: 'Warehouse' })
     expect(floorGroups[0]!.fields.some((f) => f.label === 'Amount')).toBe(false)
 
-    const ownerGlance = paymentGlance(samplePayment, { role: 'Owner', canViewMoney: true })
-    expect(ownerGlance.lines.join(' ')).toContain('1,500')
+    const ownerGlance = paymentGlance(samplePayment, { role: 'Owner' })
+    expect((ownerGlance.lines ?? []).join(' ')).toContain('1,500')
 
     // DB note visibility tiers: management hidden from Warehouse, operations hidden from Accounts
     await setActor(ownerId)
@@ -202,7 +209,7 @@ describe('BSEC-23 (P1 Batch 8): AI & Rental Intelligence — Role Access, RLS, P
           entityType: 'equipment',
           fieldKey: 'custom_test',
           label: 'Custom Test',
-          classification: 'Operational',
+          classification: 'operational',
           highPriority: false,
           clientUuid: '11111111-1111-4111-8111-111111111113',
         },
