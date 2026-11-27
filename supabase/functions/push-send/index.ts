@@ -46,6 +46,15 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(
@@ -55,6 +64,34 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    const isServiceCaller = token.length > 0 && token === supabaseServiceKey
+
+    if (!isServiceCaller) {
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      })
+      const { data: { user }, error: authError } = await userClient.auth.getUser()
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { data: callerRow } = await supabase
+        .from('users')
+        .select('primary_role, is_active')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!callerRow || !callerRow.is_active || callerRow.primary_role === 'Client') {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
 
     const body: PushSendRequest = await req.json()
     const { eventType, payload } = body
