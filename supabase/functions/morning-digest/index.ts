@@ -177,7 +177,42 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: 'Server configuration error: missing service keys' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey)
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim()
+    const isServiceCaller = token.length > 0 && token === supabaseServiceKey
+
+    if (!isServiceCaller) {
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      })
+      const { data: { user }, error: authError } = await userClient.auth.getUser()
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { data: callerRow } = await adminClient
+        .from('users')
+        .select('primary_role, is_active')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!callerRow || !callerRow.is_active || !['Owner', 'Admin', 'Manager'].includes(callerRow.primary_role)) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
 
     // Parse options from body if present
     let body: DigestRequest = {}
