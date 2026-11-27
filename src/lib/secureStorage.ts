@@ -23,20 +23,40 @@ export interface SupportedStorage {
 export type PlatformType = 'capacitor' | 'tauri' | 'electron' | 'web';
 
 /** Detect the current runtime environment. */
+interface NativeBridgeWindow extends Window {
+  Capacitor?: {
+    isNativePlatform?: () => boolean;
+    getPlatform?: () => string;
+    Plugins?: {
+      SecureStoragePlugin?: {
+        get: (opts: { key: string }) => Promise<{ value: string | null }>;
+        set: (opts: { key: string; value: string }) => Promise<void>;
+        remove: (opts: { key: string }) => Promise<void>;
+      };
+    };
+  };
+  __TAURI__?: {
+    core?: {
+      invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+    };
+  };
+  __TAURI_INTERNALS__?: {
+    invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
+  };
+  electronAPI?: {
+    isElectron?: boolean;
+    secureStorage?: {
+      getItem: (key: string) => Promise<string | null>;
+      setItem: (key: string, value: string) => Promise<boolean>;
+      removeItem: (key: string) => Promise<boolean>;
+    };
+  };
+}
+
 export function detectPlatform(): PlatformType {
   if (typeof window === 'undefined') return 'web';
 
-  const win = window as unknown as {
-    Capacitor?: {
-      isNativePlatform?: () => boolean;
-      getPlatform?: () => string;
-    };
-    __TAURI__?: unknown;
-    __TAURI_INTERNALS__?: unknown;
-    electronAPI?: {
-      isElectron?: boolean;
-    };
-  };
+  const win: NativeBridgeWindow = window;
 
   if (win.Capacitor?.isNativePlatform?.() || (win.Capacitor?.getPlatform && win.Capacitor.getPlatform() !== 'web')) {
     return 'capacitor';
@@ -114,17 +134,7 @@ export class CapacitorKeystoreAdapter implements SupportedStorage {
     remove: (opts: { key: string }) => Promise<void>;
   } | null {
     if (typeof window === 'undefined') return null;
-    const win = window as unknown as {
-      Capacitor?: {
-        Plugins?: {
-          SecureStoragePlugin?: {
-            get: (opts: { key: string }) => Promise<{ value: string | null }>;
-            set: (opts: { key: string; value: string }) => Promise<void>;
-            remove: (opts: { key: string }) => Promise<void>;
-          };
-        };
-      };
-    };
+    const win: NativeBridgeWindow = window;
     return win.Capacitor?.Plugins?.SecureStoragePlugin ?? null;
   }
 
@@ -186,16 +196,7 @@ export class TauriStrongholdAdapter implements SupportedStorage {
 
   private getTauriInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
     if (typeof window === 'undefined') return null;
-    const win = window as unknown as {
-      __TAURI__?: {
-        core?: {
-          invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
-        };
-      };
-      __TAURI_INTERNALS__?: {
-        invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
-      };
-    };
+    const win: NativeBridgeWindow = window;
     return win.__TAURI__?.core?.invoke ?? win.__TAURI_INTERNALS__?.invoke ?? null;
   }
 
@@ -256,15 +257,7 @@ export class ElectronSafeStorageAdapter implements SupportedStorage {
     removeItem: (key: string) => Promise<boolean>;
   } | null {
     if (typeof window === 'undefined') return null;
-    const win = window as unknown as {
-      electronAPI?: {
-        secureStorage?: {
-          getItem: (key: string) => Promise<string | null>;
-          setItem: (key: string, value: string) => Promise<boolean>;
-          removeItem: (key: string) => Promise<boolean>;
-        };
-      };
-    };
+    const win: NativeBridgeWindow = window;
     return win.electronAPI?.secureStorage ?? null;
   }
 

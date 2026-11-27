@@ -156,7 +156,7 @@ export async function getLegacyLocalEntriesSummary(): Promise<LegacyExportSummar
 /**
  * Helper to convert an array of record objects to a clean CSV string.
  */
-export function recordsToCsv(rows: Array<Record<string, unknown>>): string {
+export function recordsToCsv(rows: ReadonlyArray<object>): string {
   if (!rows || rows.length === 0) return ''
 
   // Collect all unique header keys
@@ -177,7 +177,7 @@ export function recordsToCsv(rows: Array<Record<string, unknown>>): string {
 
   const lines = [
     headers.join(','),
-    ...rows.map(row => headers.map(h => escapeCell(row[h])).join(',')),
+    ...rows.map(row => headers.map(h => escapeCell((row as Record<string, unknown>)[h])).join(',')),
   ]
 
   return lines.join('\r\n')
@@ -220,7 +220,7 @@ export async function buildLegacyExportBundle(): Promise<LegacyExportBundle> {
         const mutations = await outbox.mutations.toArray()
         data['indexeddb.mutations'] = mutations
         if (mutations.length > 0) {
-          csvSections.push(`# --- indexeddb.mutations (${mutations.length} entries) ---\r\n` + recordsToCsv(mutations as unknown as Array<Record<string, unknown>>))
+          csvSections.push(`# --- indexeddb.mutations (${mutations.length} entries) ---\r\n` + recordsToCsv(mutations))
         }
       }
     } catch {
@@ -232,7 +232,7 @@ export async function buildLegacyExportBundle(): Promise<LegacyExportBundle> {
         const held = await outbox.heldMutations.toArray()
         data['indexeddb.heldMutations'] = held
         if (held.length > 0) {
-          csvSections.push(`# --- indexeddb.heldMutations (${held.length} entries) ---\r\n` + recordsToCsv(held as unknown as Array<Record<string, unknown>>))
+          csvSections.push(`# --- indexeddb.heldMutations (${held.length} entries) ---\r\n` + recordsToCsv(held))
         }
       }
     } catch {
@@ -244,7 +244,7 @@ export async function buildLegacyExportBundle(): Promise<LegacyExportBundle> {
         const conflicts = await outbox.conflicts.toArray()
         data['indexeddb.conflicts'] = conflicts
         if (conflicts.length > 0) {
-          csvSections.push(`# --- indexeddb.conflicts (${conflicts.length} entries) ---\r\n` + recordsToCsv(conflicts as unknown as Array<Record<string, unknown>>))
+          csvSections.push(`# --- indexeddb.conflicts (${conflicts.length} entries) ---\r\n` + recordsToCsv(conflicts))
         }
       }
     } catch {

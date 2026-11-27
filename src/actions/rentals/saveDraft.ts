@@ -2,6 +2,7 @@ import { createAction, type ActionConfig, type ActionContext } from '../core'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { newClientUuid, supabase } from '../../lib/supabase'
 import { safeUpdate } from '../../lib/dataAccess'
+import { castRow, castRows } from '../../lib/queries/queryTypes'
 
 /** Complete, versioned snapshot owned by New Rental. */
 export interface RentalDraftData {
@@ -228,8 +229,8 @@ export const saveDraftConfig: ActionConfig<SaveDraftInput, SaveDraftResult> = {
       const branchId = await branchForUser(ctx.userId)
       let bookingNo = input.data.bookingNo
       if (!bookingNo) {
-        if (typeof (supabase as unknown as { rpc?: unknown }).rpc === 'function') {
-          const { data: mintedNo, error: mintError } = await (supabase as unknown as { rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }> }).rpc('next_document_number', {
+        if (typeof supabase.rpc === 'function') {
+          const { data: mintedNo, error: mintError } = await supabase.rpc('next_document_number', {
             p_sequence_key: 'booking',
           })
           if (mintError || !mintedNo) {
@@ -290,7 +291,7 @@ export async function fetchRentalDraft(id: string): Promise<RentalDraftRecord> {
   const { data, error } = await query.maybeSingle()
   if (error) throw new Error(`the draft could not be loaded (${error.message})`)
   if (!data) throw new Error('the draft was not found or your role cannot read it')
-  return toRecord(data as unknown as DraftDbRow)
+  return toRecord(castRow<DraftDbRow>(data))
 }
 
 /** Lists active drafts for display in RentalsList. */
@@ -305,7 +306,7 @@ export async function listActiveDrafts(branchId?: string): Promise<RentalDraftRe
   }
   const { data, error } = await query
   if (error) throw new Error(`could not list rental drafts: ${error.message}`)
-  return (data as unknown as DraftDbRow[] ?? []).map(toRecord)
+  return castRows<DraftDbRow>(data).map(toRecord)
 }
 
 export type ConvertDraftInput = { id: string; bookingId: string }
@@ -348,7 +349,7 @@ export const convertDraftConfig: ActionConfig<ConvertDraftInput, RentalDraftReco
       .maybeSingle()
     if (error) throw new Error(`the draft-to-booking link failed (${error.message})`)
     if (!data) throw new Error('the draft was not active, so it was not linked to this booking')
-    return { result: toRecord(data as unknown as DraftDbRow), events: [] }
+    return { result: toRecord(castRow<DraftDbRow>(data)), events: [] }
   },
 }
 
