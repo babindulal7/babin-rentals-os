@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-27 — 10-Task Type Hardening Batch 2 & 25 New Unit Test Suites (refactor/todo-cleanups-1-to-7)
+
+### Did
+1. **Type-hardened query modules (Batch 1 — Operations & Reports):** Replaced `as unknown as` casts using `src/lib/queries/queryTypes.ts` across `stockAudits.ts`, `shortages.ts`, `reportRevenueTrend.ts`, `rentalReports.ts`, and `expenseReports.ts`.
+2. **Type-hardened query modules (Batch 2 — Schedule, Crew, Notifications & Bundles):** Replaced `as unknown as` casts using `queryTypes.ts` across `notifications.ts`, `crew.ts`, `calendar.ts`, `bundles.ts`, `serviceDue.ts`, `openingBalances.ts`, `liveTransportPlans.ts`, and `downtime.ts`.
+3. **Type-hardened Rentals & Marketing actions:** Replaced `as unknown as` casts in `src/actions/rentals/saveDraft.ts`, `src/actions/rentals/closeRental.ts`, and `src/actions/marketing/offerCampaigns.ts`.
+4. **Type-hardened analytics & utility modules:** Replaced `as unknown as` casts in `src/lib/storeAnalytics.ts`, `src/lib/bookingQuery.ts`, `src/lib/legacyLocalExport.ts`, and `src/lib/savedViews.ts`.
+5. **Type-hardened PWA & native storage bridges:** Replaced `as unknown as` casts in `src/lib/usePwaInstall.ts` and `src/lib/secureStorage.ts` (via `NativeBridgeWindow`).
+6. **Added unit tests for `src/lib/` core modules (Batch 1):** Added `bookingTransportForm.test.ts`, `recordEditor.test.ts`, `dataAccess.test.ts`, `status.test.ts`, and `whatsappTemplates.test.ts`.
+7. **Added unit tests for `src/lib/` sync & state modules (Batch 2):** Added `settingsSync.test.ts`, `glossarySync.test.ts`, `network.test.ts`, `languagePreferenceStore.test.ts`, and `savedViews.test.ts`.
+8. **Added unit tests for Delivery actions:** Added `assignDeliveryDriver.test.ts`, `attachDeliveryProof.test.ts`, `createDeliveryJob.test.ts`, `rescheduleDeliveryJob.test.ts`, and `transitionDeliveryJob.test.ts`.
+9. **Added unit tests for Inventory & Maintenance actions:** Added `createEquipment.test.ts`, `createStockTransfer.test.ts`, `confirmStockCheckMissing.test.ts`, `createMaintenanceJob.test.ts`, and `completeMaintenance.test.ts`.
+10. **Added unit tests for Client, Notes & Counter Sale actions:** Added `enrollMembership.test.ts`, `manageCollector.test.ts`, `archiveTeamNote.test.ts`, `pinTeamNote.test.ts`, and `createCounterSale.test.ts`.
+
+### Ruled
+- Kept `src/lib/supabase.ts` untyped (`createClient(...)`) for mock-proxy parity; query and action row narrowing uses `src/lib/queries/queryTypes.ts`.
+
+### Verified
+- `npx tsc --noEmit`: PASS (0 errors).
+- `npm run lint` (`eslint src --max-warnings 0`): PASS (0 errors, 0 warnings).
+- `npm run test:local-api-guards`, `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast` (97/97): PASS.
+- `npm run check:pglite` (275/275), `npm run check:lifecycle` (102/102), `npm run check:security`: PASS.
+- `npm run test:server-contracts` & `npm run test:partial-return` (58/58): PASS.
+- `npm test`: PASS (`804/804` test files, `8,330/8,330` tests passed).
+- `npm run build`: PASS (PWA precache 322 entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-27T05:44:05.556Z). Suite: PASS — 8330/8330 passed, 0 failed (recorded 2026-11-27T05:57:48.750Z); source fingerprint matches.
+Coverage suite: Historical suite: 8207/8207 passed, 0 failed (recorded 2026-11-27T05:26:29.903Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-27T05:46:25.039Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner-gated / live-environment items unchanged: `T1-01` (live backup), `T1-13` (real staff accounts on live), `T9-04` / `T9-05` (Go/No-Go and Day X cutover).
+- Review and merge `refactor/todo-cleanups-1-to-7`.
+
 ## 2026-11-27 — 10-Task Type Hardening, Role-Matrix Timeout Fix & `src/lib` Unit Coverage (refactor/todo-cleanups-1-to-7)
 
 ### Did

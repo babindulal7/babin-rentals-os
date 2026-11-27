@@ -1,4 +1,5 @@
 import { supabase, IS_MOCK } from '../supabase'
+import { castRow, castRows } from './queryTypes'
 
 export type NotificationChannel = 'In-App' | 'SMS' | 'Email' | 'WhatsApp'
 export type NotificationSeverity = 'Information' | 'Warning' | 'Critical'
@@ -228,7 +229,7 @@ export async function fetchNotifications(options?: {
     return []
   }
 
-  return ((data ?? []) as unknown as NotificationDbRow[]).map(mapDbRow)
+  return castRows<NotificationDbRow>(data).map(mapDbRow)
 }
 
 /**
@@ -329,7 +330,7 @@ export async function markNotificationAsRead(id: string): Promise<AppNotificatio
     throw new Error(`Failed to mark notification as read: ${error.message}`)
   }
 
-  const res = mapDbRow(data as unknown as NotificationDbRow)
+  const res = mapDbRow(castRow<NotificationDbRow>(data))
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('babin:notifications-updated', { detail: { id, isRead: true } }))
   }
@@ -428,7 +429,7 @@ export async function createNotification(params: {
     throw new Error(`Failed to create notification: ${error.message}`)
   }
 
-  const res = mapDbRow(data as unknown as NotificationDbRow)
+  const res = mapDbRow(castRow<NotificationDbRow>(data))
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('babin:notifications-updated', { detail: res }))
   }

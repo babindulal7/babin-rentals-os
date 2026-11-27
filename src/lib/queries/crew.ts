@@ -1,4 +1,5 @@
 import { IS_MOCK, supabase } from '../supabase'
+import { castRows } from './queryTypes'
 import { toBs, formatBs } from '../bs'
 import { rupees } from '../money'
 import type { ListFilters } from './listQuery'
@@ -137,7 +138,7 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
 
     const memberMap = new Map<string, CrewMemberDbRow>()
     if (memberRows) {
-      for (const m of memberRows as unknown as CrewMemberDbRow[]) {
+      for (const m of castRows<CrewMemberDbRow>(memberRows)) {
         memberMap.set(m.id, m)
       }
     }
@@ -145,7 +146,7 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
       throw new Error('Crew member lookup incomplete; accountant export must not omit named crew.')
     }
 
-    const rows: CrewAssignment[] = (bookingRows as unknown as CrewBookingDbRow[]).map((b) => {
+    const rows: CrewAssignment[] = castRows<CrewBookingDbRow>(bookingRows).map((b) => {
       const member = b.crew_member_id ? memberMap.get(b.crew_member_id) : undefined
       const dayRate = b.day_rate ?? member?.day_rate ?? 0
       const days = b.days || 1
@@ -231,7 +232,7 @@ export async function listCrewMembers(_filters?: ListFilters): Promise<ListQuery
       }
     }
 
-    const rows: CrewMember[] = (memberRows as unknown as CrewMemberDbRow[]).map((m) => ({
+    const rows: CrewMember[] = castRows<CrewMemberDbRow>(memberRows).map((m) => ({
       id: m.id,
       name: m.full_name,
       role: (m.position || 'Grip') as CrewRole,

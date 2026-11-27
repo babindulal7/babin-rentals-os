@@ -3,6 +3,7 @@ import { applyListFilters, sanitiseSearchTerm, type ListFilters } from './listQu
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
 import type { StockCheckUnitState } from '../../data/stockCheck'
+import { castRow, type QueryListResult } from './queryTypes'
 
 /**
  * # The stock-audit queries — `stock_audits` / `stock_audit_items`
@@ -396,11 +397,7 @@ export async function listStockAudits(opts: ListStockAuditsOptions = {}): Promis
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawStockAuditRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawStockAuditRow>>(await query)
 
   if (error) throw new Error(`listStockAudits failed: ${error.message}`)
 
@@ -499,11 +496,7 @@ export async function listStockAuditItems(
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawStockAuditItemRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawStockAuditItemRow>>(await query)
 
   if (error) throw new Error(`listStockAuditItems failed: ${error.message}`)
 
@@ -548,10 +541,10 @@ export async function findStockAuditItemByCode(auditId: string, rawCode: string)
     )
     .limit(1)
 
-  const { data, error } = (await query) as unknown as {
+  const { data, error } = castRow<{
     data: RawStockAuditItemRow[] | null
     error: { message: string } | null
-  }
+  }>(await query)
 
   if (error) throw new Error(`findStockAuditItemByCode failed: ${error.message}`)
 

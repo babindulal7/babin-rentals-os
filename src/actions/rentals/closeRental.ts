@@ -2,6 +2,7 @@ import { createAction, type ActionContext } from '../core'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { applyBookingTransition } from '../../lib/bookingTransition'
 import { supabase } from '../../lib/supabase'
+import { castRow, castRows } from '../../lib/queries/queryTypes'
 import { getSetting } from '../../lib/settingsStore'
 import type { CloseGateInput } from '../../lib/workflow'
 import type { SystemRole } from '../../types/database'
@@ -194,7 +195,7 @@ async function readCloseGates(bookingId: string, bookingNo: string): Promise<Clo
     )
   }
 
-  const invoices = (invoiceRows ?? []) as unknown as Array<{ outstanding_amount: number | string; status: string }>
+  const invoices = castRows<{ outstanding_amount: number | string; status: string }>(invoiceRows)
 
   /* Outstanding still counts a Draft's balance — a working figure someone has
      to settle or void is not nothing. What a Draft cannot do is stand in for a
@@ -232,13 +233,11 @@ async function readCloseGates(bookingId: string, bookingNo: string): Promise<Clo
     )
   }
 
-  const depositHeldPaisa = (
-    (depositRows ?? []) as unknown as Array<{
-      received_amount: number | string
-      refunded_amount: number | string
-      applied_amount: number | string
-    }>
-  ).reduce(
+  const depositHeldPaisa = castRows<{
+    received_amount: number | string
+    refunded_amount: number | string
+    applied_amount: number | string
+  }>(depositRows).reduce(
     (sum, row) => sum + paisa(row.received_amount) - paisa(row.refunded_amount) - paisa(row.applied_amount),
     0,
   )
@@ -460,7 +459,7 @@ export const closeRental = createAction<CloseRentalInput, CloseRentalResult>({
       throw new Error(`No booking numbered ${bookingNo} exists, so there is nothing to close.`)
     }
 
-    const booking = data as unknown as BookingRow
+    const booking = castRow<BookingRow>(data)
 
     if (booking.closed_at !== null) {
       // R-09 makes reopen a separate, Owner/Admin-only act with its own reason.
@@ -544,7 +543,7 @@ export const closeRental = createAction<CloseRentalInput, CloseRentalResult>({
       )
     }
 
-    const stageNow = (after as unknown as { stage: string; closed_at: string | null }).stage
+    const stageNow = castRow<{ stage: string; closed_at: string | null }>(after).stage
     if (stageNow !== 'Closed') {
       throw new Error(
         `${bookingNo} is still ${stageNow} after the close was submitted, so treat it as NOT closed. The database ` +

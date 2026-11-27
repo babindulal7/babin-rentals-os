@@ -6,6 +6,7 @@ import { parseTstzRange } from './availability'
 import type { ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
+import { castRows } from './queryTypes'
 import {
   RESOURCE_CATALOGUE,
   type Bar,
@@ -316,7 +317,7 @@ export async function listCalendarBookings(fromAd: string, toAd: string): Promis
 
   if (error) throw new Error(`listCalendarBookings failed: ${error.message}`)
 
-  const rows = ((data ?? []) as unknown as RawCalendarRow[]).map((r) => toBar(r, startMinutes))
+  const rows = castRows<RawCalendarRow>(data).map((r) => toBar(r, startMinutes))
   // `count` is the exact number of matching bookings; `rows.length` is how many
   // came back. They differ exactly when the window was cut. Falling back to
   // `rows.length` when the count is absent keeps the old — honest, if less
@@ -397,7 +398,7 @@ export async function listCalendarDowntimes(fromAd: string, toAd: string): Promi
     product_units: { asset_tag: string } | null
     products: { name: string } | null
   }
-  for (const r of (data ?? []) as unknown as CalendarDowntimeRow[]) {
+  for (const r of castRows<CalendarDowntimeRow>(data)) {
     const range = parseTstzRange(r.period)
     if (!range) continue
     const startMs = new Date(range.fromAd).getTime()
@@ -436,7 +437,7 @@ export async function listCalendarDrafts(fromAd: string, toAd: string): Promise<
   if (error) throw new Error(`Calendar drafts could not load: ${error.message}`)
   type DraftWindow = { id: string; booking_no: string | null; client_name: string | null; project: string | null; pickup: string | null; return_date: string | null }
   const rows: Bar[] = []
-  for (const draft of (data ?? []) as unknown as DraftWindow[]) {
+  for (const draft of castRows<DraftWindow>(data)) {
     if (!draft.pickup || !draft.return_date) continue
     const from = utcMidnight(draft.pickup)
     const to = utcMidnight(draft.return_date)

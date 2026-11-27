@@ -1,6 +1,7 @@
 import { createAction, type ActionConfig } from '../core'
 import { supabase, IS_MOCK } from '../../lib/supabase'
 import { sendEmail } from '../../lib/email/client'
+import { castRow } from '../../lib/queries/queryTypes'
 
 /**
  * T5-12 / B43 / B50: Marketing Offer Campaigns
@@ -87,7 +88,7 @@ export const saveOfferCampaignConfig: ActionConfig<SaveOfferCampaignInput, SaveO
     }
 
     return {
-      result: data as unknown as SaveOfferCampaignResult,
+      result: castRow<SaveOfferCampaignResult>(data),
       events: [],
     }
   },
@@ -154,7 +155,7 @@ export const testOfferCampaignConfig: ActionConfig<TestOfferCampaignInput, TestO
     }
 
     return {
-      result: data as unknown as TestOfferCampaignResult,
+      result: castRow<TestOfferCampaignResult>(data),
       events: [],
     }
   },
@@ -197,7 +198,7 @@ export const previewOfferAudienceConfig: ActionConfig<AudiencePreviewInput, Audi
     }
 
     return {
-      result: data as unknown as AudiencePreviewResult,
+      result: castRow<AudiencePreviewResult>(data),
       events: [],
     }
   },
@@ -248,7 +249,7 @@ export const queueOfferCampaignConfig: ActionConfig<QueueOfferCampaignInput, Que
     }
 
     return {
-      result: data as unknown as QueueOfferCampaignResult,
+      result: castRow<QueueOfferCampaignResult>(data),
       events: [],
     }
   },

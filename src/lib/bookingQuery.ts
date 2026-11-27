@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { DISCOUNT_CAP, price, rupees, type Paisa, type PriceBreakdown } from './money'
 import { BOOKING_STATUS, type StatusMeta } from './workflow'
 import type { Database } from '../types/supabase'
+import { castNullableRow, castRow } from './queries/queryTypes'
 
 /**
  * # The single booking query — Law 2 (Single Query Rule)
@@ -967,7 +968,7 @@ async function readDeposit(bookingId: string): Promise<number | null> {
       `The booking loaded but its deposit did not, so no figure is shown rather than a wrong one: ${error.message}`,
     )
   }
-  return (data as unknown as { deposit_required: number | null } | null)?.deposit_required ?? null
+  return castNullableRow<{ deposit_required: number | null }>(data)?.deposit_required ?? null
 }
 
 /**
@@ -1210,7 +1211,7 @@ function aggregateUnits(units: RawUnit[] | null | undefined): LineUnits {
      * believes the five are exhaustive while Postgres is returning a sixth.
      * `hasOwnProperty` rather than `in`, so a unit_state of 'toString' or
      * '__proto__' cannot match a prototype member. */
-    if (!Object.prototype.hasOwnProperty.call(EMPTY_STATE_COUNTS, u.unit_state as unknown as string)) {
+    if (!Object.prototype.hasOwnProperty.call(EMPTY_STATE_COUNTS, String(u.unit_state))) {
       throw new Error(
         `bookingQuery: unknown item_quantity_state ${JSON.stringify(u.unit_state)} on booking_line_units ` +
           `row ${String(u.id)}. The enum has exactly five members (0001:42), so this means ` +
@@ -1992,10 +1993,12 @@ export async function fetchCanonicalBooking(
     // Law 3 — a removed line is voided, never deleted, so it must not be priced.
     .is('booking_lines_v.voided_at', null)
 
-  const { data, error } = (await (UUID.test(bookingIdOrNo)
-    ? query.eq('id', bookingIdOrNo)
-    : query.eq('booking_no', bookingIdOrNo)
-  ).maybeSingle()) as unknown as { data: RawBooking | null; error: { message: string } | null }
+  const { data, error } = castRow<{ data: RawBooking | null; error: { message: string } | null }>(
+    await (UUID.test(bookingIdOrNo)
+      ? query.eq('id', bookingIdOrNo)
+      : query.eq('booking_no', bookingIdOrNo)
+    ).maybeSingle(),
+  )
 
   if (error) throw new Error(`fetchCanonicalBooking failed: ${error.message}`)
   if (!data) return null

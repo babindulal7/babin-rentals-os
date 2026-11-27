@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import { canViewMoney } from '../rbac'
 import type { SystemRole } from '../../types/database'
+import { castRows } from './queryTypes'
 
 /**
  * There is no persisted dispatch lifecycle yet. This query returns only
@@ -74,7 +75,7 @@ export async function getLiveTransportPlans(role: SystemRole | null): Promise<Li
       .range(offset, offset + PAGE_SIZE - 1)
     if (error) throw new Error('Unable to load transport plans from the database.', { cause: error })
     if (!data) throw new Error('Transport plans query returned no data.')
-    plans.push(...data as unknown as TransportRow[])
+    plans.push(...castRows<TransportRow>(data))
     if (data.length < PAGE_SIZE) break
   }
   if (!plans.length) return []
@@ -89,7 +90,7 @@ export async function getLiveTransportPlans(role: SystemRole | null): Promise<Li
       .in('id', ids.slice(i, i + BOOKING_BATCH))
     if (error) throw new Error('Unable to verify booking access for transport plans.', { cause: error })
     if (!data) throw new Error('Booking permission check returned no data.')
-    for (const row of data as unknown as BookingRow[]) bookingMap.set(row.id, row)
+    for (const row of castRows<BookingRow>(data)) bookingMap.set(row.id, row)
   }
   if (bookingMap.size !== ids.length) {
     throw new Error('Transport plans include bookings that this session cannot verify. Nothing was displayed.')

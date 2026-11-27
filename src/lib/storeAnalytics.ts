@@ -95,8 +95,23 @@ export function initStoreAnalyticsScripts(isStaffApp = false): boolean {
     return false
   }
 
-  const ga4Id = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_GA4_ID
-  const metaPixelId = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_META_PIXEL_ID
+  const ga4Id = import.meta.env.VITE_GA4_ID as string | undefined
+  const metaPixelId = import.meta.env.VITE_META_PIXEL_ID as string | undefined
+
+  type FbqFn = ((...args: unknown[]) => void) & {
+    callMethod?: (...args: unknown[]) => void
+    push?: unknown
+    loaded?: boolean
+    version?: string
+    queue?: unknown[]
+  }
+  type AnalyticsWindow = Window & {
+    dataLayer?: unknown[]
+    gtag?: (...args: unknown[]) => void
+    fbq?: FbqFn
+    _fbq?: FbqFn
+  }
+  const win: AnalyticsWindow = window
 
   // Initialize GA4 if ID is configured
   if (ga4Id && !document.getElementById('ga4-script')) {
@@ -106,10 +121,6 @@ export function initStoreAnalyticsScripts(isStaffApp = false): boolean {
     gaScript.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga4Id)}`
     document.head.appendChild(gaScript)
 
-    const win = window as unknown as {
-      dataLayer?: unknown[]
-      gtag?: (...args: unknown[]) => void
-    }
     win.dataLayer = win.dataLayer || []
     function gtag(...args: unknown[]) {
       win.dataLayer?.push(args)
@@ -127,18 +138,7 @@ export function initStoreAnalyticsScripts(isStaffApp = false): boolean {
     pixelScript.src = 'https://connect.facebook.net/en_US/fbevents.js'
     document.head.appendChild(pixelScript)
 
-    const win = window as unknown as {
-      fbq?: unknown
-      _fbq?: unknown
-    }
     if (!win.fbq) {
-      type FbqFn = ((...args: unknown[]) => void) & {
-        callMethod?: (...args: unknown[]) => void
-        push?: unknown
-        loaded?: boolean
-        version?: string
-        queue?: unknown[]
-      }
       const fbq: FbqFn = function (...args: unknown[]) {
         if (fbq.callMethod) {
           fbq.callMethod(...args)
@@ -180,10 +180,10 @@ export function trackStoreEvent(
 
   // Safe browser window dispatch
   if (typeof window !== 'undefined') {
-    const win = window as unknown as {
+    const win: Window & {
       gtag?: (command: string, eventName: string, params: Record<string, unknown>) => void
       fbq?: (command: string, eventName: string, params: Record<string, unknown>) => void
-    }
+    } = window
 
     if (typeof win.gtag === 'function') {
       win.gtag('event', sanitized.event, sanitized.params)

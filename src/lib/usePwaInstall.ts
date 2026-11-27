@@ -32,9 +32,10 @@ export function isAppInstalled(): boolean {
   if (typeof window === 'undefined') return false
   if (appInstalledFlag) return true
 
+  const nav: Navigator & { standalone?: boolean } = window.navigator
   const isStandalone =
     window.matchMedia?.('(display-mode: standalone)').matches === true ||
-    (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
+    nav.standalone === true ||
     document.referrer?.includes('android-app://') === true ||
     window.location?.search?.includes('source=pwa') === true
 
@@ -122,7 +123,7 @@ export function usePwaInstall(): UsePwaInstallResult {
           mq.addEventListener('change', update)
         } else if ('addListener' in mq) {
           // Safari 13 compatibility
-          ;(mq as unknown as { addListener: (cb: () => void) => void }).addListener(update)
+          ;(mq as MediaQueryList & { addListener: (cb: () => void) => void }).addListener(update)
         }
       }
     } catch {
@@ -135,7 +136,7 @@ export function usePwaInstall(): UsePwaInstallResult {
         if (mq.removeEventListener) {
           mq.removeEventListener('change', update)
         } else if ('removeListener' in mq) {
-          ;(mq as unknown as { removeListener: (cb: () => void) => void }).removeListener(update)
+          ;(mq as MediaQueryList & { removeListener: (cb: () => void) => void }).removeListener(update)
         }
       }
     }
@@ -143,9 +144,10 @@ export function usePwaInstall(): UsePwaInstallResult {
 
   const isIos = useMemo(() => {
     if (typeof navigator === 'undefined') return false
+    const win: Window & { MSStream?: unknown } = window
     return (
       /iPad|iPhone|iPod/.test(navigator.userAgent || '') &&
-      !(window as unknown as { MSStream?: unknown }).MSStream
+      !win.MSStream
     )
   }, [])
 

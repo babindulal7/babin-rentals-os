@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { castRow } from './queryTypes'
 import {
   aggregateIssuedRevenue,
   reconcileInvoiceCredits,
@@ -70,14 +71,16 @@ export async function readAll<T extends { id: string }>(
 
 function invoicesIssuedIn(fromAd: string, toAd: string): Promise<IssuedInvoiceWithPayment[]> {
   return readAll<IssuedInvoiceWithPayment>('Revenue source', (from, to) =>
-    supabase
-      .from('invoices')
-      .select(INVOICE_FIELDS, { count: 'exact' })
-      .gte('issue_date', fromAd)
-      .lte('issue_date', toAd)
-      .order('issue_date', { ascending: true })
-      .order('id', { ascending: true })
-      .range(from, to) as unknown as PromiseLike<PageResult<IssuedInvoiceWithPayment>>,
+    castRow<PromiseLike<PageResult<IssuedInvoiceWithPayment>>>(
+      supabase
+        .from('invoices')
+        .select(INVOICE_FIELDS, { count: 'exact' })
+        .gte('issue_date', fromAd)
+        .lte('issue_date', toAd)
+        .order('issue_date', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
   )
 }
 
@@ -104,12 +107,14 @@ export async function getIssuedRevenueTrend(fromAd: string, toAd: string, today?
     const batch = ids.slice(start, start + INVOICE_ID_BATCH)
     notes.push(
       ...(await readAll<InvoiceCreditNoteSource>('Credit-note source', (from, to) =>
-        supabase
-          .from('credit_notes')
-          .select(CREDIT_FIELDS, { count: 'exact' })
-          .in('invoice_id', batch)
-          .order('id', { ascending: true })
-          .range(from, to) as unknown as PromiseLike<PageResult<InvoiceCreditNoteSource>>,
+        castRow<PromiseLike<PageResult<InvoiceCreditNoteSource>>>(
+          supabase
+            .from('credit_notes')
+            .select(CREDIT_FIELDS, { count: 'exact' })
+            .in('invoice_id', batch)
+            .order('id', { ascending: true })
+            .range(from, to),
+        ),
       )),
     )
     if (notes.length > MAX_ROWS) throw new Error('Credit-note report exceeds safe limit')
@@ -126,12 +131,14 @@ export async function getIssuedRevenueTrend(fromAd: string, toAd: string, today?
  * Null when nothing has been issued yet.
  */
 export async function getEarliestIssueDay(): Promise<string | null> {
-  const { data, error } = (await supabase
-    .from('invoices')
-    .select('issue_date')
-    .not('issue_date', 'is', null)
-    .order('issue_date', { ascending: true })
-    .limit(1)) as unknown as { data: Array<{ issue_date: string }> | null; error: { message: string } | null }
+  const { data, error } = castRow<{ data: Array<{ issue_date: string }> | null; error: { message: string } | null }>(
+    await supabase
+      .from('invoices')
+      .select('issue_date')
+      .not('issue_date', 'is', null)
+      .order('issue_date', { ascending: true })
+      .limit(1),
+  )
   if (error) throw new Error('Revenue source unavailable: ' + error.message)
   if (!data) throw new Error('Revenue source returned no confirmed dataset')
   return data[0]?.issue_date ?? null

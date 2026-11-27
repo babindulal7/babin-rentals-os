@@ -1,5 +1,6 @@
 import { newClientUuid, supabase } from './supabase'
 import { readLocal, writeLocal } from './safeStorage'
+import { castRow, castRows } from './queries/queryTypes'
 
 /**
  * Shared saved list views (0159, G2). The database owns who sees what — a view that filters on money is
@@ -48,7 +49,7 @@ export async function listSharedViews(listKey: string): Promise<SharedListView[]
     .eq('list_key', listKey)
     .order('created_at', { ascending: true })
   if (error) throw new Error(error.message)
-  return ((data ?? []) as unknown as ViewRow[])
+  return castRows<ViewRow>(data)
     .filter((r) => typeof r?.id === 'string' && typeof r.name === 'string' && typeof r.query === 'string')
     .map(rowToView)
 }
@@ -76,7 +77,7 @@ export async function saveSharedView(input: {
     p_id: input.id ?? null,
   } as never)
   if (error) throw new Error(unwrap(error.message))
-  return data as unknown as string
+  return castRow<string>(data)
 }
 
 export async function retireSharedView(id: string): Promise<void> {

@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import type { ServiceRow } from '../serviceDue'
+import { castRows } from './queryTypes'
 
 /**
  * # `product_units_service_v` — the read
@@ -116,7 +117,7 @@ export async function readServiceDue(unitIds: readonly string[]): Promise<Map<st
     if (error) return new Map()
 
     const byUnit = new Map<string, ServiceRow>()
-    for (const row of (data ?? []) as unknown as ServiceViewRow[]) {
+    for (const row of castRows<ServiceViewRow>(data)) {
       byUnit.set(row.unit_id, toRow(row))
     }
     return byUnit
@@ -147,5 +148,5 @@ export async function readUnitsDueForService(): Promise<readonly ServiceRow[]> {
   if (error) {
     throw new Error(`Could not read which units are due for service: ${error.message}`)
   }
-  return ((data ?? []) as unknown as ServiceViewRow[]).map(toRow)
+  return castRows<ServiceViewRow>(data).map(toRow)
 }
