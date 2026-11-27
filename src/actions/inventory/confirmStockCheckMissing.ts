@@ -43,14 +43,14 @@ export const confirmStockCheckMissingConfig: ActionConfig<
     const now = new Date().toISOString()
     const actionUuid = input.clientUuid || generateClientUuid()
 
-    const patch: Record<string, unknown> = {
+    const patch = {
       outcome: targetOutcome,
       discrepancy_notes: input.notes?.trim() || (isReversal ? null : 'Confirmed missing by staff during audit'),
       scanned_at: isReversal ? null : now,
       scanned_by: ctx.userId,
     }
 
-    await safeUpdate('stock_audit_items' as never, itemId, patch as never, actionUuid, {
+    await safeUpdate('stock_audit_items', itemId, patch, actionUuid, {
       returnRow: false,
     })
 

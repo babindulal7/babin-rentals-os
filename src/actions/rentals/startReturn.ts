@@ -80,14 +80,14 @@ export const startReturnConfig: ActionConfig<StartReturnInput, StartReturnResult
         client_uuid: actionUuid,
         booking_id: booking.id,
         session_no: sessionNo,
-        operation: 'Return',
-        state: 'In Progress',
+        operation: 'Return' as const,
+        state: 'In Progress' as const,
         notes: input.notes?.trim() || null,
         started_at: now,
         created_by: ctx.userId,
       };
 
-      const inserted = await idempotentInsert('operation_sessions' as never, newSession as never, {
+      const inserted = await idempotentInsert('operation_sessions', newSession, {
         returnRow: false,
       });
 

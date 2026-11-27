@@ -89,7 +89,17 @@ export const reconcileStockCheckConfig: ActionConfig<ReconcileStockCheckInput, R
       auditId = resolvedAudit.id;
       auditNo = resolvedAudit.audit_no;
 
-      const patch: Record<string, unknown> = {
+      const patch: {
+        status: string
+        completed_at: string
+        audited_by: string
+        total_expected: number
+        total_scanned: number
+        total_discrepancies: number
+        updated_at: string
+        updated_by: string
+        notes?: string | null
+      } = {
         status: 'Completed',
         completed_at: now,
         audited_by: ctx.userId,
@@ -103,7 +113,7 @@ export const reconcileStockCheckConfig: ActionConfig<ReconcileStockCheckInput, R
         patch.notes = input.notes.trim() || null;
       }
 
-      await safeUpdate('stock_audits' as never, auditId, patch as never, actionUuid, {
+      await safeUpdate('stock_audits', auditId, patch, actionUuid, {
         returnRow: false,
       });
     } else {
@@ -129,7 +139,7 @@ export const reconcileStockCheckConfig: ActionConfig<ReconcileStockCheckInput, R
         warehouse_id: warehouseId,
         scope: 'Full warehouse',
         status: 'Completed',
-        scheduled_date: now.split('T')[0],
+        scheduled_date: now.slice(0, 10),
         started_at: now,
         completed_at: now,
         audited_by: ctx.userId,
@@ -141,7 +151,7 @@ export const reconcileStockCheckConfig: ActionConfig<ReconcileStockCheckInput, R
         updated_by: ctx.userId,
       };
 
-      const inserted = await idempotentInsert('stock_audits' as never, newAuditRow as never, {
+      const inserted = await idempotentInsert('stock_audits', newAuditRow, {
         returnRow: false,
       });
       auditId = (inserted as { id?: string })?.id || actionUuid;

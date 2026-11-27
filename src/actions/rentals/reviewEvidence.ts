@@ -61,7 +61,17 @@ export const reviewEvidenceConfig: ActionConfig<ReviewEvidenceInput, ReviewEvide
 
     const now = new Date().toISOString();
     const actionUuid = input.clientUuid || generateClientUuid();
-    const patch: Record<string, unknown> = {
+    const patch: {
+      updated_at: string
+      removed_at?: string
+      removed_by?: string
+      removal_reason?: string
+      processing_step?: string
+      match_state?: string
+      matched_item_id?: string
+      matched_serial?: string
+      match_source?: string
+    } = {
       updated_at: now,
     };
 
@@ -86,7 +96,7 @@ export const reviewEvidenceConfig: ActionConfig<ReviewEvidenceInput, ReviewEvide
       }
     }
 
-    await safeUpdate('evidence_files' as never, evidenceId, patch as never, actionUuid, {
+    await safeUpdate('evidence_files', evidenceId, patch, actionUuid, {
       returnRow: false,
     });
 

@@ -2,6 +2,7 @@ import { supabase } from '../supabase'
 import { rupees } from '../money'
 import type { Paisa } from '../money'
 import type { LineKind, SystemRole } from '../../types/database'
+import { castNullableRow, castRow, castRows } from './queryTypes'
 
 /**
  * # What `createInvoice` will write for a booking, read before it writes it
@@ -342,7 +343,7 @@ export async function previewInvoiceForBooking(
     }
   }
 
-  const booking = bookingData as unknown as RawBookingRow
+  const booking = castRow<RawBookingRow>(bookingData)
   // Both parents are NOT NULL + FK, so a missing join is a query bug rather than
   // a data state — say so instead of printing a dash that hides it, exactly as
   // `queries/finance.ts` does.
@@ -374,7 +375,7 @@ export async function previewInvoiceForBooking(
     throw new Error(`Could not check whether ${ref} is already invoiced: ${existingError.message}`)
   }
 
-  const prior = ((existingRows ?? []) as unknown as RawExistingInvoiceRow[])[0]
+  const prior = castRows<RawExistingInvoiceRow>(existingRows)[0]
   if (prior) {
     /*
      * Mirrors `createInvoice`'s precondition exactly, INCLUDING its strictness:
@@ -415,7 +416,7 @@ export async function previewInvoiceForBooking(
   // not that the client has no terms. Immediate is the safe direction: due
   // today, which is visible and correctable, rather than 30 days of credit
   // nobody agreed to. Same reasoning as `createInvoice`.
-  const paymentTerms = (clientRow as unknown as { payment_terms?: string } | null)?.payment_terms ?? 'Immediate'
+  const paymentTerms = castNullableRow<{ payment_terms?: string }>(clientRow)?.payment_terms ?? 'Immediate'
 
   /* ── Equipment, bundles, accessories, services, sub-rentals ─────────────── */
   const { data: lineRows, error: linesError } = await supabase
@@ -428,7 +429,7 @@ export async function previewInvoiceForBooking(
     throw new Error(`Could not read the lines of ${ref}: ${linesError.message}`)
   }
 
-  const liveLines = ((lineRows ?? []) as unknown as RawLineRow[]).filter((l) => l.voided_at === null)
+  const liveLines = castRows<RawLineRow>(lineRows).filter((l) => l.voided_at === null)
 
   /*
    * Law 6 — a masked rate arrives as `null`, never as 0. Refuse rather than
@@ -497,7 +498,7 @@ export async function previewInvoiceForBooking(
     throw new Error(`Could not read the crew lines of ${ref}: ${crewError.message}`)
   }
 
-  const crewLines: InvoicePreviewLine[] = ((crewRows ?? []) as unknown as RawCrewRow[])
+  const crewLines: InvoicePreviewLine[] = castRows<RawCrewRow>(crewRows)
     .filter((c) => c.voided_at === null)
     .map((c, i) => {
       const days = Math.max(1, Number(c.days))
@@ -530,7 +531,7 @@ export async function previewInvoiceForBooking(
     throw new Error(`Could not read the transport of ${ref}: ${transportError.message}`)
   }
 
-  const transportLines: InvoicePreviewLine[] = ((transportRows ?? []) as unknown as RawTransportRow[])
+  const transportLines: InvoicePreviewLine[] = castRows<RawTransportRow>(transportRows)
     .map((t, i) => {
       const rate = Number(t.delivery_charge ?? 0) + Number(t.fuel_charge ?? 0)
       return {
@@ -581,7 +582,7 @@ export async function previewInvoiceForBooking(
   if (discountError) {
     throw new Error(`Could not read the discount on ${ref}: ${discountError.message}`)
   }
-  const discountPercent = Number((discountRow as unknown as { percent?: number } | null)?.percent ?? 0)
+  const discountPercent = Number(castNullableRow<{ percent?: number }>(discountRow)?.percent ?? 0)
 
   /*
    * The engine's buckets. Assigned from `line_kind` — the same value the action

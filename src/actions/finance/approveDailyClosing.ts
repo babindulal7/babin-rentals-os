@@ -130,12 +130,19 @@ export const approveDailyClosingConfig: ActionConfig<ApproveDailyClosingInput, A
        collected_other, receivables, and deposits_held as bigint (paisa).
        Passing raw integer Paisa here is mandatory; wrapping in toRupees() would be a
        100x unit discrepancy dividing figures by 100. */
+    const clientUuid = input.clientUuid?.trim()
+    if (!clientUuid) {
+      throw new Error(
+        'This closing carries no idempotency key, so a retry could not be told from a second press. Nothing was sent.',
+      )
+    }
+
     let inserted
     try {
       inserted = await idempotentInsert(
-        'daily_closings' as never,
+        'daily_closings',
         {
-          client_uuid: input.clientUuid,
+          client_uuid: clientUuid,
           branch_id: branchId,
           business_date: input.businessDate,
           counted_cash: input.countedCash,
@@ -152,7 +159,7 @@ export const approveDailyClosingConfig: ActionConfig<ApproveDailyClosingInput, A
           receivables: input.receivables,
           deposits_held: input.depositsHeld,
           approved_by: ctx.userId,
-        } as never,
+        },
         /* Name the columns. 0078 revoked table-level SELECT and granted back
            only the non-money 13, so an unqualified RETURNING * would be denied
            on counted_cash and the write would LOOK like a failure while the row

@@ -188,7 +188,7 @@ export const saveDraftConfig: ActionConfig<SaveDraftInput, SaveDraftResult> = {
       }
       const patch: { updated_at: string; notes?: string | null } = { updated_at: now }
       if (input.notes !== undefined) patch.notes = input.notes
-      await safeUpdate('bookings', bookingId, patch as never, input.clientUuid, { returnRow: false })
+      await safeUpdate('bookings', bookingId, patch, input.clientUuid, { returnRow: false })
       return {
         result: { success: true, bookingId, ...(bookingNo ? { bookingNo } : {}), savedAt: now },
         events: [{ type: EVENT_TYPES.DRAFT_SAVED, payload: { id: bookingId, bookingNo, timestamp: now, userId: ctx.userId } }],

@@ -29,6 +29,7 @@ import { canWriteBookingDesk } from '../rbac'
 import type { SystemRole } from '../../types/database'
 import { rupees, type Paisa } from '../money'
 import { supabase } from '../supabase'
+import { castNullableRow, castRows } from './queryTypes'
 import type {
   RebookBundleToday,
   RebookLineType,
@@ -144,7 +145,7 @@ export async function fetchRebookSource(
     .maybeSingle()
 
   if (bookingError) throw new Error(`Could not look up booking ${ref}: ${bookingError.message}`)
-  const booking = bookingData as unknown as RawBookingRow | null
+  const booking = castNullableRow<RawBookingRow>(bookingData)
   if (!booking) return { kind: 'refused', reason: `No booking numbered ${ref} exists, so there is nothing to re-book.` }
 
   /* A cancelled booking may absolutely be re-booked — that is D9's common
@@ -163,7 +164,7 @@ export async function fetchRebookSource(
 
   if (lineError) throw new Error(`Could not read the lines of ${ref}: ${lineError.message}`)
 
-  const rawLines = ((lineData ?? []) as unknown as RawLineRow[]).filter((l) => l.voided_at === null)
+  const rawLines = castRows<RawLineRow>(lineData).filter((l) => l.voided_at === null)
   const lines: RebookSourceLine[] = rawLines.map((l) => ({
     id: l.id,
     lineType: (LINE_TYPES.has(l.line_type) ? l.line_type : 'Manual item') as RebookLineType,
@@ -186,7 +187,7 @@ export async function fetchRebookSource(
       .select('id, name, is_active, daily_rate, categories:inventory_categories ( name )')
       .in('id', productIds)
     if (productError) throw new Error(`Could not read today's product rates: ${productError.message}`)
-    for (const p of (productData ?? []) as unknown as RawProductRow[]) {
+    for (const p of castRows<RawProductRow>(productData)) {
       products.set(p.id, {
         id: p.id,
         name: p.name,
@@ -206,7 +207,7 @@ export async function fetchRebookSource(
       .select('id, name, is_active, daily_rate')
       .in('id', bundleIds)
     if (bundleError) throw new Error(`Could not read today's bundle rates: ${bundleError.message}`)
-    for (const b of (bundleData ?? []) as unknown as RawBundleRow[]) {
+    for (const b of castRows<RawBundleRow>(bundleData)) {
       bundles.set(b.id, {
         id: b.id,
         name: b.name,
@@ -224,7 +225,7 @@ export async function fetchRebookSource(
 
   if (crewError) throw new Error(`Could not read the crew of ${ref}: ${crewError.message}`)
 
-  const crew: RebookSourceCrewLine[] = ((crewData ?? []) as unknown as RawCrewRow[])
+  const crew: RebookSourceCrewLine[] = castRows<RawCrewRow>(crewData)
     .filter((c) => c.voided_at === null)
     .map((c) => ({
       crewMemberId: c.crew_member_id,
@@ -249,7 +250,7 @@ export async function fetchRebookSource(
       .maybeSingle()
 
     if (transportError) throw new Error(`Could not read the transport of ${ref}: ${transportError.message}`)
-    const t = transportData as unknown as RawTransportRow | null
+    const t = castNullableRow<RawTransportRow>(transportData)
     if (t) {
       transport = {
         vehicle: t.vehicle ?? '',
@@ -269,7 +270,7 @@ export async function fetchRebookSource(
     .eq('booking_id', booking.id)
 
   if (discountError) throw new Error(`Could not read the discount on ${ref}: ${discountError.message}`)
-  const discountPct = ((discountData ?? []) as unknown as Array<{ percent: number | string }>).reduce(
+  const discountPct = castRows<{ percent: number | string }>(discountData).reduce(
     (sum, d) => sum + (Number(d.percent) || 0),
     0,
   )

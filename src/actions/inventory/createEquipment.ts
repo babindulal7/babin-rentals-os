@@ -455,16 +455,11 @@ export const createEquipmentConfig: ActionConfig<CreateEquipmentInput, CreateEqu
 
     let productResult: Awaited<ReturnType<typeof idempotentInsert>>
     try {
-      /* `'products' as never` / `payload as never` — the sanctioned cast from
-         createClient.ts:389-405: `dataAccess` is generic over the hand-written
-         `types/database.ts`, whose `products` entry describes columns this
-         table does not have. `ProductInsertPayload` above is what actually
-         typechecks the payload. */
       /* Explicit RETURNING list: products is one of the four tables 0062 locks
          down, and a bare echo is RETURNING * — which names ungranted money
          columns and throws AFTER the row commits (AUDIT_0062.md). This caller
          consumes exactly id + asset_code. */
-      productResult = await idempotentInsert('products' as never, payload as never, {
+      productResult = await idempotentInsert('products', payload, {
         returningColumns: 'id, asset_code',
       })
     } catch (err) {
@@ -539,7 +534,7 @@ export const createEquipmentConfig: ActionConfig<CreateEquipmentInput, CreateEqu
       }
       try {
         /* Same 0062 rule as the products insert above: explicit granted list. */
-        const unitResult = await idempotentInsert('product_units' as never, unitPayload as never, {
+        const unitResult = await idempotentInsert('product_units', unitPayload, {
           returningColumns: 'id',
         })
         const savedUnit = unitResult.data as unknown as { id?: string } | null

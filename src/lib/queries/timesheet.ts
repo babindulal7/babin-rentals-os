@@ -22,6 +22,7 @@ import { supabase } from '../supabase'
 import { businessDayAd } from '../bs'
 import { csvCell } from '../csv'
 import type { ListQueryResult } from './useList'
+import { castRows } from './queryTypes'
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -259,7 +260,7 @@ export async function listTimesheetWeek(week: TimesheetWeek, now: Date = new Dat
     .lte('work_date', end)
   if (dayError) throw new Error(`listTimesheetWeek failed: ${dayError.message}`)
 
-  const days = (dayData ?? []) as unknown as ShootDayDbRow[]
+  const days = castRows<ShootDayDbRow>(dayData)
   if (days.length === 0) return { rows: [], total: 0 }
 
   const bookingIds = [...new Set(days.map((d) => d.crew_booking_id))]
@@ -268,7 +269,7 @@ export async function listTimesheetWeek(week: TimesheetWeek, now: Date = new Dat
     .select('id, crew_member_id, position, day_rate')
     .in('id', bookingIds)
   if (bookingError) throw new Error(`listTimesheetWeek failed: ${bookingError.message}`)
-  const bookings = (bookingData ?? []) as unknown as CrewBookingDbRow[]
+  const bookings = castRows<CrewBookingDbRow>(bookingData)
 
   const memberIds = [...new Set(bookings.map((b) => b.crew_member_id).filter((id): id is string => id !== null))]
   let members: CrewMemberDbRow[] = []
@@ -278,7 +279,7 @@ export async function listTimesheetWeek(week: TimesheetWeek, now: Date = new Dat
       .select('id, full_name, position')
       .in('id', memberIds)
     if (memberError) throw new Error(`listTimesheetWeek failed: ${memberError.message}`)
-    members = (memberData ?? []) as unknown as CrewMemberDbRow[]
+    members = castRows<CrewMemberDbRow>(memberData)
   }
 
   const rows = buildTimesheetRows(days, bookings, members, start, today)

@@ -1,5 +1,100 @@
 # Progress Log
 
+## 2026-11-27 — 10-Task Type Hardening, Role-Matrix Timeout Fix & `src/lib` Unit Coverage (refactor/todo-cleanups-1-to-7)
+
+### Did
+1. **Fixed `supabase-role-matrix.test.ts` parallel timeout:** Raised `beforeAll` hook timeout from `120000` ms to `300000` ms in `src/__tests__/supabase-role-matrix.test.ts` so full `npm test` passes reliably under parallel PGlite worker contention.
+2. **Removed `as never` casts in Inventory actions + aligned `src/types/database.ts`:** Added full `products` insert/service-plan columns, `stock_audits`, `stock_audit_items`, and `booking_line_units` unit-assignment columns in `src/types/database.ts`, and removed `as never` casts across `updateServicePlan.ts`, `createStockTransfer.ts`, `createEquipment.ts`, `recordStockCheckScan.ts`, `reconcileStockCheck.ts`, `planDowntime.ts`, `endDowntime.ts`, `reserveEquipment.ts`, and `confirmStockCheckMissing.ts`.
+3. **Removed `as never` casts in Rentals & Subrentals actions:** Added `evidence_files` and expanded `booking_lines.Insert`, `operation_sessions.Insert`, and `booking_line_units.Insert` in `src/types/database.ts`; removed `as never` casts in `releaseBookingLineUnit.ts`, `saveDraft.ts`, `startReturn.ts`, `reviewEvidence.ts`, and `createSubRental.ts`.
+4. **Removed `as never` casts in Payments, Notes, Maintenance & Intel actions:** Added `payment_reversals`, `booking_notes`, `maintenance_records`, `intel_entity_notes`, `intel_field_definitions`, and `intel_field_values` to `src/types/database.ts`; removed `as never` casts in `refundPayment.ts`, `addBookingNote.ts`, `createMaintenanceJob.ts`, `completeMaintenance.ts`, and `writeIntel.ts`.
+5. **Type-hardened core query modules:** Created `src/lib/queries/queryTypes.ts` (`QueryListResult`, `castRows`, `castRow`, `castNullableRow`) and replaced `as unknown as` chains across `src/lib/queries/bookings.ts`, `src/lib/queries/clients.ts`, and `src/lib/queries/finance.ts`.
+6. **Type-hardened secondary query modules:** Replaced `as unknown as` chains across `src/lib/queries/warehouses.ts`, `src/lib/queries/rebook.ts`, `src/lib/queries/invoicePreview.ts`, `src/lib/queries/inventory.ts`, `src/lib/queries/intelExtras.ts`, `src/lib/queries/purchaseRequests.ts`, and `src/lib/queries/timesheet.ts`.
+7. **Added unit tests for booking & pricing engines:** Added `bookingDiscountRows.test.ts`, `rentalDraftPricing.test.ts`, `bookingTransition.test.ts`, `availabilityEvaluation.test.ts`, and `rebook.test.ts` under `src/lib/__tests__/`.
+8. **Added unit tests for visibility, portal & audit engines:** Added `moneyVisibility.test.ts`, `clientPortalEngine.test.ts`, `authAudit.test.ts`, `exportAudit.test.ts`, and `rentalWindowParams.test.ts` under `src/lib/__tests__/`.
+9. **Added unit tests for import, pack & utility modules:** Added `bundleImport.test.ts`, `pricingStructureImport.test.ts`, `monthlyPack.test.ts`, `safeStorage.test.ts`, and `format.test.ts` under `src/lib/__tests__/`.
+10. **Cleaned up `updateClient.ts` and `exportPdf.ts`:** Added `client_contacts` to `src/types/database.ts` and removed `as unknown as` casts in `src/actions/clients/updateClient.ts`; extracted `pdfBlob()` in `src/lib/pdf/exportPdf.ts` to eliminate all 7 `as unknown as BlobPart` casts.
+
+### Ruled
+- Kept `src/lib/supabase.ts` untyped (`createClient(...)`) to preserve mock-proxy parity; query boundary narrowing lives in `src/lib/queries/queryTypes.ts` (`castRows`, `castRow`, `castNullableRow`) rather than calling `.returns()` (which the mock PostgREST builder does not implement).
+
+### Verified
+- `npx tsc --noEmit`: PASS (0 errors).
+- `npm run lint` (`eslint src --max-warnings 0`): PASS (0 errors, 0 warnings).
+- `npm run test:local-api-guards`: PASS.
+- `npm run lint:shell` (1016 files) & `npm run lint:ui-copy`: PASS.
+- `npm run check:contrast`: PASS (`97/97` pass, 0 fail).
+- `npm run check:pglite`: PASS (`275/275` applied, 0 failed; recorded `2026-11-27T01:26:14.325Z`).
+- `npm run check:lifecycle`: PASS (`102/102` green).
+- `npm run check:security`: PASS.
+- `npm run test:server-contracts` & `npm run test:partial-return`: PASS.
+- `npm test`: PASS (`779/779` test files, `8,277/8,277` tests passed, including `supabase-role-matrix.test.ts` and all 15 new `src/lib/__tests__/*.test.ts` suites).
+- `npm run build` (`tsc --noEmit && vite build`): PASS (built in 26.04s, PWA precache 322 entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-27T01:26:14.325Z). Suite: PASS — 8277/8277 passed, 0 failed (recorded 2026-11-27T01:38:17.857Z); source fingerprint matches.
+Coverage suite: Historical suite: 8160/8160 passed, 0 failed (recorded 2026-11-26T12:23:37.402Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-27T01:26:36.498Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner-gated / live-environment items unchanged: `T1-01` (live backup), `T1-13` (real staff accounts on live), `T9-04` / `T9-05` (Go/No-Go and Day X cutover).
+- Review and commit/merge `refactor/todo-cleanups-1-to-7` (including the 10-task hardening batch).
+
+## 2026-11-27 — Selected 10 TODO Cleanups: Workflow Gates & Action Schema Typing (refactor/todo-cleanups-1-to-7)
+
+### Did
+- Completed 10 selected TODO / type-safety cleanups across workflow gates, database types, and actions:
+  1. **`src/lib/workflow.ts` (`TODO(MONEY-10)` & `TODO(FORMS-05)`):** Removed stale "no screen records a refund or an application yet" and "approving one is not built yet" clauses (`settleDeposit` is wired in `BookingDetail.tsx` and `resolveDamageFinding` is wired in `DamageTab.tsx`); updated `src/lib/__tests__/workflow.test.ts` assertions accordingly.
+  2. **`src/types/database.ts`:** Added authoritative migration-backed enum and table definitions for `client_merges`, `cases`, `document_registry`, `booking_documents` (including `'Pro Forma'` from `0231_pro_forma_document_type.sql`), `daily_closings`, `purchase_requests`, `stock_transfers`, `stock_transfer_lines`, and `product_units`.
+  3. **`src/actions/clients/mergeClients.ts`:** Removed `'clients' as never` and `'client_merges' as never` / `as never` payload casts.
+  4. **`src/actions/cases/createCase.ts`:** Removed `'cases' as never` / `casePayload as never` casts.
+  5. **`src/actions/cases/resolveCase.ts`:** Removed `'cases' as never` / `patch as never` casts.
+  6. **`src/actions/documents/createDocument.ts`:** Typed `docType` (`DocumentType`) and `lifecycleStatus` (`DocumentLifecycleStatus`), and removed `'document_registry' as never` / `'booking_documents' as never` casts.
+  7. **`src/actions/documents/generateProForma.ts`:** Removed `'document_registry' as never` / `'booking_documents' as never` casts.
+  8. **`src/actions/finance/approveDailyClosing.ts`:** Narrowed `input.clientUuid` and removed `'daily_closings' as never` / payload `as never` casts.
+  9. **`src/actions/inventory/approvePurchaseRequest.ts`:** Removed `'purchase_requests' as never` / `patch as never` casts and the stale `database.ts` comment.
+  10. **`src/actions/inventory/createBundle.ts` & `src/actions/inventory/transitionStockTransfer.ts`:** Removed `as never` casts on `bundles`, `bundle_items`, `stock_transfers`, `stock_transfer_lines`, and `product_units`.
+
+### Ruled
+- None. All types were transcribed directly from `supabase/migrations/` (`0001_enums.sql`, `0002_bookings.sql`, `0004_inventory.sql`, `0005_clients.sql`, `0009_crew_vehicles.sql`, `0023_cases_charges.sql`, `0078_daily_closings.sql`, `0231_pro_forma_document_type.sql`).
+
+### Verified
+- Targeted Vitest suite (21 files covering `workflow.test.ts`, `mergeClients.test.ts`, `createCase.test.ts`, `resolveCase.test.ts`, `documents/__tests__/`, `approveDailyClosing.test.ts`, `inventory/__tests__/`): PASS (`21/21` files, `309/309` tests).
+- `npx eslint --max-warnings 0` on all 12 touched files: PASS (0 errors, 0 warnings).
+- `npm run test:local-api-guards`, `npm run lint:shell` (1,016 files), `npm run lint:ui-copy`, `npm run check:contrast` (97/97): PASS.
+- `npm run check:pglite`: PASS (`275/275` applied, 0 failed).
+- `npm run check:lifecycle`, `npm run check:security`, `npm run test:server-contracts`, `npm run test:partial-return` (58/58): PASS.
+- `npx vite build`: PASS (PWA precache 322 entries).
+- `npm run typecheck`: 0 errors in our 12 touched files; 22 errors reported in 6 unrelated concurrently modified files in the working tree (`updateClient.ts`, `createStockTransfer.ts`, `recordStockCheckScan.ts`, `purchaseRequests.ts`, `bookingDiscountRows.test.ts`, `rentalDraftPricing.test.ts`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 275 files · check:pglite Historical, incomplete or failed receipt (2026-11-27T00:21:51.485Z); current source NOT VERIFIED. Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 8160/8160 passed, 0 failed (recorded 2026-11-26T12:23:37.402Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-27T00:25:51.013Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Reconcile or isolate the 6 unrelated concurrently modified files in the working tree so full-repo `npm run typecheck` and `npm test` can run cleanly.
+- Remaining `as never` casts in `src/actions/` (e.g. `createEquipment.ts`, `createStockTransfer.ts`, `stockCheck` actions, `maintenance` actions, `rentals` actions) and `T1-01` / `T1-13` / `T9` live-ops items.
+
 ## 2026-11-26 — TODO Cleanups #1–#7 & Live-Ops Blocker Audit (#8–#10) (refactor/todo-cleanups-1-to-7)
 
 ### Did

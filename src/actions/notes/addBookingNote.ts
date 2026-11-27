@@ -141,10 +141,7 @@ export const addBookingNoteConfig: ActionConfig<AddBookingNoteInput, AddBookingN
 
     let inserted
     try {
-      /* `'booking_notes' as never` — absent from the hand-declared
-       * `types/database.ts`; same cast, same reason, as `blockClient.ts`'s
-       * `client_flags`. `NoteInsert` above is what typechecks the payload. */
-      inserted = await idempotentInsert('booking_notes' as never, payload as never)
+      inserted = await idempotentInsert('booking_notes', payload)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       /* No duplicate-key branch here on purpose: a client_uuid 23505 never

@@ -90,7 +90,9 @@ export type StockTransferTypeLabel =
   | 'Transit'
 
 /** UI label → `transfer_kind` enum member (0001:592-598). Pure wire translation. */
-const TRANSFER_KIND_OF: Record<StockTransferTypeLabel, string> = {
+import type { TransferKind } from '../../types/database'
+
+const TRANSFER_KIND_OF: Record<StockTransferTypeLabel, TransferKind> = {
   'Branch Transfer': 'Branch Transfers',
   'Warehouse Transfer': 'Warehouse Transfers',
   'Zone Transfer': 'Zone Transfers',
@@ -145,7 +147,7 @@ export type CreateStockTransferResult = {
 type TransferInsertPayload = {
   client_uuid: string
   transfer_no: string
-  transfer_type: string
+  transfer_type: TransferKind
   source_branch_id: string
   source_warehouse_id: string
   destination_branch_id: string
@@ -335,10 +337,7 @@ export const createStockTransferConfig: ActionConfig<CreateStockTransferInput, C
 
     let headerResult: Awaited<ReturnType<typeof idempotentInsert>>
     try {
-      /* `as never` — the sanctioned cast from createClient.ts:389-405: the
-         hand-written `Database` type has no `stock_transfers` entry, and
-         `TransferInsertPayload` above is what actually typechecks the payload. */
-      headerResult = await idempotentInsert('stock_transfers' as never, payload as never)
+      headerResult = await idempotentInsert('stock_transfers', payload)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       if (message.includes('stock_transfers_no_key')) {
@@ -378,7 +377,7 @@ export const createStockTransferConfig: ActionConfig<CreateStockTransferInput, C
       requested_quantity: 1,
     }
     try {
-      const lineResult = await idempotentInsert('stock_transfer_lines' as never, linePayload as never)
+      const lineResult = await idempotentInsert('stock_transfer_lines', linePayload)
       const line = lineResult.data as unknown as { id?: string } | null
       if (lineResult.error || !line || typeof line.id !== 'string') {
         throw new Error('the database did not confirm the line')

@@ -17,8 +17,10 @@ function requireKey(clientUuid: string): void {
   if (!clientUuid) throw new Error('An idempotency key is required.')
 }
 
-async function insertConfirmed(table: string, payload: Record<string, unknown>): Promise<string> {
-  const inserted = await idempotentInsert(table as never, payload as never, { queueOnFailure: false, returningColumns: 'id' })
+type IntelTable = 'intel_entity_notes' | 'intel_field_definitions' | 'intel_field_values'
+
+async function insertConfirmed(table: IntelTable, payload: Record<string, unknown> & { client_uuid: string }): Promise<string> {
+  const inserted = await idempotentInsert(table, payload, { queueOnFailure: false, returningColumns: 'id' })
   if (inserted.error) throw new Error(`The database refused this write: ${inserted.error.message}`)
   const row = inserted.data as { id?: unknown } | null
   if (!row || typeof row.id !== 'string') throw new Error('The write was not confirmed by the database.')

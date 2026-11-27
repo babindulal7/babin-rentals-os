@@ -54,7 +54,7 @@ export const reserveEquipmentConfig: ActionConfig<ReserveEquipmentInput, Reserve
         assigned_by: ctx.userId,
       };
 
-      await idempotentInsert('booking_line_units' as never, assignmentRow as never);
+      await idempotentInsert('booking_line_units', assignmentRow);
     } else {
       // 2. Check if target resolves to a booking
       const bookingQuery = supabase

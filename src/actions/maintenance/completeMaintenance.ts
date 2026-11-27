@@ -119,7 +119,15 @@ export const completeMaintenanceConfig: ActionConfig<CompleteMaintenanceInput, C
     }
 
     // Direct fallback path for environments without RPC
-    const patch: Record<string, unknown> = {
+    const patch: {
+      status: string
+      completed_at: string
+      actions_taken: string
+      updated_at: string
+      updated_by: string
+      findings?: string | null
+      cost?: number
+    } = {
       status: finalStatus,
       completed_at: completedAt,
       actions_taken: note,
@@ -135,7 +143,7 @@ export const completeMaintenanceConfig: ActionConfig<CompleteMaintenanceInput, C
     }
 
     // Law 6: returnRow: false prevents 42501 permission error on revoked money column 'cost'
-    await safeUpdate('maintenance_records' as never, resolvedId, patch as never, actionUuid, {
+    await safeUpdate('maintenance_records', resolvedId, patch, actionUuid, {
       returnRow: false,
     });
 

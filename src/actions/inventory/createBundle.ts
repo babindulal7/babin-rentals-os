@@ -356,14 +356,10 @@ export const createBundleConfig: ActionConfig<CreateBundleInput, CreateBundleRes
     };
 
     try {
-      /* `'bundles' as never` / `payload as never` — the sanctioned cast from
-         createClient.ts / createEquipment.ts: `dataAccess` is generic over the
-         hand-written `types/database.ts`, and `BundleInsertPayload` above is
-         what actually typechecks the payload against 0004.
-         `{ returnRow: false }` because 0035:67 revokes select on the two money
+      /* `{ returnRow: false }` because 0035:67 revokes select on the two money
          columns and the default read-back requests every column — see the
          header. */
-      await idempotentInsert('bundles' as never, payload as never, { returnRow: false });
+      await idempotentInsert('bundles', payload, { returnRow: false });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       throw new Error(describeBundleInsertFailure(message, bundleCode as string));
@@ -410,7 +406,7 @@ export const createBundleConfig: ActionConfig<CreateBundleInput, CreateBundleRes
         created_by: ctx.userId,
       };
       try {
-        const itemResult = await idempotentInsert('bundle_items' as never, itemPayload as never);
+        const itemResult = await idempotentInsert('bundle_items', itemPayload);
         const savedItem = itemResult.data as unknown as { id?: string } | null;
         if (itemResult.error || !savedItem || typeof savedItem.id !== 'string') {
           throw new Error('the database did not confirm the row');

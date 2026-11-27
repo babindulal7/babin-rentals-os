@@ -107,7 +107,7 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
     }
 
     const patch = input.patch
-    const clientPayload: Record<string, unknown> = {}
+    const clientPayload: Database['public']['Tables']['clients']['Update'] = {}
 
     if ('name' in patch && patch.name !== undefined) clientPayload.name = String(patch.name).trim()
     if ('phone' in patch && patch.phone !== undefined) {
@@ -134,18 +134,22 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
     if ('billingAddress' in patch) clientPayload.billing_address = patch.billingAddress ? String(patch.billingAddress).trim() : null
     if ('billing_address' in patch) clientPayload.billing_address = patch.billing_address ? String(patch.billing_address).trim() : null
     if ('notes' in patch) clientPayload.notes = patch.notes ? String(patch.notes).trim() : null
-    if ('tags' in patch) clientPayload.tags = patch.tags ?? []
-    if ('clientType' in patch) clientPayload.type_parent = patch.clientType ?? null
-    if ('type_parent' in patch) clientPayload.type_parent = patch.type_parent ?? null
-    if ('organisationType' in patch) clientPayload.org_subtype = patch.organisationType ?? null
-    if ('org_subtype' in patch) clientPayload.org_subtype = patch.org_subtype ?? null
-    if ('portal_default_language' in patch) clientPayload.portal_default_language = patch.portal_default_language
-    if ('preferred_contact_channels' in patch) clientPayload.preferred_contact_channels = patch.preferred_contact_channels
+    if ('tags' in patch) clientPayload.tags = Array.isArray(patch.tags) ? patch.tags.map(String) : []
+    if ('clientType' in patch) clientPayload.type_parent = (patch.clientType as Database['public']['Tables']['clients']['Update']['type_parent']) ?? null
+    if ('type_parent' in patch) clientPayload.type_parent = (patch.type_parent as Database['public']['Tables']['clients']['Update']['type_parent']) ?? null
+    if ('organisationType' in patch) clientPayload.org_subtype = patch.organisationType ? String(patch.organisationType) : null
+    if ('org_subtype' in patch) clientPayload.org_subtype = patch.org_subtype ? String(patch.org_subtype) : null
+    if ('portal_default_language' in patch && patch.portal_default_language !== undefined) {
+      clientPayload.portal_default_language = patch.portal_default_language as NonNullable<Database['public']['Tables']['clients']['Update']['portal_default_language']>
+    }
+    if ('preferred_contact_channels' in patch && patch.preferred_contact_channels !== undefined) {
+      clientPayload.preferred_contact_channels = patch.preferred_contact_channels as NonNullable<Database['public']['Tables']['clients']['Update']['preferred_contact_channels']>
+    }
     if ('is_staff' in patch) clientPayload.is_staff = Boolean(patch.is_staff)
     if ('isStaff' in patch) clientPayload.is_staff = Boolean(patch.isStaff)
     if ('isStaffClient' in patch) clientPayload.is_staff = Boolean(patch.isStaffClient)
-    if ('staff_user_id' in patch) clientPayload.staff_user_id = patch.staff_user_id ?? null
-    if ('staffUserId' in patch) clientPayload.staff_user_id = patch.staffUserId ?? null
+    if ('staff_user_id' in patch) clientPayload.staff_user_id = patch.staff_user_id ? String(patch.staff_user_id) : null
+    if ('staffUserId' in patch) clientPayload.staff_user_id = patch.staffUserId ? String(patch.staffUserId) : null
 
     const hasContactFields = 'contact_name' in patch || 'contact_designation' in patch || 'contact_phone' in patch
     if (hasContactFields) {
@@ -162,7 +166,7 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
       }
 
       if (existingContact && (existingContact as { id: string }).id) {
-        const contactUpdate: Record<string, unknown> = {}
+        const contactUpdate: Database['public']['Tables']['client_contacts']['Update'] = {}
         if ('contact_name' in patch && patch.contact_name !== undefined) {
           contactUpdate.full_name = String(patch.contact_name).trim()
         }
@@ -174,9 +178,9 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
         }
         if (Object.keys(contactUpdate).length > 0) {
           const contactRes = await safeUpdate(
-            'client_contacts' as unknown as keyof Database['public']['Tables'],
+            'client_contacts',
             (existingContact as { id: string }).id,
-            contactUpdate as unknown as Database['public']['Tables']['branches']['Update'],
+            contactUpdate,
             input.clientUuid,
           )
           if (contactRes.error) {
@@ -184,14 +188,14 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
           }
         }
       } else if (patch.contact_name && String(patch.contact_name).trim()) {
-        const contactIns = await idempotentInsert('client_contacts' as unknown as keyof Database['public']['Tables'], {
+        const contactIns = await idempotentInsert('client_contacts', {
           client_id: resolvedId,
           full_name: String(patch.contact_name).trim(),
           designation: patch.contact_designation ? String(patch.contact_designation).trim() : null,
           phone: patch.contact_phone ? String(patch.contact_phone).trim() : null,
           is_primary: true,
-          client_uuid: input.clientUuid,
-        } as unknown as Database['public']['Tables']['branches']['Insert'])
+          client_uuid: input.clientUuid ?? crypto.randomUUID(),
+        })
         if (contactIns.error) {
           throw new Error(`Failed to create primary contact: ${String((contactIns.error as { message?: string }).message ?? contactIns.error)}`)
         }
@@ -200,9 +204,9 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
 
     if (Object.keys(clientPayload).length > 0) {
       const { data: updatedRow, error } = await safeUpdate(
-        'clients' as unknown as keyof Database['public']['Tables'],
+        'clients',
         resolvedId,
-        clientPayload as unknown as Database['public']['Tables']['branches']['Update'],
+        clientPayload,
         input.clientUuid,
         { returnRow: true, returningColumns: 'id, client_code, name, phone, updated_at' },
       )
@@ -212,8 +216,8 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
       if (!updatedRow) {
         throw new Error(`Update returned no row for client '${resolvedId}'. Nothing was saved.`)
       }
-      if ((updatedRow as unknown as { client_code?: string }).client_code) {
-        clientCode = (updatedRow as unknown as { client_code: string }).client_code
+      if ('client_code' in updatedRow && typeof updatedRow.client_code === 'string' && updatedRow.client_code) {
+        clientCode = updatedRow.client_code
       }
     }
 

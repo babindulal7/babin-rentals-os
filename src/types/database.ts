@@ -207,6 +207,60 @@ export type DocumentType =
   | 'Call Sheet'
   | 'Pro Forma'
 
+export type BookingDocumentType =
+  | 'Quote'
+  | 'Rental Agreement'
+  | 'Packing List'
+  | 'Delivery Note'
+  | 'Invoice'
+  | 'Receipt'
+  | 'Inspection Report'
+  | 'Damage Report'
+  | 'Client Documents'
+  | 'Insurance'
+  | 'Pro Forma'
+
+export type DocumentOrigin = 'Generated' | 'Uploaded'
+
+export type CaseType = 'Damage' | 'Missing' | 'Theft' | 'Dispute' | 'Vendor'
+export type CaseCounterpartyKind = 'Client' | 'Partner' | 'Vendor'
+export type CasePriority = 'Critical' | 'High' | 'Medium' | 'Low'
+export type CaseStatus =
+  | 'Open'
+  | 'Under Review'
+  | 'Awaiting Decision'
+  | 'In Progress'
+  | 'Resolved'
+  | 'Closed'
+  | 'Cancelled'
+export type CaseFlag = 'Under Investigation' | 'Legal' | 'Police Report' | 'Insurance Notified'
+
+export type PurchaseRequestStatus =
+  | 'Draft'
+  | 'Submitted'
+  | 'Approved'
+  | 'Ordered'
+  | 'Received'
+  | 'Rejected'
+  | 'Cancelled'
+export type PurchaseRequestReason = 'Demand exceeded' | 'Sub-rent event' | 'Manual'
+
+export type TransferKind =
+  | 'Branch Transfers'
+  | 'Warehouse Transfers'
+  | 'Zone Transfers'
+  | 'Temporary Holding'
+  | 'Transit'
+export type TransferStatus =
+  | 'Pending'
+  | 'Approved'
+  | 'Packing'
+  | 'In Transit'
+  | 'Received'
+  | 'Completed'
+  | 'Cancelled'
+export type UnitCondition = 'Excellent' | 'Good' | 'Fair' | 'Damaged' | 'Lost'
+
 export type AuditEventClass = 'status change' | 'money movement' | 'discount' | 'override' | 'session' | 'cancellation'
 export type AuditCategory = 'Authentication' | 'Users' | 'Rentals' | 'Inventory' | 'Finance' | 'Administration' | 'Uncategorised'
 export type AuditModule =
@@ -562,9 +616,41 @@ export interface Database {
           category_id: string
           supplier_id?: string | null
           name: string
-          slug: string
+          slug?: string
+          asset_code?: string
+          short_name?: string | null
+          brand?: string
+          model?: string | null
           model_number?: string | null
+          manufacturer?: string | null
+          description?: string | null
           tracking_mode?: ProductTrackingMode
+          status?: 'Draft' | 'Active' | 'Archived'
+          total_quantity?: number
+          reorder_level?: number | null
+          quantity_unit?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          replacement_value?: number | null
+          daily_rate?: number | null
+          weekly_rate?: number | null
+          monthly_rate?: number | null
+          hourly_rate?: number | null
+          weekend_rate?: number | null
+          deposit_percent?: number | null
+          deposit_fixed?: number | null
+          min_rental_days?: number
+          rental_enabled?: boolean
+          prep_time_minutes?: number
+          cleaning_time_minutes?: number
+          inspection_required?: boolean
+          packing_required?: boolean
+          notes_internal?: string | null
+          notes_warehouse?: string | null
+          service_interval_days?: number | null
+          service_interval_rental_days?: number | null
+          service_interval_meter_hours?: number | null
+          service_grace_days?: number
           rental_rate_daily?: number
           deposit_rate?: number
           total_stock?: number
@@ -881,16 +967,26 @@ export interface Database {
           product_id?: string | null
           unit_id?: string | null
           line_kind?: LineKind
+          line_type?: string
           description: string
           quantity?: number
+          qty?: number
           short_quantity?: number
           days?: number
           daily_rate?: number
+          rate?: number
           discount_percent?: number
+          discount_amount?: number
           line_total?: number
           item_state?: ItemQuantityState
           sort_order?: number
+          subrental_return_by?: string | null
+          supplier_id?: string | null
+          supplier_cost?: number | null
+          markup_amount?: number | null
+          line_note?: string | null
           created_at?: string
+          created_by?: string | null
         }
         Update: Partial<Database['public']['Tables']['booking_lines']['Insert']>
       }
@@ -1328,7 +1424,7 @@ export interface Database {
           completed_by?: string | null
           cancelled_at?: string | null
           cancel_reason?: string | null
-          warehouse_staff_id: string
+          warehouse_staff_id?: string
           delivery_method?: DeliveryMethod | null
           receiver_name?: string | null
           receiver_phone?: string | null
@@ -1490,6 +1586,9 @@ export interface Database {
           client_uuid: string
           booking_line_id: string
           asset_id?: string | null
+          product_unit_id?: string | null
+          assigned_at?: string | null
+          assigned_by?: string | null
           qty?: number
           unit_state?: ItemQuantityState
           is_required?: boolean
@@ -1505,8 +1604,10 @@ export interface Database {
           damaged?: boolean
           reset_done_at?: string | null
           cleaning_done_at?: string | null
+          released_at?: string | null
+          released_by?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string
         }
         Update: Partial<Omit<Database['public']['Tables']['booking_line_units']['Insert'], 'client_uuid' | 'created_by'>>
       }
@@ -1899,6 +2000,673 @@ export interface Database {
           updated_by?: string | null
         }
         Update: Partial<Database['public']['Tables']['client_collectors']['Insert']>
+      }
+      client_merges: {
+        Row: {
+          id: string
+          client_uuid: string
+          surviving_client_id: string
+          merged_client_id: string
+          typed_confirmation: string
+          moved_summary: Json
+          created_at: string
+          created_by: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          surviving_client_id: string
+          merged_client_id: string
+          typed_confirmation: string
+          moved_summary: Json
+          created_at?: string
+          created_by: string
+        }
+        Update: Partial<Database['public']['Tables']['client_merges']['Insert']>
+      }
+      cases: {
+        Row: {
+          id: string
+          client_uuid: string
+          case_no: string
+          type: CaseType
+          title: string
+          counterparty_kind: CaseCounterpartyKind
+          counterparty_name: string
+          priority: CasePriority
+          status: CaseStatus
+          disposition: string | null
+          linked_booking_id: string | null
+          assessed_amount: number
+          deposit_held_amount: number
+          charged_to_client_amount: number
+          deposit_applied_amount: number
+          insurance_claimed_amount: number
+          warranty_covered_amount: number
+          recovered_from_partner_amount: number
+          absorbed_amount: number
+          owner_id: string
+          flags: CaseFlag[]
+          opened_at: string
+          settled_at: string | null
+          created_at: string
+          created_by: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          case_no: string
+          type: CaseType
+          title: string
+          counterparty_kind: CaseCounterpartyKind
+          counterparty_name: string
+          priority: CasePriority
+          status?: CaseStatus
+          disposition?: string | null
+          linked_booking_id?: string | null
+          assessed_amount?: number
+          deposit_held_amount?: number
+          charged_to_client_amount?: number
+          deposit_applied_amount?: number
+          insurance_claimed_amount?: number
+          warranty_covered_amount?: number
+          recovered_from_partner_amount?: number
+          absorbed_amount?: number
+          owner_id: string
+          flags?: CaseFlag[]
+          opened_at?: string
+          settled_at?: string | null
+          created_at?: string
+          created_by: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['cases']['Insert']>
+      }
+      document_registry: {
+        Row: {
+          id: string
+          client_uuid: string
+          document_no: string
+          document_type: DocumentType
+          booking_id: string | null
+          client_id: string | null
+          lifecycle_status: DocumentLifecycleStatus
+          file_url: string
+          file_size_bytes: number | null
+          generated_by: string | null
+          signed_at: string | null
+          signed_by_name: string | null
+          signature_url: string | null
+          voided_at: string | null
+          void_reason: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          document_no: string
+          document_type?: DocumentType
+          booking_id?: string | null
+          client_id?: string | null
+          lifecycle_status?: DocumentLifecycleStatus
+          file_url: string
+          file_size_bytes?: number | null
+          generated_by?: string | null
+          signed_at?: string | null
+          signed_by_name?: string | null
+          signature_url?: string | null
+          voided_at?: string | null
+          void_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['document_registry']['Insert']>
+      }
+      booking_documents: {
+        Row: {
+          id: string
+          client_uuid: string
+          booking_id: string
+          document_id: string
+          doc_type: BookingDocumentType
+          origin: DocumentOrigin
+          produced_in_session_id: string | null
+          linked_at: string
+          created_at: string
+          created_by: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          booking_id: string
+          document_id: string
+          doc_type: BookingDocumentType
+          origin: DocumentOrigin
+          produced_in_session_id?: string | null
+          linked_at?: string
+          created_at?: string
+          created_by: string
+        }
+        Update: Partial<Database['public']['Tables']['booking_documents']['Insert']>
+      }
+      daily_closings: {
+        Row: {
+          id: string
+          client_uuid: string
+          branch_id: string
+          business_date: string
+          counted_cash: number
+          expected_cash: number
+          variance: number
+          variance_reason: string | null
+          pickups_count: number
+          returns_count: number
+          new_count: number
+          collected_cash: number
+          collected_bank: number
+          collected_card: number
+          collected_other: number
+          receivables: number
+          deposits_held: number
+          approved_at: string
+          approved_by: string
+          created_at: string
+          voided_at: string | null
+          voided_by: string | null
+          void_reason: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          branch_id: string
+          business_date: string
+          counted_cash: number
+          expected_cash: number
+          variance: number
+          variance_reason?: string | null
+          pickups_count: number
+          returns_count: number
+          new_count: number
+          collected_cash: number
+          collected_bank: number
+          collected_card: number
+          collected_other: number
+          receivables: number
+          deposits_held: number
+          approved_at?: string
+          approved_by: string
+          created_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+          void_reason?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['daily_closings']['Insert']>
+      }
+      purchase_requests: {
+        Row: {
+          id: string
+          client_uuid: string
+          pr_no: string
+          product_id: string
+          supplier_id: string | null
+          quantity: number
+          estimated_unit_cost: number
+          total_estimated_cost: number
+          reason_type: PurchaseRequestReason
+          urgency: string
+          status: PurchaseRequestStatus
+          requested_by: string
+          approved_by: string | null
+          rejection_reason: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          pr_no: string
+          product_id: string
+          supplier_id?: string | null
+          quantity?: number
+          estimated_unit_cost?: number
+          total_estimated_cost?: number
+          reason_type?: PurchaseRequestReason
+          urgency?: string
+          status?: PurchaseRequestStatus
+          requested_by: string
+          approved_by?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['purchase_requests']['Insert']>
+      }
+      stock_transfers: {
+        Row: {
+          id: string
+          client_uuid: string
+          transfer_no: string
+          transfer_type: TransferKind
+          status: TransferStatus
+          source_branch_id: string
+          source_warehouse_id: string
+          source_zone_id: string | null
+          destination_branch_id: string
+          destination_warehouse_id: string
+          destination_zone_id: string | null
+          requested_by: string
+          approved_by: string | null
+          dispatched_by: string | null
+          received_by: string | null
+          requested_at: string
+          approved_at: string | null
+          dispatched_at: string | null
+          received_at: string | null
+          completed_at: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancellation_reason: string | null
+          notes: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          transfer_no: string
+          transfer_type?: TransferKind
+          status?: TransferStatus
+          source_branch_id: string
+          source_warehouse_id: string
+          source_zone_id?: string | null
+          destination_branch_id: string
+          destination_warehouse_id: string
+          destination_zone_id?: string | null
+          requested_by: string
+          approved_by?: string | null
+          dispatched_by?: string | null
+          received_by?: string | null
+          requested_at?: string
+          approved_at?: string | null
+          dispatched_at?: string | null
+          received_at?: string | null
+          completed_at?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancellation_reason?: string | null
+          notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['stock_transfers']['Insert']>
+      }
+      stock_transfer_lines: {
+        Row: {
+          id: string
+          client_uuid: string
+          transfer_id: string
+          product_id: string
+          product_unit_id: string | null
+          requested_quantity: number
+          transferred_quantity: number
+          received_quantity: number
+          condition_on_receipt: UnitCondition | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          transfer_id: string
+          product_id: string
+          product_unit_id?: string | null
+          requested_quantity?: number
+          transferred_quantity?: number
+          received_quantity?: number
+          condition_on_receipt?: UnitCondition | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['stock_transfer_lines']['Insert']>
+      }
+      product_units: {
+        Row: {
+          id: string
+          client_uuid: string
+          product_id: string
+          serial_no: string | null
+          asset_tag: string
+          barcode: string | null
+          qr_code: string | null
+          status: InventoryState
+          condition: UnitCondition
+          branch_id: string
+          warehouse_id: string
+          storage_zone_id: string | null
+          rack: string | null
+          shelf: string | null
+          bin: string | null
+          container_id: string | null
+          purchase_date: string | null
+          purchase_price: number | null
+          replacement_value: number | null
+          warranty_expires_at: string | null
+          insurance_expires_at: string | null
+          running_hours: number
+          last_maintenance_at: string | null
+          next_maintenance_at: string | null
+          retired_at: string | null
+          retired_by: string | null
+          retirement_reason: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          product_id: string
+          serial_no?: string | null
+          asset_tag: string
+          barcode?: string | null
+          qr_code?: string | null
+          status?: InventoryState
+          condition?: UnitCondition
+          branch_id: string
+          warehouse_id: string
+          storage_zone_id?: string | null
+          rack?: string | null
+          shelf?: string | null
+          bin?: string | null
+          container_id?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          replacement_value?: number | null
+          warranty_expires_at?: string | null
+          insurance_expires_at?: string | null
+          running_hours?: number
+          last_maintenance_at?: string | null
+          next_maintenance_at?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          retirement_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['product_units']['Insert']>
+      }
+      stock_audits: {
+        Row: {
+          id: string
+          client_uuid: string
+          audit_no: string
+          branch_id: string
+          warehouse_id: string
+          scope: string
+          status: string
+          scheduled_date: string
+          started_at: string | null
+          completed_at: string | null
+          audited_by: string | null
+          total_expected: number
+          total_scanned: number
+          total_discrepancies: number
+          notes: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          audit_no: string
+          branch_id: string
+          warehouse_id: string
+          scope: string
+          status?: string
+          scheduled_date: string
+          started_at?: string | null
+          completed_at?: string | null
+          audited_by?: string | null
+          total_expected?: number
+          total_scanned?: number
+          total_discrepancies?: number
+          notes?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['stock_audits']['Insert']>
+      }
+      stock_audit_items: {
+        Row: {
+          id: string
+          client_uuid: string
+          stock_audit_id: string
+          product_unit_id: string
+          expected_state: string
+          scanned_state: string | null
+          outcome: string
+          exclusion_reason: string | null
+          discrepancy_notes: string | null
+          scanned_at: string | null
+          scanned_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          stock_audit_id: string
+          product_unit_id: string
+          expected_state: string
+          scanned_state?: string | null
+          outcome?: string
+          exclusion_reason?: string | null
+          discrepancy_notes?: string | null
+          scanned_at?: string | null
+          scanned_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['stock_audit_items']['Insert']>
+      }
+      evidence_files: {
+        Row: {
+          id: string
+          client_uuid: string
+          match_state: string
+          original_filename: string
+          processing_step: string
+          matched_item_id: string | null
+          matched_serial: string | null
+          match_source: string | null
+          removed_at: string | null
+          removed_by: string | null
+          removal_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          match_state?: string
+          original_filename: string
+          processing_step?: string
+          matched_item_id?: string | null
+          matched_serial?: string | null
+          match_source?: string | null
+          removed_at?: string | null
+          removed_by?: string | null
+          removal_reason?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['evidence_files']['Insert']>
+      }
+      payment_reversals: {
+        Row: {
+          id: string
+          client_uuid: string
+          reversal_no: string
+          original_payment_id: string
+          amount: number
+          reason: string
+          reversed_by: string
+          approved_by: string
+          reversed_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          reversal_no: string
+          original_payment_id: string
+          amount: number
+          reason: string
+          reversed_by: string
+          approved_by: string
+          reversed_at?: string
+          created_at?: string
+        }
+        Update: never
+      }
+      booking_notes: {
+        Row: {
+          id: string
+          client_uuid: string
+          booking_id: string
+          booking_line_id: string | null
+          note_type: string
+          visibility: string | null
+          body: string
+          archived_at: string | null
+          created_at: string
+          created_by: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          booking_id: string
+          booking_line_id?: string | null
+          note_type: string
+          visibility?: string | null
+          body: string
+          archived_at?: string | null
+          created_at?: string
+          created_by: string
+        }
+        Update: Partial<Database['public']['Tables']['booking_notes']['Insert']>
+      }
+      maintenance_records: {
+        Row: {
+          id: string
+          client_uuid: string
+          record_no: string
+          product_unit_id: string
+          damage_finding_id: string | null
+          maintenance_type: string
+          priority: string
+          status: string
+          description: string
+          scheduled_date: string
+          vendor_name: string | null
+          cost: number
+          performed_by: string | null
+          started_at: string | null
+          completed_at: string | null
+          actions_taken: string | null
+          findings: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          record_no: string
+          product_unit_id: string
+          damage_finding_id?: string | null
+          maintenance_type: string
+          priority: string
+          status: string
+          description: string
+          scheduled_date: string
+          vendor_name?: string | null
+          cost?: number
+          performed_by?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          actions_taken?: string | null
+          findings?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['maintenance_records']['Insert']>
+      }
+      intel_entity_notes: {
+        Row: { id: string; client_uuid: string }
+        Insert: Record<string, unknown> & { client_uuid: string }
+        Update: Partial<Record<string, unknown>>
+      }
+      intel_field_definitions: {
+        Row: { id: string; client_uuid: string }
+        Insert: Record<string, unknown> & { client_uuid: string }
+        Update: Partial<Record<string, unknown>>
+      }
+      intel_field_values: {
+        Row: { id: string; client_uuid: string }
+        Insert: Record<string, unknown> & { client_uuid: string }
+        Update: Partial<Record<string, unknown>>
+      }
+      client_contacts: {
+        Row: {
+          id: string
+          client_uuid: string
+          client_id: string
+          full_name: string
+          designation: string | null
+          phone: string | null
+          email: string | null
+          is_primary: boolean
+          status: string
+          created_at: string
+          created_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          client_id: string
+          full_name: string
+          designation?: string | null
+          phone?: string | null
+          email?: string | null
+          is_primary?: boolean
+          status?: string
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['client_contacts']['Insert']>
       }
     }
   }

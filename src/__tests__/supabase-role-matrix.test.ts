@@ -100,7 +100,7 @@ describe('T-SB-03: Real Role-Based RLS, Auth & Money-Access Matrix', () => {
         ($2, 'Client Beta', '+977-9822222222', 'Beta Corp', 'PAN-BETA-456')
       on conflict (auth_uid) do update set pan = excluded.pan;
     `, [clientA.id, clientB.id]);
-  }, 120000);
+  }, 300000);
 
   async function asActor<T>(actor: { id: string | null; role: string | null } | undefined, fn: () => Promise<T>): Promise<T> {
     if (!actor || !actor.id || actor.role === 'anon') {

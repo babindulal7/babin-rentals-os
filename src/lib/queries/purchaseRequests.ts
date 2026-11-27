@@ -4,6 +4,7 @@ import type { Paisa } from '../money'
 import type { ListFilters } from './listQuery'
 import { useList, type ListQueryResult, type ListResult } from './useList'
 import type { PurchaseRequest, PRStatus, PRReason } from '../../data/purchaseRequests'
+import { castRows } from './queryTypes'
 
 /**
  * # Purchase requests, the real ones
@@ -81,11 +82,11 @@ async function readProductFacts(ids: readonly string[]): Promise<Map<string, { n
 
   if (error) throw new Error(`listPurchaseRequests could not read the requested products: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{
+  for (const row of castRows<{
     id: string
     name: string
     category: { name: string } | null
-  }>) {
+  }>(data)) {
     out.set(row.id, { name: row.name, category: row.category?.name ?? null })
   }
   return out
@@ -98,7 +99,7 @@ async function readSupplierNames(ids: readonly string[]): Promise<Map<string, st
   const { data, error } = await supabase.from('suppliers').select('id, name').in('id', [...new Set(ids)])
   if (error) throw new Error(`listPurchaseRequests could not read the suppliers: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{ id: string; name: string }>) out.set(row.id, row.name)
+  for (const row of castRows<{ id: string; name: string }>(data)) out.set(row.id, row.name)
   return out
 }
 
@@ -109,7 +110,7 @@ async function readUserNames(ids: readonly string[]): Promise<Map<string, string
   const { data, error } = await supabase.from('users').select('id, full_name').in('id', [...new Set(ids)])
   if (error) throw new Error(`listPurchaseRequests could not read who raised these requests: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{ id: string; full_name: string | null }>) {
+  for (const row of castRows<{ id: string; full_name: string | null }>(data)) {
     if (row.full_name !== null) out.set(row.id, row.full_name)
   }
   return out
@@ -133,7 +134,7 @@ export async function listPurchaseRequests(limit = 200): Promise<PurchaseRequest
 
   if (error) throw new Error(`listPurchaseRequests failed: ${error.message}`)
 
-  const rows = (data ?? []) as unknown as PurchaseRequestRow[]
+  const rows = castRows<PurchaseRequestRow>(data)
   if (rows.length === 0) return []
 
   const [products, suppliers, users] = await Promise.all([

@@ -4,6 +4,7 @@ import { applyListFilters, type ListFilters } from './listQuery'
 import { nepalDay, previousDay, startOfCalendarDay, endOfCalendarDay } from './dayBounds'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
+import { castRow, castRows, type QueryListResult } from './queryTypes'
 
 /**
  * # The finance list queries — invoices, payments, expenses
@@ -473,11 +474,7 @@ export async function listInvoices(opts: ListInvoicesOptions = {}): Promise<List
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawInvoiceRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawInvoiceRow>>(await query)
 
   if (error) throw new Error(`listInvoices failed: ${error.message}`)
 
@@ -886,11 +883,7 @@ export async function listPayments(opts: ListPaymentsOptions = {}): Promise<List
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawPaymentRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawPaymentRow>>(await query)
 
   if (error) throw new Error(`listPayments failed: ${error.message}`)
 
@@ -1039,16 +1032,18 @@ export async function lastPaymentMethodForClient(clientId: string): Promise<Paym
   // round trip rather than dressed up as a database error.
   if (!clientId) return null
 
-  const { data, error } = (await supabase
-    .from('payments')
-    .select('notes')
-    .eq('client_id', clientId)
-    .eq('status', 'Received')
-    .order('payment_date', { ascending: false })
-    .limit(LAST_METHOD_SCAN)) as unknown as {
+  const { data, error } = castRow<{
     data: Array<{ notes: string | null }> | null
     error: { message: string } | null
-  }
+  }>(
+    await supabase
+      .from('payments')
+      .select('notes')
+      .eq('client_id', clientId)
+      .eq('status', 'Received')
+      .order('payment_date', { ascending: false })
+      .limit(LAST_METHOD_SCAN),
+  )
 
   if (error) throw new Error(`lastPaymentMethodForClient failed: ${error.message}`)
 
@@ -1280,11 +1275,7 @@ export async function listExpenses(opts: ListExpensesOptions = {}): Promise<List
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawExpenseRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawExpenseRow>>(await query)
 
   if (error) throw new Error(`listExpenses failed: ${error.message}`)
 
@@ -1439,7 +1430,7 @@ export async function listExpenseCategories(): Promise<ExpenseCategoryRow[]> {
     .order('code', { ascending: true })
 
   if (error) throw new Error(`listExpenseCategories failed: ${error.message}`)
-  return (data ?? []) as unknown as ExpenseCategoryRow[]
+  return castRows<ExpenseCategoryRow>(data)
 }
 
 /**
@@ -1465,7 +1456,7 @@ export async function listExpenseBranches(): Promise<ExpenseBranchRow[]> {
     .order('name', { ascending: true })
 
   if (error) throw new Error(`listExpenseBranches failed: ${error.message}`)
-  return (data ?? []) as unknown as ExpenseBranchRow[]
+  return castRows<ExpenseBranchRow>(data)
 }
 
 /* ── Expenses · the write half, unblocked by migration 0054 ───────────────
@@ -1591,7 +1582,7 @@ export async function createExpense(input: NewExpenseInput, clientUuid: string):
     throw new Error(`createExpense failed: ${error.message}`)
   }
 
-  return toExpenseRow(data as unknown as RawExpenseRow)
+  return toExpenseRow(castRow<RawExpenseRow>(data))
 }
 
 /** The row a replayed submit already created. Read through the same columns, so the two paths cannot drift. */
@@ -1603,7 +1594,7 @@ async function expenseByClientUuid(clientUuid: string): Promise<ExpenseListRow |
     .maybeSingle()
 
   if (error) throw new Error(`expenseByClientUuid failed: ${error.message}`)
-  return data ? toExpenseRow(data as unknown as RawExpenseRow) : null
+  return data ? toExpenseRow(castRow<RawExpenseRow>(data)) : null
 }
 
 /**
@@ -1672,7 +1663,7 @@ export async function setExpenseStatus(
       `This expense is no longer ${from}, so it was not changed. Someone else may have acted on it — reload and look again.`,
     )
   }
-  return toExpenseRow(data as unknown as RawExpenseRow)
+  return toExpenseRow(castRow<RawExpenseRow>(data))
 }
 
 /* Calendar day boundary helpers (`nepalDay`, `previousDay`, `startOfCalendarDay`,
@@ -1713,7 +1704,7 @@ export async function invoiceTargetByNo(ref: {
   if (error) {
     throw new Error(`Could not look up invoice ${label}, so nothing was recorded: ${error.message}`)
   }
-  return data ? (data as unknown as InvoicePaymentTargetRow) : null
+  return data ? castRow<InvoicePaymentTargetRow>(data) : null
 }
 
 export {

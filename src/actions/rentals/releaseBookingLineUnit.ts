@@ -86,11 +86,9 @@ export const releaseBookingLineUnitConfig: ActionConfig<ReleaseBookingLineUnitIn
     let updated
     try {
       updated = await safeUpdate(
-        /* Absent from the hand-declared types/database.ts Update map for the
-         * release pair — same cast, same reason, as addBookingNote's table. */
-        'booking_line_units' as never,
+        'booking_line_units',
         input.unitRowId,
-        { released_at: releasedAt, released_by: ctx.userId } as never,
+        { released_at: releasedAt, released_by: ctx.userId },
         input.clientUuid,
       )
     } catch (err) {

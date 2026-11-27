@@ -347,10 +347,10 @@ describe('closeGates — §1.7', () => {
   it('refuses on an unapproved damage finding and counts it in words, singular and plural', () => {
     const one = closeGates({ ...PASSING_GATES, damageChargesPendingApproval: 1 })[3]
     expect(one?.passing).toBe(false)
-    expect(one?.blocking).toBe('1 damage finding awaiting approval, and approving one is not built yet')
+    expect(one?.blocking).toBe('1 damage finding awaiting approval')
 
     const three = closeGates({ ...PASSING_GATES, damageChargesPendingApproval: 3 })[3]
-    expect(three?.blocking).toBe('3 damage findings awaiting approval, and approving one is not built yet')
+    expect(three?.blocking).toBe('3 damage findings awaiting approval')
   })
 })
 
