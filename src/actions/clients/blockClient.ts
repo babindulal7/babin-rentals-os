@@ -1,8 +1,7 @@
 import { createAction, type ActionConfig, type ActionContext } from '../core'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { idempotentInsert, safeUpdate } from '../../lib/dataAccess'
-import { supabase } from '../../lib/supabase'
-import { getClientRecord } from '../../lib/queries/clients'
+import { getClientRecord, liveBlockFlagId } from '../../lib/queries/clients'
 
 /**
  * # BLOCK_CLIENT — the write, and the end of block-as-component-state
@@ -124,32 +123,7 @@ type BlockFlagRemoval = {
   removal_reason: string | null
 }
 
-/**
- * The live Blocked flag's row id, or null.
- *
- * ⚠ **Why this read is here and not in `lib/queries/clients.ts`.** That module
- * owns client reads (Law 2's Single Query Rule) and is the correct long-term
- * home, but it is outside this task's file list and another session is live-
- * editing this repo — the same trade `actions/finance/recordPayment.ts:164-180`
- * records for its own invoice lookup. This is a one-column, single-row lookup
- * against the partial unique index, with no filters and no money conversion, so
- * none of that module's masking contract is being re-implemented.
- * TODO(refactor): hoist to `queries/clients.ts` as `liveBlockFlagId()`.
- */
-async function liveBlockedFlagId(clientId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('client_flags')
-    .select('id')
-    .eq('client_id', clientId)
-    .eq('flag_type', 'Blocked')
-    .is('removed_at', null)
-    .maybeSingle()
-
-  if (error) {
-    throw new Error(`Could not read this client's block state, so nothing was changed: ${error.message}`)
-  }
-  return data ? (data as unknown as { id: string }).id : null
-}
+/* Live-flag read (`liveBlockFlagId`) lives in `lib/queries/clients.ts`. */
 
 /**
  * The config, exported alongside the dispatched action — same reason as
@@ -224,7 +198,7 @@ export const blockClientConfig: ActionConfig<BlockClientInput, BlockClientResult
     const clientId = profile.id
     const clientName = profile.record.name
     const reason = input.reason?.trim() || null
-    const liveFlagId = await liveBlockedFlagId(clientId)
+    const liveFlagId = await liveBlockFlagId(clientId)
 
     let flagId: string
 
@@ -247,20 +221,7 @@ export const blockClientConfig: ActionConfig<BlockClientInput, BlockClientResult
 
       let inserted
       try {
-        /*
-         * `'client_flags' as never` — `client_flags` is absent from
-         * `src/types/database.ts` entirely (that file hand-declares 21 tables;
-         * the accurate generated types are `src/types/supabase.ts`). Same cast,
-         * same reason, as `lib/booqable/sync.ts:1772`. `BlockFlagInsert` above
-         * is what typechecks the payload.
-         * TODO(refactor): add `client_flags` to `src/types/database.ts` and drop
-         * the cast. Out of this task's files.
-         *
-         * `insertViaSourceSwitch` is not used because it would only delegate:
-         * `resolveDataSource('client_flags')` is `'os-native'` — the table is on
-         * neither Booqable list.
-         */
-        inserted = await idempotentInsert('client_flags' as never, payload as never)
+        inserted = await idempotentInsert('client_flags', payload)
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         if (message.includes('client_flags_one_live_per_kind')) {
@@ -321,9 +282,9 @@ export const blockClientConfig: ActionConfig<BlockClientInput, BlockClientResult
        * row (see `dataAccess.ts:66-87`).
        */
       const updated = await safeUpdate(
-        'client_flags' as never,
+        'client_flags',
         liveFlagId,
-        { ...removal } as never,
+        { ...removal },
         input.clientUuid as string,
       )
 

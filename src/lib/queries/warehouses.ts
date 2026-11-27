@@ -2,6 +2,7 @@ import { supabase } from '../supabase'
 import type { ListFilters } from './listQuery'
 import { useList, type ListQueryResult, type ListResult } from './useList'
 import type { StockTransfer, TransferStatus, TransferType } from '../../data/warehouse'
+import { castRows } from './queryTypes'
 
 /**
  * # Stock transfers, the real ones
@@ -79,7 +80,7 @@ export async function listWarehouses(): Promise<WarehouseOption[]> {
     throw new Error(`Could not read the warehouse list: ${error.message}`)
   }
 
-  return ((data ?? []) as unknown as WarehouseOptionRow[]).map((r) => ({
+  return castRows<WarehouseOptionRow>(data).map((r) => ({
     id: r.id,
     name: r.name,
     code: r.warehouse_code ?? '',
@@ -149,7 +150,7 @@ export async function listStockTransfers(limit = 200): Promise<StockTransfer[]> 
 
   if (error) throw new Error(`listStockTransfers failed: ${error.message}`)
 
-  const rows = (data ?? []) as unknown as TransferRow[]
+  const rows = castRows<TransferRow>(data)
   if (rows.length === 0) return []
 
   const lines = await readLines(rows.map((r) => r.id))
@@ -212,7 +213,7 @@ async function readLines(transferIds: readonly string[]): Promise<Map<string, Tr
 
   if (error) throw new Error(`listStockTransfers could not read the transfer lines: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as TransferLineRow[]) {
+  for (const row of castRows<TransferLineRow>(data)) {
     const list = out.get(row.transfer_id) ?? []
     list.push(row)
     out.set(row.transfer_id, list)
@@ -227,7 +228,7 @@ async function readNames(table: string, ids: readonly string[]): Promise<Map<str
   const { data, error } = await supabase.from(table).select('id, name').in('id', [...new Set(ids)])
   if (error) throw new Error(`listStockTransfers could not read ${table}: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{ id: string; name: string }>) out.set(row.id, row.name)
+  for (const row of castRows<{ id: string; name: string }>(data)) out.set(row.id, row.name)
   return out
 }
 
@@ -238,7 +239,7 @@ async function readUserNames(ids: readonly string[]): Promise<Map<string, string
   const { data, error } = await supabase.from('users').select('id, full_name').in('id', [...new Set(ids)])
   if (error) throw new Error(`listStockTransfers could not read who raised these transfers: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{ id: string; full_name: string | null }>) {
+  for (const row of castRows<{ id: string; full_name: string | null }>(data)) {
     if (row.full_name !== null) out.set(row.id, row.full_name)
   }
   return out
@@ -256,7 +257,7 @@ async function readProductFacts(ids: readonly string[]): Promise<Map<string, { n
 
   if (error) throw new Error(`listStockTransfers could not read the transferred products: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{ id: string; name: string; category: { name: string } | null }>) {
+  for (const row of castRows<{ id: string; name: string; category: { name: string } | null }>(data)) {
     out.set(row.id, { name: row.name, category: row.category?.name ?? null })
   }
   return out
@@ -274,7 +275,7 @@ async function readUnitFacts(ids: readonly string[]): Promise<Map<string, { asse
 
   if (error) throw new Error(`listStockTransfers could not read the transferred units: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{ id: string; asset_tag: string; serial_no: string | null }>) {
+  for (const row of castRows<{ id: string; asset_tag: string; serial_no: string | null }>(data)) {
     out.set(row.id, { assetTag: row.asset_tag, serialNo: row.serial_no })
   }
   return out

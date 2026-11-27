@@ -61,7 +61,7 @@ export const refundPaymentConfig: ActionConfig<RefundPaymentInput, RefundPayment
     if (!reversalNo) throw new Error('next_document_number returned no reversal number, so nothing was recorded.')
 
     const now = new Date().toISOString()
-    const result = await idempotentInsert('payment_reversals' as never, {
+    const result = await idempotentInsert('payment_reversals', {
       client_uuid: input.clientUuid || generateClientUuid(),
       reversal_no: reversalNo as string,
       original_payment_id: payment.id,
@@ -70,7 +70,7 @@ export const refundPaymentConfig: ActionConfig<RefundPaymentInput, RefundPayment
       reversed_by: ctx.userId,
       approved_by: ctx.userId,
       reversed_at: now,
-    } as never, { queueOnFailure: false })
+    }, { queueOnFailure: false })
 
     if (result.error) throw new Error(`Could not record the reversal: ${result.error.message}`)
     const persisted = result.data as { id?: string; reversal_no?: string } | null

@@ -158,7 +158,7 @@ export const createCaseConfig: ActionConfig<CreateCaseInput, CreateCaseResult> =
       opened_at: now,
     }
 
-    await idempotentInsert('cases' as never, casePayload as never, {
+    await idempotentInsert('cases', casePayload, {
       queueOnFailure: false,
       returnRow: false,
     })

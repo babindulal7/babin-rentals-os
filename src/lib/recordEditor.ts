@@ -1,5 +1,6 @@
 import { canonicalPhone, isValidLocalPhone } from './phone'
-import { sanitizeEmail, sanitizePan, sanitizePhone } from './formForgiveness'
+import { sanitizeEmail, sanitizePhone } from './formForgiveness'
+import { PAN_RE, PAN_REJECTION, sanitizePan } from './pan'
 import { parseMoney, toRupees } from './money'
 
 export type RecordKind = 'client' | 'equipment' | 'bundle'
@@ -56,7 +57,7 @@ export function validateRecord(kind: RecordKind, values: RecordValues): Record<s
     const p = sanitizePhone(String(values.phone ?? ''))
     if(!isValidLocalPhone(p) && !/^\+977(97|98)\d{8}$/.test(String(values.phone))) errors.phone = 'Enter a 10-digit Nepali mobile starting 97 or 98.'
     const pan = sanitizePan(String(values.pan_vat ?? ''))
-    if(values.pan_vat && !/^\d{9}$/.test(pan)) errors.pan_vat = 'PAN/VAT must be exactly nine digits.'
+    if(values.pan_vat && !PAN_RE.test(pan)) errors.pan_vat = PAN_REJECTION
     const em = sanitizeEmail(String(values.email ?? ''))
     if(values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) errors.email = 'Enter a valid email address.'
   }

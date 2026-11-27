@@ -1,6 +1,7 @@
 /** CSV client validation and mapping. Pages collect input; this engine decides what can be saved. */
 import { normalizedPhone, type ClientRecord, type ClientType } from '../data/clients'
 import { PHONE_REJECTION, canonicalPhone, isValidLocalPhone } from './phone'
+import { PAN_RE, PAN_REJECTION } from './pan'
 import { recordDefaults, recordFields, recordPayload, validateRecord, type RecordValues } from './recordEditor'
 import { canCreateClient } from './rbac'
 import type { SystemRole } from '../types/database'
@@ -78,7 +79,7 @@ export function buildImportRow(raw: Partial<Record<ImportTargetField, string>>, 
   if (rawSubtype && !orgSubtype) errors.push('Organisation Type "' + rawSubtype + '" is not recognized.')
   if (rawSubtype && clientType !== 'Organisation') errors.push('Only an Organisation can have an Organisation Type.')
   const pan = cell(raw, 'pan')
-  if (pan && !/^\d{9}$/.test(pan)) errors.push('PAN/VAT must be exactly nine digits.')
+  if (pan && !PAN_RE.test(pan)) errors.push(PAN_REJECTION)
   if (cell(raw, 'membership')) errors.push('Membership is not imported. Skip this column and use Membership after import.')
   if (cell(raw, 'company')) errors.push('A separate company field is not supported. Map this column to Name, or explicitly skip it.')
   const phoneKey = phone ? normalizedPhone(phone) : ''

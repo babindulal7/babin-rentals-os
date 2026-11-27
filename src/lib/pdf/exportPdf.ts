@@ -40,6 +40,10 @@ export interface ExportPdfOptions {
   documentId?: string
 }
 
+function pdfBlob(bytes: Uint8Array): Blob {
+  return new Blob([new Uint8Array(bytes)], { type: 'application/pdf' })
+}
+
 export interface ExportPdfResult {
   blob: Blob
   bytes: Uint8Array
@@ -96,7 +100,7 @@ export async function exportInvoicePdf(
 
   // 1. Generate standard PDF bytes
   const bytes = generateInvoicePdf(invoiceData)
-  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+  const blob = pdfBlob(bytes)
 
   let storagePath: string | undefined
   let signedUrl: string | undefined
@@ -165,7 +169,7 @@ export async function exportProFormaPdf(
   const filename = options.filename || `${safeName}.pdf`
 
   const bytes = generateInvoicePdf(proFormData)
-  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+  const blob = pdfBlob(bytes)
 
   let storagePath: string | undefined
   let signedUrl: string | undefined
@@ -225,7 +229,7 @@ export async function exportDocumentPdf(
   const filename = options.filename || `${safeName}.pdf`
 
   const bytes = generateDocumentPdf(documentData)
-  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+  const blob = pdfBlob(bytes)
 
   let storagePath: string | undefined
   let signedUrl: string | undefined
@@ -285,7 +289,7 @@ export async function exportRentalAgreementPdf(
   const filename = options.filename || `${safeName}.pdf`
 
   const bytes = generateRentalAgreementPdf(agreementData)
-  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+  const blob = pdfBlob(bytes)
 
   let storagePath: string | undefined
   let signedUrl: string | undefined
@@ -350,7 +354,7 @@ export async function exportPackingListPdf(
   const filename = options.filename || `${safeName}.pdf`
 
   const bytes = generatePackingListPdf(packingData)
-  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+  const blob = pdfBlob(bytes)
 
   let storagePath: string | undefined
   let signedUrl: string | undefined
@@ -415,7 +419,7 @@ export async function exportReturnReportPdf(
   const filename = options.filename || `${safeName}.pdf`
 
   const bytes = generateReturnReportPdf(returnData)
-  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+  const blob = pdfBlob(bytes)
 
   let storagePath: string | undefined
   let signedUrl: string | undefined
@@ -488,7 +492,7 @@ export async function exportClientStatementPdf(
   const safeName = sanitizePathSegment(`Statement_${statementData.client.name}`)
   const filename = options.filename || `${safeName}.pdf`
   const bytes = generateClientStatementPdf(statementData)
-  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+  const blob = pdfBlob(bytes)
 
   if (options.download && typeof window !== 'undefined' && typeof document !== 'undefined') {
     const downloadUrl = URL.createObjectURL(blob)

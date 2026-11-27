@@ -28,10 +28,10 @@ export const endDowntimeConfig: ActionConfig<EndDowntimeInput, EndDowntimeResult
   execute: async (input, _ctx: ActionContext) => {
     const clientUuid = input.clientUuid || generateClientUuid()
 
-    const { data, error } = await supabase.rpc('end_equipment_downtime' as never, {
+    const { data, error } = await supabase.rpc('end_equipment_downtime', {
       p_reservation_id: input.reservationId,
       p_client_uuid: clientUuid,
-    } as never)
+    })
 
     if (error) {
       throw new Error(error.message)

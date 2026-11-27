@@ -114,7 +114,7 @@ export const transitionStockTransferConfig: ActionConfig<
       patch.cancellation_reason = input.cancellationReason?.trim()
     }
 
-    await safeUpdate('stock_transfers' as never, transfer.id, patch as never, actionUuid, {
+    await safeUpdate('stock_transfers', transfer.id, patch, actionUuid, {
       returnRow: false,
     })
 
@@ -130,12 +130,12 @@ export const transitionStockTransferConfig: ActionConfig<
           for (const line of lines) {
             // Update line received quantity
             await safeUpdate(
-              'stock_transfer_lines' as never,
+              'stock_transfer_lines',
               line.id,
               {
                 received_quantity: line.requested_quantity,
                 transferred_quantity: line.requested_quantity,
-              } as never,
+              },
               generateClientUuid(),
               { returnRow: false },
             )
@@ -143,12 +143,12 @@ export const transitionStockTransferConfig: ActionConfig<
             // Update physical unit warehouse location if unit exists
             if (line.product_unit_id && transfer.destination_warehouse_id) {
               await safeUpdate(
-                'product_units' as never,
+                'product_units',
                 line.product_unit_id,
                 {
                   warehouse_id: transfer.destination_warehouse_id,
                   updated_at: now,
-                } as never,
+                },
                 generateClientUuid(),
                 { returnRow: false },
               )

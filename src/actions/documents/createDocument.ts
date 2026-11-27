@@ -3,6 +3,7 @@ import { EVENT_TYPES } from '../../events/eventBus';
 import { idempotentInsert, generateClientUuid } from '../../lib/dataAccess';
 import { supabase } from '../../lib/supabase';
 import { generateAndStoreDocumentPdf } from '../../lib/documentStorage';
+import type { DocumentLifecycleStatus, DocumentType } from '../../types/database';
 
 export type CreateDocumentInput = {
   title: string;
@@ -22,7 +23,7 @@ export type CreateDocumentResult = {
   documentNo: string;
 };
 
-const VALID_DOC_TYPES = new Set([
+const VALID_DOC_TYPES = new Set<DocumentType>([
   'Quotation',
   'Rental Agreement',
   'Packing List',
@@ -92,11 +93,11 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
     }
 
     // 3. Resolve document type
-    let docType = 'Quotation';
+    let docType: DocumentType = 'Quotation';
     if (input.docType && input.docType.trim()) {
       const trimmed = input.docType.trim();
-      if (VALID_DOC_TYPES.has(trimmed)) {
-        docType = trimmed;
+      if (VALID_DOC_TYPES.has(trimmed as DocumentType)) {
+        docType = trimmed as DocumentType;
       } else if (trimmed.toLowerCase().includes('agreement')) {
         docType = 'Rental Agreement';
       } else if (trimmed.toLowerCase().includes('quote')) {
@@ -126,7 +127,7 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
       resolvedSizeBytes = stored.fileSizeBytes;
     }
 
-    const lifecycleStatus = input.status || 'Draft';
+    const lifecycleStatus = (input.status || 'Draft') as DocumentLifecycleStatus;
 
     const docRow = {
       client_uuid: actionUuid,
@@ -141,13 +142,13 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
       created_by: ctx.userId,
     };
 
-    const inserted = await idempotentInsert('document_registry' as never, docRow as never, { queueOnFailure: false, returningColumns: 'id' });
+    const inserted = await idempotentInsert('document_registry', docRow, { queueOnFailure: false, returningColumns: 'id' });
     const insertedId = (inserted as { id?: string })?.id;
     if (!insertedId) throw new Error('The document registry save was not confirmed.');
 
     // 4. Link to booking_documents if booking is attached
     if (resolvedBookingId) {
-      let bookingDocType: string = 'Quote';
+      let bookingDocType: 'Quote' | 'Rental Agreement' | 'Packing List' | 'Delivery Note' | 'Invoice' | 'Pro Forma' | 'Receipt' | 'Inspection Report' | 'Damage Report' = 'Quote';
       if (docType === 'Rental Agreement') bookingDocType = 'Rental Agreement';
       else if (docType === 'Packing List') bookingDocType = 'Packing List';
       else if (docType === 'Delivery Note') bookingDocType = 'Delivery Note';
@@ -157,14 +158,14 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
       else if (docType === 'Inspection Report') bookingDocType = 'Inspection Report';
       else if (docType === 'Damage Report') bookingDocType = 'Damage Report';
 
-      await idempotentInsert('booking_documents' as never, {
+      await idempotentInsert('booking_documents', {
         client_uuid: generateClientUuid(),
         booking_id: resolvedBookingId,
         document_id: insertedId,
         doc_type: bookingDocType,
         origin: 'Generated',
         created_by: ctx.userId,
-      } as never);
+      });
     }
 
     const events = [

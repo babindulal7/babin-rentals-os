@@ -359,23 +359,17 @@ export function closeGates(i: CloseGateInput): Array<{ label: string; passing: b
         held === 0 || depositSkipped
           ? null
           : held > 0
-            /* TODO(MONEY-10): drop the second clause once a screen records a Released or
-               Applied deposit_movement. Nothing in src/actions or src/lib/queries writes one
-               today, so telling the operator to "refund or apply it" names an action the app
-               does not offer — the same dishonesty the floor verbs were just cleared of. */
-            ? `${rs(held)} of the client's deposit is still held, so the rental cannot close — and no screen records a refund or an application yet`
+            ? `${rs(held)} of the client's deposit is still held, so the rental cannot close`
             : `${rs(-held)} more deposit has been refunded or applied than was ever received`,
     },
     { label: 'No open Case', passing: i.openCases === 0, blocking: i.openCases === 0 ? null : `${i.openCases} open` },
     {
       label: 'No damage charge pending approval',
       passing: pending === 0,
-      /* TODO(FORMS-05): drop the second clause once approving a finding writes
-         damage_findings.approval_state. floorVerb only inserts findings today. */
       blocking:
         pending === 0
           ? null
-          : `${pending} damage finding${pending === 1 ? '' : 's'} awaiting approval, and approving one is not built yet`,
+          : `${pending} damage finding${pending === 1 ? '' : 's'} awaiting approval`,
     },
     {
       label: 'No client collateral held',

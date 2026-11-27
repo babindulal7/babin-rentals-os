@@ -1,14 +1,13 @@
 import { supabase } from '../supabase'
 import { parseBookingNoSearch } from '../format'
 import { getSetting } from '../settingsStore'
-import { dayStartMinutesFrom, operationalDayBounds, operationalDayOf } from '../operationalDay'
+import { dayStartMinutesFrom } from '../operationalDay'
+import { nepalOperationalDay, startOfOperationalDay, endOfOperationalDay } from './dayBounds'
 import { rupees, type Paisa } from '../money'
 import { applyListFilters, type ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
-
-/** A bare calendar date, `YYYY-MM-DD` — what a date picker emits. */
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+import { castRow, castRows, type QueryListResult } from './queryTypes'
 
 /**
  * # The bookings list query
@@ -326,6 +325,8 @@ interface RawBookingRow {
   quote_expires_at: string | null
   /** `numeric(14,2)` — RUPEES. Absent from the row unless `withDeposit` was set. */
   deposit_required?: number | null
+  total_amount?: number | string | null
+  rental_total?: number | string | null
   cancelled_at: string | null
   closed_at: string | null
   /** `timestamptz not null default now()` (0002:46). AD, UTC. */
@@ -395,14 +396,14 @@ function toRow(r: RawBookingRow): BookingListRow {
     itemCount: sumQty(r.booking_lines),
     depositRequired: toPaisa(r.deposit_required),
     totalAmount: toPaisa(
-      typeof (r as unknown as Record<string, unknown>).total_amount === 'number'
-        ? ((r as unknown as Record<string, unknown>).total_amount as number)
-        : typeof (r as unknown as Record<string, unknown>).rental_total === 'number'
-          ? ((r as unknown as Record<string, unknown>).rental_total as number)
-          : (r as unknown as Record<string, unknown>).total_amount != null
-            ? Number((r as unknown as Record<string, unknown>).total_amount)
-            : (r as unknown as Record<string, unknown>).rental_total != null
-              ? Number((r as unknown as Record<string, unknown>).rental_total)
+      typeof r.total_amount === 'number'
+        ? r.total_amount
+        : typeof r.rental_total === 'number'
+          ? r.rental_total
+          : r.total_amount != null
+            ? Number(r.total_amount)
+            : r.rental_total != null
+              ? Number(r.rental_total)
               : null,
     ),
     isCancelled: r.cancelled_at !== null,
@@ -527,12 +528,12 @@ async function readTotalAmounts(ids: string[]): Promise<Map<string, number | nul
     }
 
     const totals = new Map<string, number>()
-    for (const inv of (data ?? []) as unknown as Array<{
+    for (const inv of castRows<{
       booking_id: string
       total_amount: number | null
       status: string
       voided_at: string | null
-    }>) {
+    }>(data)) {
       if (inv.voided_at !== null || inv.status === 'Void') continue
       const current = totals.get(inv.booking_id) ?? 0
       totals.set(inv.booking_id, current + (inv.total_amount ?? 0))
@@ -568,7 +569,7 @@ async function readDeposits(ids: string[]): Promise<Map<string, number | null>> 
     )
   }
 
-  const rows = (data ?? []) as unknown as Array<{ id: string; deposit_required: number | null }>
+  const rows = castRows<{ id: string; deposit_required: number | null }>(data)
   return new Map(rows.map((r) => [r.id, r.deposit_required]))
 }
 
@@ -587,7 +588,7 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
         search: filters.search === undefined ? undefined : parseBookingNoSearch(filters.search),
         searchColumns: filters.searchColumns ?? (legacy ? PRE_0144_SEARCH_COLUMNS : SEARCH_COLUMNS),
       })
-      return (await query) as unknown as { count: number | null; error: BookingQueryError | null }
+      return castRow<{ count: number | null; error: BookingQueryError | null }>(await query)
     }
 
     let { count, error } = await countBookings(false)
@@ -672,11 +673,7 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
       // caller should need to.
       tiebreak: filters.tiebreak ?? 'id',
     })
-    return (await query) as unknown as {
-      data: RawBookingRow[] | null
-      error: BookingQueryError | null
-      count: number | null
-    }
+    return castRow<QueryListResult<RawBookingRow> & { error: BookingQueryError | null }>(await query)
   }
 
   let legacy = false
@@ -710,12 +707,12 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i]
         if (!row) continue
-        const rawRow = raw[i] as unknown as Record<string, unknown> | undefined
+        const rawRow = raw[i]
         const t = totals.get(row.id)
         if (t !== undefined && t !== null) {
           row.totalAmount = toPaisa(t)
-        } else if (rawRow?.['rental_total'] !== undefined && rawRow?.['rental_total'] !== null) {
-          row.totalAmount = toPaisa(rawRow['rental_total'] as number)
+        } else if (rawRow?.rental_total !== undefined && rawRow?.rental_total !== null) {
+          row.totalAmount = toPaisa(Number(rawRow.rental_total))
         }
       }
     }
@@ -1085,21 +1082,11 @@ function operationalDayStartMinutes(): number {
  * will build a screen that swallows it.
  */
 function nepalDay(dayAd: string): string {
-  if (DATE_ONLY.test(dayAd)) return dayAd
-
-  const t = Date.parse(dayAd)
-  if (Number.isNaN(t)) {
-    throw new Error(`Expected an AD day (YYYY-MM-DD) or a full ISO instant, got ${JSON.stringify(dayAd)}`)
-  }
-  // An instant resolves to the OPERATIONAL day it belongs to (D4): 05:30
-  // Kathmandu is still yesterday's day when the day starts at 06:00.
-  // `operationalDayOf` shifts by the day start and then asks the same
-  // `kathmanduCivil` the render side uses, so filter-day and label-day agree.
-  return operationalDayOf(dayAd, operationalDayStartMinutes())
+  return nepalOperationalDay(dayAd, operationalDayStartMinutes())
 }
 
 function startOfDay(dayAd: string): string {
-  return operationalDayBounds(nepalDay(dayAd), operationalDayStartMinutes()).fromAd
+  return startOfOperationalDay(dayAd, operationalDayStartMinutes())
 }
 
 /**
@@ -1118,7 +1105,7 @@ function startOfDay(dayAd: string): string {
  * with `00:00` it degrades to the old same-day `T23:59:59.999` bound exactly.
  */
 function endOfDay(dayAd: string): string {
-  return operationalDayBounds(nepalDay(dayAd), operationalDayStartMinutes()).toAd
+  return endOfOperationalDay(dayAd, operationalDayStartMinutes())
 }
 
 /**
@@ -1384,7 +1371,7 @@ export async function fetchFloorBooking(bookingRef: string): Promise<FloorBookin
   if (error) throw new Error(`fetchFloorBooking(${bookingRef}) failed: ${error.message}`)
   if (!data) return null
 
-  const raw = data as unknown as RawFloorBooking
+  const raw = castRow<RawFloorBooking>(data)
   const rawLines = raw.booking_lines
 
   return {
@@ -1530,7 +1517,7 @@ export async function fetchLastProjectType(
     .order('created_at', { ascending: false })
     .limit(20)
   if (error || !data) return null
-  const rows = data as unknown as { project_type: string | null; project_type_other: string | null }[]
+  const rows = castRows<{ project_type: string | null; project_type_other: string | null }>(data)
   const hit = rows.find((r) => r.project_type)
   return hit ? { projectType: hit.project_type!, projectTypeOther: hit.project_type_other } : null
 }
@@ -1555,11 +1542,11 @@ export async function fetchRecentClientProjects(
     .limit(30)
   if (error || !data) return { projectNames: [], shootLocations: [] }
 
-  const rows = data as unknown as {
+  const rows = castRows<{
     project: string | null
     project_name?: string | null
     shoot_location?: string | null
-  }[]
+  }>(data)
 
   const projectNames: string[] = []
   const shootLocations: string[] = []

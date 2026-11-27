@@ -241,30 +241,30 @@ export const generateProFormaConfig: ActionConfig<GenerateProFormaInput, Generat
     const docRow = {
       client_uuid: actionUuid,
       document_no: documentNo,
-      document_type: 'Pro Forma',
+      document_type: 'Pro Forma' as const,
       booking_id: booking.id,
       client_id: booking.client_id,
-      lifecycle_status: 'Draft',
+      lifecycle_status: 'Draft' as const,
       file_url: exportResult.storagePath || `documents/${documentNo}.pdf`,
       file_size_bytes: exportResult.fileSizeBytes,
       generated_by: ctx.userId,
       created_by: ctx.userId,
     }
 
-    const inserted = await idempotentInsert('document_registry' as never, docRow as never, {
+    const inserted = await idempotentInsert('document_registry', docRow, {
       queueOnFailure: false,
       returningColumns: 'id',
     })
     const insertedId = (inserted as { id?: string })?.id || actionUuid
 
-    await idempotentInsert('booking_documents' as never, {
+    await idempotentInsert('booking_documents', {
       client_uuid: generateClientUuid(),
       booking_id: booking.id,
       document_id: insertedId,
       doc_type: 'Pro Forma',
       origin: 'Generated',
       created_by: ctx.userId,
-    } as never)
+    })
 
     const result: GenerateProFormaResult = {
       success: true,

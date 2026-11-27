@@ -2,6 +2,7 @@ import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
 import { applyListFilters, type ListFilters } from './listQuery'
 import { useList, type ListQueryResult, type ListResult } from './useList'
+import { castRow, castRows, type QueryListResult } from './queryTypes'
 import type { Database } from '../../types/supabase'
 import type { SortKey } from '../../data/inventory'
 import { formatDueCountdown, formatRelativeUpcoming } from '../itemCountdown'
@@ -826,10 +827,10 @@ export async function listInventory(opts: InventoryListOptions = {}): Promise<Li
       searchColumns: filters.searchColumns ?? SEARCH_COLUMNS,
     })
 
-    const { count, error } = (await query) as unknown as {
+    const { count, error } = castRow<{
       error: { message: string } | null
       count: number | null
-    }
+    }>(await query)
 
     if (error) throw new Error(`listInventory count failed: ${error.message}`)
     return { rows: [], total: count ?? null }
@@ -860,11 +861,7 @@ export async function listInventory(opts: InventoryListOptions = {}): Promise<Li
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawInventoryRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawInventoryRow>>(await query)
 
   if (error) throw new Error(`listInventory failed: ${error.message}`)
 
@@ -927,11 +924,7 @@ export async function listUnits(
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawUnitRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawUnitRow>>(await query)
 
   if (error) throw new Error(`listUnits failed: ${error.message}`)
 
@@ -1015,14 +1008,16 @@ export async function getAssetDetail(
   // would resolve links in production that 404 in every demo.
   if (!product) {
     for (const column of ['serial_no', 'asset_tag', 'barcode'] as const) {
-      const { data, error } = (await supabase
-        .from('product_units_v')
-        .select('id, product_id')
-        .eq(column, trimmed)
-        .limit(1)) as unknown as {
+      const { data, error } = castRow<{
         data: Array<{ id: string; product_id: string }> | null
         error: { message: string } | null
-      }
+      }>(
+        await supabase
+          .from('product_units_v')
+          .select('id, product_id')
+          .eq(column, trimmed)
+          .limit(1),
+      )
       if (error) throw new Error(`getAssetDetail failed: ${error.message}`)
       const hit = data?.[0]
       if (hit) {
@@ -1149,8 +1144,10 @@ async function fetchCustody(
   if (bluErr || !bluRows || bluRows.length === 0) return null
 
   const activeBlu = bluRows.filter((r) => !r.returned_at && !r.released_at)
-  const candidateBookingIds = (activeBlu.length > 0 ? activeBlu : bluRows)
-    .map((r) => ((r as unknown as { booking_lines?: { booking_id?: string } | null }).booking_lines?.booking_id ?? (r as unknown as { booking_id?: string }).booking_id))
+  const candidateBookingIds = castRows<{ booking_lines?: { booking_id?: string } | null; booking_id?: string }>(
+    activeBlu.length > 0 ? activeBlu : bluRows,
+  )
+    .map((r) => r.booking_lines?.booking_id ?? r.booking_id)
     .filter(Boolean) as string[]
 
   if (candidateBookingIds.length === 0) return null
@@ -1706,7 +1703,7 @@ export async function listProductImportCorpus(): Promise<Array<{ id: string; nam
     .select('id, name, brand, model')
     .limit(5000)
   if (error) throw new Error(`Could not read the catalogue for duplicate checking: ${error.message}`)
-  return (data ?? []) as unknown as Array<{ id: string; name: string; brand: string; model: string | null }>
+  return castRows<{ id: string; name: string; brand: string; model: string | null }>(data)
 }
 
 export async function listInventoryCategories(): Promise<CategoryOption[]> {
@@ -1720,7 +1717,7 @@ export async function listInventoryCategories(): Promise<CategoryOption[]> {
     throw new Error(`Could not read the category list: ${error.message}`)
   }
 
-  return ((data ?? []) as unknown as CategoryOptionRow[]).map((r) => ({
+  return castRows<CategoryOptionRow>(data).map((r) => ({
     id: r.id,
     name: r.name,
     code: r.code ?? '',

@@ -2,6 +2,7 @@ import { IS_MOCK, supabase } from '../supabase'
 import type { IntelEntityType } from '../intel/context'
 import type { GateContext } from '../fieldGating'
 import { canViewPII, moneyScope } from '../fieldGating'
+import { castRows } from './queryTypes'
 
 export type IntelNoteVisibility = 'all_staff' | 'operations' | 'management'
 export type IntelFieldClass = 'operational' | 'personal' | 'financial'
@@ -48,11 +49,15 @@ export async function loadIntelNotes(entityType: IntelEntityType, entityId: stri
   const table = entityType === 'rental' ? 'booking_notes' : 'intel_entity_notes'
   const notes: IntelNoteRow[] = []
   for (let page = 0; page < 100; page += 1) {
-    const { data, error } = await supabase.from(table as never).select('id, body, visibility, created_at')
+    const query =
+      table === 'booking_notes'
+        ? supabase.from('booking_notes').select('id, body, visibility, created_at')
+        : supabase.from('intel_entity_notes').select('id, body, visibility, created_at')
+    const { data, error } = await query
       .eq(key, entityId).is('archived_at', null).order('created_at', { ascending: false }).order('id', { ascending: false })
       .range(page * 100, page * 100 + 99)
     if (error) throw new Error(`Could not read Intel notes: ${error.message}`)
-    const chunk = (data ?? []) as unknown as RawNote[]
+    const chunk = castRows<RawNote>(data)
     notes.push(...chunk.filter(note => visibleNote(note, ctx)).map(note => ({ id: note.id, body: note.body, visibility: note.visibility, createdAt: note.created_at })))
     if (chunk.length < 100) return notes
   }
@@ -69,17 +74,17 @@ export async function loadIntelExtras(entityType: IntelEntityType, entityId: str
   const key = entityType === 'client' ? 'client_id' : entityType === 'equipment' ? 'product_id' : 'booking_id'
   const [notesResult, definitionsResult, valuesResult] = await Promise.all([
     section === 'fields' ? Promise.resolve([]) : loadIntelNotes(entityType, entityId, ctx),
-    supabase.from('intel_field_definitions' as never).select('id, field_key, label, classification, high_priority').eq('entity_type', entityType).is('archived_at', null),
-    supabase.from('intel_field_values' as never).select('id, definition_id, value_text, created_at').eq(key, entityId).order('created_at', { ascending: false }),
+    supabase.from('intel_field_definitions').select('id, field_key, label, classification, high_priority').eq('entity_type', entityType).is('archived_at', null),
+    supabase.from('intel_field_values').select('id, definition_id, value_text, created_at').eq(key, entityId).order('created_at', { ascending: false }),
   ])
   if (definitionsResult.error) throw new Error(`Could not read custom fields: ${definitionsResult.error.message}`)
   if (valuesResult.error) throw new Error(`Could not read custom field values: ${valuesResult.error.message}`)
   const notes = notesResult
   const values = new Map<string, string | null>()
-  for (const value of (valuesResult.data ?? []) as unknown as RawValue[]) {
+  for (const value of castRows<RawValue>(valuesResult.data)) {
     if (!values.has(value.definition_id)) values.set(value.definition_id, value.value_text)
   }
-  const fields = ((definitionsResult.data ?? []) as unknown as RawDefinition[])
+  const fields = castRows<RawDefinition>(definitionsResult.data)
     .filter((field) => visibleField(field, ctx))
     .map((field) => ({
       id: field.id,
@@ -102,7 +107,7 @@ export async function loadIntelGlanceFields(entityType: IntelEntityType, entityI
     .eq('high_priority', true)
     .is('archived_at', null)
   if (definitions.error) return []
-  const allowed = ((definitions.data ?? []) as unknown as RawDefinition[]).filter((field) => visibleField(field, ctx)).slice(0, 2)
+  const allowed = castRows<RawDefinition>(definitions.data).filter((field) => visibleField(field, ctx)).slice(0, 2)
   if (allowed.length === 0) return []
   const values = await supabase.from('intel_field_values' as never)
     .select('id, definition_id, value_text, created_at')
@@ -111,7 +116,7 @@ export async function loadIntelGlanceFields(entityType: IntelEntityType, entityI
     .order('created_at', { ascending: false })
   if (values.error) return []
   const latest = new Map<string, string | null>()
-  for (const value of (values.data ?? []) as unknown as RawValue[]) {
+  for (const value of castRows<RawValue>(values.data)) {
     if (!latest.has(value.definition_id)) latest.set(value.definition_id, value.value_text)
   }
   return allowed.flatMap((field) => {

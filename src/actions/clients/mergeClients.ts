@@ -205,7 +205,7 @@ export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsRes
     const actionUuid = input.clientUuid || generateClientUuid();
 
     const updateRes = await safeUpdate(
-      'clients' as never,
+      'clients',
       duplicateId,
       {
         status: 'Deactivated',
@@ -214,7 +214,7 @@ export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsRes
         deactivation_reason: `Merged into ${survivorProfile.record.id}`,
         merged_into_client_id: survivorId,
         updated_at: now,
-      } as never,
+      },
       actionUuid,
       { returnRow: false }
     );
@@ -233,7 +233,7 @@ export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsRes
       created_by: ctx.userId,
     };
 
-    const insertRes = await idempotentInsert('client_merges' as never, mergeRow as never, { returnRow: false });
+    const insertRes = await idempotentInsert('client_merges', mergeRow, { returnRow: false });
     if (insertRes?.error) {
       throw new Error(`Failed to log client merge audit record: ${String((insertRes.error as { message?: string }).message ?? insertRes.error)}`);
     }

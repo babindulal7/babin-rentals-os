@@ -170,13 +170,10 @@ export const updateServicePlanConfig: ActionConfig<UpdateServicePlanInput, Updat
       throw new Error('Nothing was changed, so nothing was saved.')
     }
 
-    /* `as never` for the six columns 0103 adds: the migration is N-5 blocked, so
-       the generated Database types do not carry them yet. Same device, same
-       reason, as `queries/availability.ts`'s hold insert. */
     const { data: after, error } = (await safeUpdate(
       'products',
       input.productId,
-      payload as never,
+      payload,
       input.clientUuid,
     )) as { data: Record<string, unknown> | null; error: { message: string } | null }
 

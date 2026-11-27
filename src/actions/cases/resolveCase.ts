@@ -79,7 +79,7 @@ export const resolveCaseConfig: ActionConfig<ResolveCaseInput, ResolveCaseResult
     if (input.warrantyCoveredAmount !== undefined) patch.warranty_covered_amount = input.warrantyCoveredAmount
     if (input.recoveredFromPartnerAmount !== undefined) patch.recovered_from_partner_amount = input.recoveredFromPartnerAmount
 
-    const updateRes = await safeUpdate('cases' as never, realCaseId, patch as never, input.clientUuid, {
+    const updateRes = await safeUpdate('cases', realCaseId, patch, input.clientUuid, {
       returnRow: false,
     })
 

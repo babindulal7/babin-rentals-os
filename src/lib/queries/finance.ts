@@ -1,12 +1,10 @@
 import { supabase } from '../supabase'
-import { kathmanduCivil, NPT_OFFSET_MIN } from '../bs'
 import { rupees, toRupees, type Paisa } from '../money'
 import { applyListFilters, type ListFilters } from './listQuery'
+import { nepalDay, previousDay, startOfCalendarDay, endOfCalendarDay } from './dayBounds'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
-
-/** A bare calendar date, `YYYY-MM-DD` — what a date picker emits. */
-const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+import { castRow, castRows, type QueryListResult } from './queryTypes'
 
 /**
  * # The finance list queries — invoices, payments, expenses
@@ -476,11 +474,7 @@ export async function listInvoices(opts: ListInvoicesOptions = {}): Promise<List
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawInvoiceRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawInvoiceRow>>(await query)
 
   if (error) throw new Error(`listInvoices failed: ${error.message}`)
 
@@ -889,11 +883,7 @@ export async function listPayments(opts: ListPaymentsOptions = {}): Promise<List
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawPaymentRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawPaymentRow>>(await query)
 
   if (error) throw new Error(`listPayments failed: ${error.message}`)
 
@@ -1042,16 +1032,18 @@ export async function lastPaymentMethodForClient(clientId: string): Promise<Paym
   // round trip rather than dressed up as a database error.
   if (!clientId) return null
 
-  const { data, error } = (await supabase
-    .from('payments')
-    .select('notes')
-    .eq('client_id', clientId)
-    .eq('status', 'Received')
-    .order('payment_date', { ascending: false })
-    .limit(LAST_METHOD_SCAN)) as unknown as {
+  const { data, error } = castRow<{
     data: Array<{ notes: string | null }> | null
     error: { message: string } | null
-  }
+  }>(
+    await supabase
+      .from('payments')
+      .select('notes')
+      .eq('client_id', clientId)
+      .eq('status', 'Received')
+      .order('payment_date', { ascending: false })
+      .limit(LAST_METHOD_SCAN),
+  )
 
   if (error) throw new Error(`lastPaymentMethodForClient failed: ${error.message}`)
 
@@ -1090,7 +1082,7 @@ export async function lastPaymentMethodForClient(clientId: string): Promise<Paym
  */
 export function paymentsInPeriod(fromDayAd: string, toDayAd: string): ListFilters {
   return {
-    dateRange: { column: 'payment_date', fromAd: startOfDay(fromDayAd), toAd: endOfDay(toDayAd) },
+    dateRange: { column: 'payment_date', fromAd: startOfCalendarDay(fromDayAd), toAd: endOfCalendarDay(toDayAd) },
     chips: {
       status: ['Received'] satisfies PaymentStatusDb[],
       payment_type: ['Advance Payment'] satisfies PaymentTypeDb[],
@@ -1283,11 +1275,7 @@ export async function listExpenses(opts: ListExpensesOptions = {}): Promise<List
     tiebreak: filters.tiebreak ?? 'id',
   })
 
-  const { data, error, count } = (await query) as unknown as {
-    data: RawExpenseRow[] | null
-    error: { message: string } | null
-    count: number | null
-  }
+  const { data, error, count } = castRow<QueryListResult<RawExpenseRow>>(await query)
 
   if (error) throw new Error(`listExpenses failed: ${error.message}`)
 
@@ -1442,7 +1430,7 @@ export async function listExpenseCategories(): Promise<ExpenseCategoryRow[]> {
     .order('code', { ascending: true })
 
   if (error) throw new Error(`listExpenseCategories failed: ${error.message}`)
-  return (data ?? []) as unknown as ExpenseCategoryRow[]
+  return castRows<ExpenseCategoryRow>(data)
 }
 
 /**
@@ -1468,7 +1456,7 @@ export async function listExpenseBranches(): Promise<ExpenseBranchRow[]> {
     .order('name', { ascending: true })
 
   if (error) throw new Error(`listExpenseBranches failed: ${error.message}`)
-  return (data ?? []) as unknown as ExpenseBranchRow[]
+  return castRows<ExpenseBranchRow>(data)
 }
 
 /* ── Expenses · the write half, unblocked by migration 0054 ───────────────
@@ -1594,7 +1582,7 @@ export async function createExpense(input: NewExpenseInput, clientUuid: string):
     throw new Error(`createExpense failed: ${error.message}`)
   }
 
-  return toExpenseRow(data as unknown as RawExpenseRow)
+  return toExpenseRow(castRow<RawExpenseRow>(data))
 }
 
 /** The row a replayed submit already created. Read through the same columns, so the two paths cannot drift. */
@@ -1606,7 +1594,7 @@ async function expenseByClientUuid(clientUuid: string): Promise<ExpenseListRow |
     .maybeSingle()
 
   if (error) throw new Error(`expenseByClientUuid failed: ${error.message}`)
-  return data ? toExpenseRow(data as unknown as RawExpenseRow) : null
+  return data ? toExpenseRow(castRow<RawExpenseRow>(data)) : null
 }
 
 /**
@@ -1675,94 +1663,48 @@ export async function setExpenseStatus(
       `This expense is no longer ${from}, so it was not changed. Someone else may have acted on it — reload and look again.`,
     )
   }
-  return toExpenseRow(data as unknown as RawExpenseRow)
+  return toExpenseRow(castRow<RawExpenseRow>(data))
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * DAY BOUNDARIES · Law 7, Asia/Kathmandu (+05:45)
- *
- * ⚠ DUPLICATION, KNOWN AND DELIBERATE. The four helpers below are the same
- * arithmetic as the private `NPT_OFFSET` / `nepalDay` / `startOfDay` /
- * `endOfDay` in `queries/bookings.ts:648-740`. They are copied rather than
- * imported because that module does not export them and it is outside this
- * task's assigned file list — editing it to add an export would be a change to
- * a file another session is not expecting.
- *
- * What is NOT duplicated is the offset itself. Both copies derive it from
- * `bs.ts`'s `NPT_OFFSET_MIN`, and both resolve "which day is this" through
- * `bs.ts`'s `kathmanduCivil`. Calendar.md §4.2 calls a second hardcoded copy of
- * Nepal's offset "the highest-priority correctness bug in the product"; that
- * rule is intact — `bs.ts` still owns the number, and these are two call sites
- * of it, not two definitions.
- *
- * TODO(refactor): hoist these into a shared `queries/dayBounds.ts` and have both
- * modules import it. One file, two importers, zero behaviour change — but it
- * touches `queries/bookings.ts`, so it belongs to whoever owns that file next.
- * ═══════════════════════════════════════════════════════════════════════════ */
+/* Calendar day boundary helpers (`nepalDay`, `previousDay`, `startOfCalendarDay`,
+ * `endOfCalendarDay`) live in `./dayBounds` alongside operational day bounds. */
 
-/** `+05:45`, FORMATTED from `bs.ts`'s number rather than typed again. */
-const NPT_OFFSET = `${NPT_OFFSET_MIN < 0 ? '-' : '+'}${String(Math.floor(Math.abs(NPT_OFFSET_MIN) / 60)).padStart(
-  2,
-  '0',
-)}:${String(Math.abs(NPT_OFFSET_MIN) % 60).padStart(2, '0')}`
-
+/** Minimum invoice target columns needed to validate and post a payment row. */
+export interface InvoicePaymentTargetRow {
+  id: string
+  booking_id: string
+  client_id: string
+  branch_id: string
+  invoice_no: string
+  voided_at: string | null
+  status: string | null
+  outstanding_amount: number | string | null
+}
 
 /**
- * The **Nepal** calendar day an argument names.
- *
- *  - `YYYY-MM-DD` is already a calendar date, and the calendar the operator was
- *    reading is Nepal's, so it is returned untouched.
- *  - A full ISO instant is converted through `kathmanduCivil`, the same function
- *    the render side uses to decide which day an instant belongs to. For 5h45m
- *    of every day `instant.slice(0, 10)` is a DIFFERENT day, which is why that
- *    shortcut is not taken here.
- *
- * Anything else throws rather than producing `Invalid Date` → `NaN-NaN-NaN`,
- * which Postgres answers with a 400 the operator cannot act on. Like the named
- * sets in `queries/bookings.ts`, these are called during a screen's render, so
- * the throw lands in `components/shell/ErrorBoundary`, not in `useList`'s error
- * state — a malformed day is a programming mistake at a fixed call site.
+ * Look up an invoice by uuid or `invoice_no` for payment target resolution.
+ * Returns `null` when no matching row exists so the action can explain which
+ * handle failed.
  */
-function nepalDay(dayAd: string): string {
-  if (DATE_ONLY.test(dayAd)) return dayAd
+export async function invoiceTargetByNo(ref: {
+  invoiceId?: string | undefined
+  invoiceNo?: string | undefined
+}): Promise<InvoicePaymentTargetRow | null> {
+  const byId = typeof ref.invoiceId === 'string' && ref.invoiceId.trim() !== ''
+  const label = byId ? `with id ${ref.invoiceId}` : `numbered ${ref.invoiceNo}`
 
-  const t = Date.parse(dayAd)
-  if (Number.isNaN(t)) {
-    throw new Error(`Expected an AD day (YYYY-MM-DD) or a full ISO instant, got ${JSON.stringify(dayAd)}`)
+  const base = supabase
+    .from('invoices')
+    .select('id, booking_id, client_id, branch_id, invoice_no, voided_at, status, outstanding_amount')
+  const { data, error } = await (byId
+    ? base.eq('id', (ref.invoiceId as string).trim())
+    : base.eq('invoice_no', (ref.invoiceNo as string).trim())
+  ).maybeSingle()
+
+  if (error) {
+    throw new Error(`Could not look up invoice ${label}, so nothing was recorded: ${error.message}`)
   }
-  return new Date(kathmanduCivil(new Date(t))).toISOString().slice(0, 10)
-}
-
-/**
- * The calendar day before a `YYYY-MM-DD`, for `overdueInvoices`' strict bound.
- *
- * Parsed as midnight UTC purely as arithmetic on a calendar date — no instant
- * survives the round trip and no timezone is implied, because the input and the
- * output are both bare dates. UTC has no daylight saving, so subtracting exactly
- * 86 400 000 ms always lands on the previous calendar day.
- */
-function previousDay(dayAd: string): string {
-  const t = Date.parse(`${dayAd}T00:00:00.000Z`)
-  if (Number.isNaN(t)) {
-    throw new Error(`previousDay expected YYYY-MM-DD, got ${JSON.stringify(dayAd)}`)
-  }
-  return new Date(t - 86_400_000).toISOString().slice(0, 10)
-}
-
-function startOfDay(dayAd: string): string {
-  return `${nepalDay(dayAd)}T00:00:00.000${NPT_OFFSET}`
-}
-
-/**
- * The last instant of the day, to a millisecond — `dateRange` compares `toAd`
- * with `lte`, so the bound must be the last value INSIDE the day rather than the
- * first value after it. `timestamptz` resolves to microseconds, so a payment
- * written at 23:59:59.9995 NPT slips past by half a millisecond; accepted
- * knowingly, exactly as `queries/bookings.ts:726-740` records, because closing it
- * properly means changing the shared "inclusive at both ends" contract.
- */
-function endOfDay(dayAd: string): string {
-  return `${nepalDay(dayAd)}T23:59:59.999${NPT_OFFSET}`
+  return data ? castRow<InvoicePaymentTargetRow>(data) : null
 }
 
 export {

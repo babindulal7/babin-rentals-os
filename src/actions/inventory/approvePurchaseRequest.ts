@@ -168,12 +168,10 @@ export const approvePurchaseRequestConfig: ActionConfig<ApprovePurchaseRequestIn
       /* rejection_reason stays NULL — this screen collects none. See the header. */
     }
 
-    /* `as never` — the sanctioned cast from createClient.ts:389-405: the
-       hand-written `Database` type has no `purchase_requests` entry. */
     const updateResult = await safeUpdate(
-      'purchase_requests' as never,
+      'purchase_requests',
       pr.id,
-      patch as never,
+      patch,
       input.clientUuid,
       /* 0130: the two estimated-cost columns are ungranted once Law 6 arms this
          table — a default RETURNING * throws 42501 after the row commits. The

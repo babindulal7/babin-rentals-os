@@ -156,7 +156,7 @@ export const createSubRentalConfig: ActionConfig<CreateSubRentalInput, CreateSub
 
       // Law 6: rate, discount_amount, supplier_cost, markup_amount revoked from authenticated select.
       // Must use returnRow: false to prevent 42501 permission error.
-      const inserted = await idempotentInsert('booking_lines' as never, bookingLineRow as never, {
+      const inserted = await idempotentInsert('booking_lines', bookingLineRow, {
         returnRow: false,
       });
 

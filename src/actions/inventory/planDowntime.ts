@@ -59,7 +59,7 @@ export const planDowntimeConfig: ActionConfig<PlanDowntimeInput, PlanDowntimeRes
   execute: async (input, _ctx: ActionContext) => {
     const clientUuid = input.clientUuid || generateClientUuid()
 
-    const { data, error } = await supabase.rpc('plan_equipment_downtime' as never, {
+    const { data, error } = await supabase.rpc('plan_equipment_downtime', {
       p_client_uuid: clientUuid,
       p_asset_id: input.assetId ?? null,
       p_product_id: input.productId ?? null,
@@ -68,7 +68,7 @@ export const planDowntimeConfig: ActionConfig<PlanDowntimeInput, PlanDowntimeRes
       p_end_at: input.endAt,
       p_reason: input.reason,
       p_notes: input.notes?.trim() || null,
-    } as never)
+    })
 
     if (error) {
       throw new Error(error.message)

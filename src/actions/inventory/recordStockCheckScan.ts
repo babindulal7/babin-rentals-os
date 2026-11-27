@@ -44,7 +44,13 @@ export const recordStockCheckScanConfig: ActionConfig<
     const code = input.code.trim()
 
     // Resolve item on the audit manifest
-    let item = await findStockAuditItemByCode(auditId, code)
+    let item: {
+      id: string
+      stockAuditId: string
+      productUnitId: string
+      outcome: string
+      expectedState: 'In Stock' | 'Reserved' | 'Packed' | 'On Rent' | 'Returning' | 'Inspection' | 'Cleaning' | 'Maintenance' | 'Missing' | 'Retired'
+    } | null = await findStockAuditItemByCode(auditId, code)
 
     if (!item && input.productUnitId) {
       const { data } = await supabase
@@ -61,7 +67,7 @@ export const recordStockCheckScanConfig: ActionConfig<
           productUnitId: data.product_unit_id,
           outcome: data.outcome,
           expectedState: data.expected_state,
-        } as never
+        }
       }
     }
 
@@ -83,14 +89,14 @@ export const recordStockCheckScanConfig: ActionConfig<
     const now = new Date().toISOString()
     const actionUuid = input.clientUuid || generateClientUuid()
 
-    const patch: Record<string, unknown> = {
+    const patch = {
       outcome: 'Found',
       scanned_state: item.expectedState || 'Available',
       scanned_at: now,
       scanned_by: ctx.userId,
     }
 
-    await safeUpdate('stock_audit_items' as never, item.id, patch as never, actionUuid, {
+    await safeUpdate('stock_audit_items', item.id, patch, actionUuid, {
       returnRow: false,
     })
 

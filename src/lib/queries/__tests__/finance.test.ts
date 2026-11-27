@@ -828,6 +828,9 @@ describe('Law 4 — payments are immutable, and this module offers no way in', (
       'financeRestriction',
       'invoiceDetailGroups',
       'invoiceGlance',
+      /* Read-only single-invoice target lookup hoisted from `actions/finance/recordPayment.ts`.
+       * Selects metadata from `invoices` only; never writes to `payments`. */
+      'invoiceTargetByNo',
       /*
        * Added 4 Sep 2026 for the Calendar Workspace's *Upcoming* rail, and
        * added deliberately rather than to silence this guard: it is a named

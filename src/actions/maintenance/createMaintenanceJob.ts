@@ -114,7 +114,7 @@ export const createMaintenanceJobConfig: ActionConfig<CreateMaintenanceJobInput,
     };
 
     // Law 6: return explicit granted columns, avoiding revoked 'cost' echo
-    const inserted = await idempotentInsert('maintenance_records' as never, row as never, {
+    const inserted = await idempotentInsert('maintenance_records', row, {
       returningColumns: 'id, record_no, status, product_unit_id',
     });
 

@@ -34,6 +34,7 @@ import type { ClientIdDocumentType } from '../../types/database'
 import type { ClientRecord, MembershipTier } from '../../data/clients'
 import type { GateContext } from '../fieldGating'
 import { canViewMoneyField, canViewPII } from '../fieldGating'
+import { castRow, castRows } from './queryTypes'
 export * from '../../data/clients'
 export { clientGlance, clientDetailGroups } from '../../data/clientIntel'
 export { STACK_NOTE } from '../../data/membership'
@@ -429,7 +430,7 @@ export async function listClients(opts: ListClientsOptions = {}): Promise<Client
   }
 
   if (error) throw new Error(`listClients failed: ${error.message}`)
-  return (data ?? []).map((r) => toListItem(r as unknown as DirectoryRow))
+  return castRows<DirectoryRow>(data).map(toListItem)
 }
 
 /**
@@ -464,7 +465,7 @@ export async function listClientRecords(opts: ListClientsOptions = {}): Promise<
   }
 
   if (error) throw new Error(`listClientRecords failed: ${error.message}`)
-  return (data ?? []).map((r) => toClientRecord(r as unknown as DirectoryRow))
+  return castRows<DirectoryRow>(data).map(toClientRecord)
 }
 
 /** What {@link sumDepositsHeld} returns: the liability, and how many rows it was summed over. */
@@ -531,7 +532,7 @@ export async function sumDepositsHeld(): Promise<DepositsHeld> {
 
     if (error) throw new Error(`sumDepositsHeld failed: ${error.message}`)
 
-    const rows = (data ?? []) as unknown as Array<Pick<DirectoryRow, 'id' | 'deposit_held_amount'>>
+    const rows = castRows<Pick<DirectoryRow, 'id' | 'deposit_held_amount'>>(data)
     if (typeof count === 'number') expected = count
 
     for (const r of rows) {
@@ -577,7 +578,7 @@ export async function getClient(id: string): Promise<ClientListItem | null> {
   }
 
   if (error) throw new Error(`getClient failed: ${error.message}`)
-  return data ? toListItem(data as unknown as DirectoryRow) : null
+  return data ? toListItem(castRow<DirectoryRow>(data)) : null
 }
 
 /**
@@ -672,8 +673,10 @@ export async function getClientPreviewRecord(ref: string, ctx: GateContext): Pro
   const { data, error } = await supabase.from('client_directory_v').select(columns).eq(column, ref).maybeSingle()
   if (error) throw new Error(`getClientPreviewRecord failed: ${error.message}`)
   if (!data) return null
-  const row = data as unknown as Pick<DirectoryRow, 'id' | 'client_code' | 'name' | 'membership_level' | 'is_blocked' | 'client_since'>
+  const row = castRow<
+    Pick<DirectoryRow, 'id' | 'client_code' | 'name' | 'membership_level' | 'is_blocked' | 'client_since'>
     & Partial<Pick<DirectoryRow, 'email' | 'phone' | 'outstanding_amount' | 'deposit_held_amount'>>
+  >(data)
   const outstanding = money ? toPaisa(row.outstanding_amount ?? null) : null
   const deposit = money ? toPaisa(row.deposit_held_amount ?? null) : null
   if (money && (outstanding === null || deposit === null)) throw new Error('Client balances unavailable')
@@ -714,7 +717,7 @@ export async function getClientRecord(ref: string): Promise<ClientProfile | null
   if (error) throw new Error(`getClientRecord failed: ${error.message}`)
   if (!data) return null
 
-  const row = data as unknown as DirectoryRow
+  const row = castRow<DirectoryRow>(data)
   return {
     id: row.id,
     record: toClientRecord(row),
@@ -776,7 +779,7 @@ export async function findClientsByPhoneTail(phoneInput: string, limit = 3): Pro
   }
 
   if (error) throw new Error(`findClientsByPhoneTail failed: ${error.message}`)
-  return (data ?? []).map((r) => toClientRecord(r as unknown as DirectoryRow))
+  return castRows<DirectoryRow>(data).map(toClientRecord)
 }
 
 export interface ClientMatchKeys {
@@ -849,7 +852,7 @@ export async function findClientMatches(keys: ClientMatchKeys): Promise<ClientRe
     }
 
     if (error) throw new Error(`findClientMatches failed: ${error.message}`)
-    for (const row of (data ?? []) as unknown as DirectoryRow[]) byId.set(row.id, row)
+    for (const row of castRows<DirectoryRow>(data)) byId.set(row.id, row)
   }
 
   return Array.from(byId.values()).map(toClientRecord)
@@ -883,7 +886,7 @@ export async function listReferrerOptions(): Promise<ReferrerOption[]> {
 
   if (error) throw new Error(`listReferrerOptions failed: ${error.message}`)
 
-  return ((data ?? []) as unknown as Array<Pick<DirectoryRow, 'client_code' | 'name' | 'is_blocked'>>).map((r) => ({
+  return castRows<Pick<DirectoryRow, 'client_code' | 'name' | 'is_blocked'>>(data).map((r) => ({
     clientCode: r.client_code,
     name: r.name,
     isBlocked: r.is_blocked === true,
@@ -942,8 +945,7 @@ export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
 
   if (error) throw new Error(`listMembershipPlans failed: ${error.message}`)
 
-  return (data ?? [])
-    .map((r) => r as unknown as MembershipPlanViewRow)
+  return castRows<MembershipPlanViewRow>(data)
     // `level` and `label` are `not null` on the base table; the generated view
     // type widens every column to nullable. A row that somehow arrives without
     // a level cannot be labelled, so it is dropped rather than rendered as an
@@ -990,7 +992,7 @@ export interface ClientCollector {
 }
 
 export async function fetchClientIdDocument(clientId: string): Promise<ClientIdDocument | null> {
-  if (typeof (supabase as unknown as { from?: unknown })?.from !== 'function') return null
+  if (typeof (supabase as { from?: unknown })?.from !== 'function') return null
   const { data, error } = await supabase
     .from('client_id_documents_v')
     .select('id, client_uuid, client_id, id_type, id_number, evidence_file_id, expiry_date, verified_at, verified_by, notes, created_at')
@@ -1018,7 +1020,7 @@ export async function fetchClientIdDocument(clientId: string): Promise<ClientIdD
     notes: string | null
     created_at: string
   }
-  const row = data as unknown as DocRow
+  const row = castRow<DocRow>(data)
 
   return {
     id: row.id,
@@ -1041,7 +1043,7 @@ export async function hasClientIdOnFile(clientId: string): Promise<boolean> {
 }
 
 export async function fetchClientCollectors(clientId: string): Promise<ClientCollector[]> {
-  if (typeof (supabase as unknown as { from?: unknown })?.from !== 'function') return []
+  if (typeof (supabase as { from?: unknown })?.from !== 'function') return []
   const { data, error } = await supabase
     .from('client_collectors_v')
     .select('id, client_uuid, client_id, name, phone, role_title, id_type, id_number, evidence_file_id, is_active, created_at')
@@ -1068,7 +1070,7 @@ export async function fetchClientCollectors(clientId: string): Promise<ClientCol
     created_at: string
   }
 
-  return ((data ?? []) as unknown as CollectorRow[]).map((r) => ({
+  return castRows<CollectorRow>(data).map((r) => ({
     id: r.id,
     clientUuid: r.client_uuid,
     clientId: r.client_id,
@@ -1119,6 +1121,26 @@ export async function resumeClientPaymentReminders(
 
   if (error) throw new Error(`resumeClientPaymentReminders failed: ${error.message}`)
   return Boolean(data)
+}
+
+/**
+ * Look up the active `'Blocked'` flag row id for a client, or `null` when
+ * unblocked. Uses the partial unique index `(client_id, flag_type) where
+ * removed_at is null`.
+ */
+export async function liveBlockFlagId(clientId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('client_flags')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('flag_type', 'Blocked')
+    .is('removed_at', null)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Could not read this client's block state, so nothing was changed: ${error.message}`)
+  }
+  return data ? castRow<{ id: string }>(data).id : null
 }
 
 export {
