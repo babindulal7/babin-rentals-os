@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import { rupees } from '../money'
 import type { Paisa } from '../money'
+import { castRows } from './queryTypes'
 
 /**
  * # Bundles, with their components — the real ones
@@ -201,7 +202,7 @@ export async function listBundlesWithItems(opts: ListBundlesOptions = {}): Promi
 
   if (error) throw new Error(`listBundlesWithItems failed: ${error.message}`)
 
-  const bundles = (data ?? []) as unknown as BundleRow[]
+  const bundles = castRows<BundleRow>(data)
   if (bundles.length === 0) return []
 
   const productIds = [
@@ -274,14 +275,14 @@ async function readProducts(ids: readonly string[], withMoney: boolean): Promise
   const { data, error } = await supabase.from('products_v').select(columns).in('id', [...ids])
   if (error) throw new Error(`listBundlesWithItems could not read the component products: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{
+  for (const row of castRows<{
     id: string
     name: string
     brand: string | null
     tracking_mode: string | null
     category: { name: string } | null
     daily_rate?: number | null
-  }>) {
+  }>(data)) {
     out.set(row.id, {
       name: row.name,
       brand: row.brand,
@@ -304,7 +305,7 @@ async function readUnitCounts(ids: readonly string[]): Promise<Map<string, { tot
 
   if (error) throw new Error(`listBundlesWithItems could not read the component units: ${error.message}`)
 
-  for (const row of (data ?? []) as unknown as Array<{ product_id: string; status: string }>) {
+  for (const row of castRows<{ product_id: string; status: string }>(data)) {
     const entry = out.get(row.product_id) ?? { total: 0, inStock: 0 }
     entry.total += 1
     if (row.status === 'In Stock') entry.inStock += 1

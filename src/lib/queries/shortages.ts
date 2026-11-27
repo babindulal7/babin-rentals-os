@@ -2,6 +2,7 @@ import { supabase } from '../supabase'
 import type { QuantityHold } from '../availability'
 import { parseTstzRange } from './availability'
 import type { ShortageProduct } from '../shortages'
+import { castRows } from './queryTypes'
 
 /**
  * The reads behind the shortage list (C7, see `lib/shortages.ts`).
@@ -39,7 +40,7 @@ export async function readShortageInputs(): Promise<ShortageInputs> {
 
   if (resError) throw new Error(`Could not read the live reservations, so no shortage list was built: ${resError.message}`)
 
-  const reservations = (resData ?? []) as unknown as ReservationRow[]
+  const reservations = castRows<ReservationRow>(resData)
 
   const assetIds = [...new Set(reservations.map((r) => r.asset_id).filter((id): id is string => id !== null))]
   const productOfAsset = new Map<string, string>()
@@ -51,7 +52,7 @@ export async function readShortageInputs(): Promise<ShortageInputs> {
     if (unitError) {
       throw new Error(`Could not read the units behind the serial holds, so no shortage list was built: ${unitError.message}`)
     }
-    for (const unit of (unitData ?? []) as unknown as Array<{ id: string; product_id: string }>) {
+    for (const unit of castRows<{ id: string; product_id: string }>(unitData)) {
       productOfAsset.set(unit.id, unit.product_id)
     }
   }
@@ -83,12 +84,12 @@ export async function readShortageInputs(): Promise<ShortageInputs> {
       .select('id, name, asset_code, total_quantity')
       .in('id', productIds)
     if (prodError) throw new Error(`Could not read the products, so no shortage list was built: ${prodError.message}`)
-    for (const p of (prodData ?? []) as unknown as Array<{
+    for (const p of castRows<{
       id: string
       name: string
       asset_code: string
       total_quantity: number | null
-    }>) {
+    }>(prodData)) {
       products.push({
         id: p.id,
         name: p.name,

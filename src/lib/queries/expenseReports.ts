@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { castRow } from './queryTypes'
 import {
   EXPENSES,
   CATEGORIES,
@@ -94,7 +95,7 @@ export async function getExpenseReportsSummary(): Promise<ExpenseReportsSummary>
     rows,
     categories: CATEGORIES,
     branches: BRANCHES,
-    totalSpent: totals.paid as unknown as Paisa,
-    pendingApproval: totals.pending as unknown as Paisa,
+    totalSpent: castRow<Paisa>(totals.paid),
+    pendingApproval: castRow<Paisa>(totals.pending),
   }
 }

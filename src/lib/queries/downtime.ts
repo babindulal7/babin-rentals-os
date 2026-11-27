@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { parseTstzRange } from './availability'
+import { castRows } from './queryTypes'
 
 export interface DowntimeRow {
   id: string
@@ -90,7 +91,7 @@ export async function listProductDowntimes(productId: string): Promise<DowntimeR
 
   if (error) throw new Error(`listProductDowntimes failed: ${error.message}`)
 
-  return ((data ?? []) as unknown as RawDowntimeReservation[]).map(toDowntimeRow)
+  return castRows<RawDowntimeReservation>(data).map(toDowntimeRow)
 }
 
 export async function listAssetDowntimes(assetId: string): Promise<DowntimeRow[]> {
@@ -118,5 +119,5 @@ export async function listAssetDowntimes(assetId: string): Promise<DowntimeRow[]
 
   if (error) throw new Error(`listAssetDowntimes failed: ${error.message}`)
 
-  return ((data ?? []) as unknown as RawDowntimeReservation[]).map(toDowntimeRow)
+  return castRows<RawDowntimeReservation>(data).map(toDowntimeRow)
 }

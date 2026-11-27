@@ -1,5 +1,6 @@
 import { supabase } from '../supabase'
 import { rupees, toRupees, type Paisa } from '../money'
+import { castRows } from './queryTypes'
 
 export interface OpeningBalance {
   id: string
@@ -19,14 +20,14 @@ export async function fetchOpeningBalances(): Promise<OpeningBalance[]> {
 
   if (error) throw new Error(`Could not read opening balances: ${error.message}`)
 
-  return ((data ?? []) as unknown as Array<{
+  return castRows<{
     id: string
     account_type: string
     account_id: string | null
     opening_date: string
     amount: number | string
     created_at: string
-  }>).map((row) => ({
+  }>(data).map((row) => ({
     id: row.id,
     accountType: row.account_type as 'cash' | 'bank',
     accountId: row.account_id,
@@ -61,14 +62,14 @@ export async function fetchLatestOpeningBalance(
 
   if (error) throw new Error(`Could not read opening balance: ${error.message}`)
 
-  const rows = (data ?? []) as unknown as Array<{
+  const rows = castRows<{
     id: string
     account_type: string
     account_id: string | null
     opening_date: string
     amount: number | string
     created_at: string
-  }>
+  }>(data)
 
   if (rows.length === 0) return null
 

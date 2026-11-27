@@ -2,6 +2,7 @@ import { supabase } from '../supabase'
 import type { Paisa } from '../money'
 import { rentalDaysBetween } from '../rentalDays'
 import { completeReportRead, embeddedName, isPermissionDenied, linesValue, percentOf, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { castRow } from './queryTypes'
 
 export type { ReportFilterOptions } from './reportSupport'
 
@@ -139,7 +140,7 @@ interface FilteredBookingQuery extends ReportQuery {
 }
 function bookingRead(columns: string): FilteredBookingQuery {
   // The transport result is unknown until rowsOf validates the response.
-  return supabase.from('bookings').select<string, unknown>(columns) as unknown as FilteredBookingQuery
+  return castRow<FilteredBookingQuery>(supabase.from('bookings').select<string, unknown>(columns))
 }
 function filtered(q: unknown, options?: ReportFilterOptions): FilteredBookingQuery {
   let out = q as FilteredBookingQuery
@@ -253,7 +254,7 @@ const BUCKETS = [
 
 export async function getRentalDurationReport(options?: ReportFilterOptions): Promise<RentalDurationReportData> {
   const [res, lineMap] = await Promise.all([
-    completeReportRead(filtered(supabase.from('bookings').select<string, unknown>('id, pickup_at, return_at').is('cancelled_at', null) as unknown as FilteredBookingQuery, options), 'Rental duration read failed'),
+    completeReportRead(filtered(supabase.from('bookings').select<string, unknown>('id, pickup_at, return_at').is('cancelled_at', null), options), 'Rental duration read failed'),
     readLineValues(),
   ])
   const rows = rowsOf<Pick<BookingRow, 'id' | 'pickup_at' | 'return_at'>>(res, 'Rental duration read failed')
@@ -300,7 +301,7 @@ export async function getCancellationsReport(options?: ReportFilterOptions): Pro
       supabase
         .from('bookings')
         .select<string, unknown>('id, booking_no, pickup_at, return_at, project, cancelled_at, cancellation_reason, clients!client_id(name)')
-        .not('cancelled_at', 'is', null) as unknown as FilteredBookingQuery,
+        .not('cancelled_at', 'is', null),
       options,
     ), 'Cancellations read failed'),
     readLineValues(),
