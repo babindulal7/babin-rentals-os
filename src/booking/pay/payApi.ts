@@ -87,7 +87,7 @@ export async function createBookingPaymentLink(bookingId: string): Promise<{
   booking_id: string
   booking_no: string
 }> {
-  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase || typeof (supabase as { rpc?: unknown })?.rpc !== 'function'
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
   if (isMock) {
     const token = 'mock-link-' + (bookingId ? bookingId.slice(0, 8) : Date.now().toString())
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
