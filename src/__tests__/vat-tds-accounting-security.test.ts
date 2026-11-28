@@ -87,11 +87,11 @@ describe('BSEC-15 (P1 Batch 10): VAT, TDS, Invoice Uniqueness, Credit Notes & Ac
   it('BSEC-15-01: computes configured 13% VAT and 0% VAT-exempt totals in integer paisa', () => {
     const withVat = calculatePricingPipeline({
       equipmentSubtotalPaisa: rupees(30000),
-      bundleSubtotalPaisa: 0,
-      servicesSubtotalPaisa: 0,
-      crewSubtotalPaisa: 0,
-      deliveryChargePaisa: 0,
-      fuelChargePaisa: 0,
+      bundleSubtotalPaisa: rupees(0),
+      servicesSubtotalPaisa: rupees(0),
+      crewSubtotalPaisa: rupees(0),
+      deliveryChargePaisa: rupees(0),
+      fuelChargePaisa: rupees(0),
       vatEnabled: true,
       vatRatePercent: 13,
       recommendedDepositPaisa: rupees(5000),
@@ -102,11 +102,11 @@ describe('BSEC-15 (P1 Batch 10): VAT, TDS, Invoice Uniqueness, Credit Notes & Ac
 
     const noVat = calculatePricingPipeline({
       equipmentSubtotalPaisa: rupees(30000),
-      bundleSubtotalPaisa: 0,
-      servicesSubtotalPaisa: 0,
-      crewSubtotalPaisa: 0,
-      deliveryChargePaisa: 0,
-      fuelChargePaisa: 0,
+      bundleSubtotalPaisa: rupees(0),
+      servicesSubtotalPaisa: rupees(0),
+      crewSubtotalPaisa: rupees(0),
+      deliveryChargePaisa: rupees(0),
+      fuelChargePaisa: rupees(0),
       vatEnabled: false,
       vatRatePercent: 13,
       recommendedDepositPaisa: rupees(5000),
