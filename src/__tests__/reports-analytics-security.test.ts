@@ -16,21 +16,31 @@ import { canViewFinancialReports, canViewMoney, type SystemRole } from '../lib/r
 import { rupees } from '../lib/money'
 import { startOfCalendarDay, endOfCalendarDay, startOfOperationalDay, endOfOperationalDay } from '../lib/queries/dayBounds'
 import type { RentalRow } from '../data/rentals'
+import { statusToken } from '../lib/workflow'
 
 function makeRentalRow(overrides: Partial<RentalRow>): RentalRow {
   return {
-    id: 'bk-test-1',
     bookingNo: '270101',
+    bookedOn: 'Booked 10 Feb',
     client: 'Test Client',
+    avatar: ['TC'],
+    avatarTone: 'neutral',
+    project: 'Test project',
+    location: 'Kathmandu',
+    crew: 'None',
+    kit: 'Test kit',
+    items: 1,
     status: 'Booked',
-    pickup: { ad: new Date('2027-02-10T06:00:00+05:45'), bs: '2083-10-27' },
-    ret: { ad: new Date('2027-02-12T06:00:00+05:45'), bs: '2083-10-29' },
+    pickup: { ad: new Date('2027-02-10T06:00:00+05:45'), time: '06:00 AM', who: 'Test staff' },
+    ret: { ad: new Date('2027-02-12T06:00:00+05:45'), time: '06:00 AM', who: 'Test staff' },
     amount: rupees(10000),
     due: rupees(5000),
     progress: 0,
+    progressTone: 'primary',
     flags: [],
     ...overrides,
-  } as RentalRow
+    statusKey: statusToken(overrides.status ?? 'Booked'),
+  }
 }
 
 describe('BSEC-27 (P1 Batch 11): Reports & Analytics — Reconciliation, Utilization, Filters & Role Gates', () => {
@@ -93,8 +103,8 @@ describe('BSEC-27 (P1 Batch 11): Reports & Analytics — Reconciliation, Utiliza
     const today = new Date('2027-02-10T10:00:00+05:45')
     const rows = [
       makeRentalRow({ amount: rupees(12000), flags: [] }),
-      makeRentalRow({ id: 'bk-2', amount: rupees(8000), flags: ['Cancelled'] }),
-      makeRentalRow({ id: 'bk-3', amount: rupees(5000), pickup: { ad: new Date('2027-02-11T06:00:00+05:45'), bs: '2083-10-28' } }),
+      makeRentalRow({ bookingNo: '270102', amount: rupees(8000), flags: ['Cancelled'] }),
+      makeRentalRow({ bookingNo: '270103', amount: rupees(5000), pickup: { ad: new Date('2027-02-11T06:00:00+05:45'), time: '06:00 AM', who: 'Test staff' } }),
     ]
     expect(calculateRevenueToday(rows, today)).toBe(rupees(12000))
   })
@@ -102,8 +112,8 @@ describe('BSEC-27 (P1 Batch 11): Reports & Analytics — Reconciliation, Utiliza
   it('BSEC-27-02: sums outstanding payment balances excluding Cancelled rentals', () => {
     const rows = [
       makeRentalRow({ due: rupees(4500), flags: [] }),
-      makeRentalRow({ id: 'bk-2', due: rupees(9000), flags: ['Cancelled'] }),
-      makeRentalRow({ id: 'bk-3', due: rupees(1500), flags: ['Overdue'] }),
+      makeRentalRow({ bookingNo: '270102', due: rupees(9000), flags: ['Cancelled'] }),
+      makeRentalRow({ bookingNo: '270103', due: rupees(1500), flags: ['Overdue'] }),
     ]
     expect(calculatePaymentDue(rows)).toBe(rupees(6000))
   })
@@ -111,9 +121,9 @@ describe('BSEC-27 (P1 Batch 11): Reports & Analytics — Reconciliation, Utiliza
   it('BSEC-27-03: computes active rentals, pickups, returns, and overdue counts accurately', () => {
     const today = new Date('2027-02-10T10:00:00+05:45')
     const rows = [
-      makeRentalRow({ status: 'On Rent', progress: 100, flags: [] }),
-      makeRentalRow({ id: 'bk-2', status: 'Booked', progress: 0, flags: ['Overdue'] }),
-      makeRentalRow({ id: 'bk-3', status: 'Closed', progress: 100, flags: [] }),
+      makeRentalRow({ status: 'On Rent', progress: 2, flags: [] }),
+      makeRentalRow({ bookingNo: '270102', status: 'Booked', progress: 0, flags: ['Overdue'] }),
+      makeRentalRow({ bookingNo: '270103', status: 'Closed', progress: 4, flags: [] }),
     ]
     expect(calculateActiveRentals(rows)).toBe(2)
     expect(countOverdue(rows)).toBe(1)
